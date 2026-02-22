@@ -57,6 +57,13 @@ const navItems = [
   },
 ];
 
+const pageTitles: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/dashboard/supplements": "Supplements",
+  "/dashboard/upload": "Upload Estimate",
+  "/dashboard/settings": "Settings",
+};
+
 export function DashboardShell({
   user,
   children,
@@ -66,6 +73,8 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const pageTitle = pageTitles[pathname] || "Dashboard";
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -77,7 +86,7 @@ export function DashboardShell({
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r bg-gray-50/50">
+      <aside className="hidden md:flex w-64 flex-col border-r bg-gray-50/50">
         {/* Logo */}
         <div className="flex h-14 items-center px-6 font-bold text-lg">
           4Margin
@@ -89,8 +98,7 @@ export function DashboardShell({
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href !== "/dashboard" &&
-                pathname.startsWith(item.href));
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.href}
@@ -137,10 +145,41 @@ export function DashboardShell({
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="container max-w-6xl p-6 lg:p-8">{children}</div>
-      </main>
+      {/* Main area */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="flex h-14 items-center justify-between border-b bg-white px-6">
+          <div className="flex items-center gap-4">
+            <span className="md:hidden font-bold text-lg">4Margin</span>
+            <h1 className="text-lg font-semibold">{pageTitle}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button asChild size="sm">
+              <Link href="/dashboard/upload">
+                <svg
+                  className="mr-2 h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                New Supplement
+              </Link>
+            </Button>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-auto">
+          <div className="container max-w-6xl p-6 lg:p-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
