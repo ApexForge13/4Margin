@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { SupplementsList } from "@/components/dashboard/supplements-list";
+import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -10,6 +12,14 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
 
   if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id, companies(name, phone, address)")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile) return null;
 
   // Fetch supplements with full claim data for edit pre-fill
   const { data: supplements } = await supabase
@@ -64,6 +74,25 @@ export default async function DashboardPage() {
     };
   }>;
 
+  // Check onboarding progress for checklist
+  const admin = createAdminClient();
+  const [carriersRes, codesRes] = await Promise.all([
+    admin.from("carriers").select("id", { count: "exact", head: true }),
+    admin.from("xactimate_codes").select("id", { count: "exact", head: true }),
+  ]);
+
+  const company = profile.companies as unknown as {
+    name: string;
+    phone: string | null;
+    address: string | null;
+  } | null;
+
+  const hasCompany = !!(company?.name && (company?.phone || company?.address));
+  const hasCarriers = (carriersRes.count ?? 0) > 0;
+  const hasCodes = (codesRes.count ?? 0) > 0;
+  const hasSupplements = rows.length > 0;
+  const showChecklist = !hasCompany || !hasCarriers || !hasCodes || !hasSupplements;
+
   // Stats (exclude archived)
   const active = rows.filter((s) => !s.claims?.archived_at);
   const total = active.length;
@@ -78,6 +107,16 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Onboarding checklist — shown until all steps are done */}
+      {showChecklist && (
+        <OnboardingChecklist
+          hasCompany={hasCompany}
+          hasSupplements={hasSupplements}
+          hasCarriers={hasCarriers}
+          hasCodes={hasCodes}
+        />
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Total Supplements" value={String(total)} description="All time" />
         <StatCard title="Pending Review" value={String(pending)} description="Needs action" />
