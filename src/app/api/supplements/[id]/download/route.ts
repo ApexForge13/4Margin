@@ -30,6 +30,14 @@ export async function GET(
     return NextResponse.json({ error: "Supplement not found" }, { status: 404 });
   }
 
+  // ── Payment check ─────────────────────────────────────────
+  if (!supplement.paid_at) {
+    return NextResponse.json(
+      { error: "Payment required. Please purchase this supplement report first." },
+      { status: 402 }
+    );
+  }
+
   const claim = supplement.claims as Record<string, unknown>;
   const carrier = (claim?.carriers as Record<string, unknown>) || null;
 

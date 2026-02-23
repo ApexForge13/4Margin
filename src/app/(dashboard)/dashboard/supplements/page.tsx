@@ -17,6 +17,7 @@ export default async function SupplementsPage() {
       status,
       adjuster_total,
       supplement_total,
+      paid_at,
       created_at,
       claims (
         id,
@@ -43,6 +44,7 @@ export default async function SupplementsPage() {
     status: string;
     adjuster_total: number | null;
     supplement_total: number | null;
+    paid_at: string | null;
     created_at: string;
     claims: {
       id: string;

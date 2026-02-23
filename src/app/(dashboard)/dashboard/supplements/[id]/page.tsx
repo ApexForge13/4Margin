@@ -17,6 +17,8 @@ import { StatusTracker } from "@/components/supplements/status-tracker";
 import { StatusActions } from "./status-actions";
 import { CarrierUploadCard } from "@/components/supplements/carrier-upload-card";
 import { DownloadButton } from "@/components/supplements/download-button";
+import { PaymentGate } from "@/components/supplements/payment-gate";
+import { PaymentToast } from "@/components/supplements/payment-toast";
 
 export default async function SupplementDetailPage({
   params,
@@ -90,6 +92,7 @@ export default async function SupplementDetailPage({
 
   return (
     <div className="space-y-6">
+      <PaymentToast />
       {/* Back nav */}
       <Button variant="ghost" size="sm" asChild>
         <Link href="/dashboard/supplements">
@@ -136,7 +139,12 @@ export default async function SupplementDetailPage({
             status === "approved" ||
             status === "partially_approved" ||
             status === "denied") && (
-            <DownloadButton supplementId={id} variant="button" />
+            <PaymentGate
+              supplementId={id}
+              paid={!!supplement.paid_at}
+            >
+              <DownloadButton supplementId={id} variant="button" />
+            </PaymentGate>
           )}
           <StatusActions
             supplementId={id}

@@ -57,6 +57,7 @@ interface SupplementRow {
   status: string;
   adjuster_total: number | null;
   supplement_total: number | null;
+  paid_at: string | null;
   created_at: string;
   claims: ClaimData;
 }
@@ -484,7 +485,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                      {["complete", "submitted", "approved", "partially_approved", "denied"].includes(s.status) && (
+                      {["complete", "submitted", "approved", "partially_approved", "denied"].includes(s.status) && s.paid_at && (
                         <DownloadButton supplementId={s.id} variant="icon" />
                       )}
                       <DropdownMenu>
