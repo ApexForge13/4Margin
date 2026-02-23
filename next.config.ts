@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -8,4 +9,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Suppress CLI output during build
+  silent: true,
+
+  // Source map settings
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Tunnel Sentry events through the app to avoid ad-blockers
+  // tunnelRoute: "/monitoring-tunnel",
+});

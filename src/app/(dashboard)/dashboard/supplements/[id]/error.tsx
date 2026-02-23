@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 
 export default function SupplementDetailError({
@@ -9,6 +11,10 @@ export default function SupplementDetailError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
