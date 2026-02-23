@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ClaimEditDialog } from "@/components/dashboard/claim-edit-dialog";
 import { ClaimDeleteDialog } from "@/components/dashboard/claim-delete-dialog";
+import { DownloadButton } from "@/components/supplements/download-button";
 import {
   STATUS_LABELS,
   SUPPLEMENT_STATUS_ORDER,
@@ -482,6 +483,10 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                       {formatCurrency(s.supplement_total)}
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center gap-1">
+                      {["complete", "submitted", "approved", "partially_approved", "denied"].includes(s.status) && (
+                        <DownloadButton supplementId={s.id} variant="icon" />
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -553,6 +558,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

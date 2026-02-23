@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { StatusTracker } from "@/components/supplements/status-tracker";
 import { StatusActions } from "./status-actions";
 import { CarrierUploadCard } from "@/components/supplements/carrier-upload-card";
+import { DownloadButton } from "@/components/supplements/download-button";
 
 export default async function SupplementDetailPage({
   params,
@@ -130,6 +131,13 @@ export default async function SupplementDetailPage({
           <Badge variant={statusInfo.variant} className="text-sm">
             {statusInfo.label}
           </Badge>
+          {(status === "complete" ||
+            status === "submitted" ||
+            status === "approved" ||
+            status === "partially_approved" ||
+            status === "denied") && (
+            <DownloadButton supplementId={id} variant="button" />
+          )}
           <StatusActions
             supplementId={id}
             status={status}
