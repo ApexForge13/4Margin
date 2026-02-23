@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -25,7 +26,6 @@ const pageTitles: Record<string, string> = {
   "/dashboard/admin": "Admin",
 };
 
-/** Resolve the header title — supports dynamic routes like /dashboard/supplements/[id] */
 function resolvePageTitle(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname];
   if (pathname.startsWith("/dashboard/supplements/")) return "Supplement Detail";
@@ -41,6 +41,24 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    if (sidebarOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
 
   const isOwnerOrAdmin = user.role === "owner" || user.role === "admin";
 
@@ -106,74 +124,120 @@ export function DashboardShell({
     router.push("/login");
   };
 
+  const initials = user.full_name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  /* Shared sidebar content used by both desktop and mobile */
+  const sidebarContent = (
+    <>
+      {/* Logo */}
+      <div className="flex h-14 items-center justify-between px-6">
+        <span className="font-bold text-lg">4Margin</span>
+        {/* Close button — mobile only */}
+        <button
+          className="md:hidden rounded-md p-1 text-muted-foreground hover:bg-gray-100"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <Separator />
+
+      {/* Nav */}
+      <nav className="flex-1 space-y-1 p-3">
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-gray-100 hover:text-foreground"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User section */}
+      <div className="border-t p-3">
+        <div className="flex items-center gap-3 rounded-md px-3 py-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            {initials}
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <p className="truncate text-sm font-medium">{user.full_name}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user.companies?.name}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-1 w-full justify-start text-muted-foreground"
+          onClick={handleSignOut}
+        >
+          Sign out
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-r bg-gray-50/50">
-        {/* Logo */}
-        <div className="flex h-14 items-center px-6 font-bold text-lg">
-          4Margin
-        </div>
-        <Separator />
+      {/* ─── Mobile sidebar overlay ─── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-        {/* Nav */}
-        <nav className="flex-1 space-y-1 p-3">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-gray-100 hover:text-foreground"
-                }`}
-              >
-                {item.icon}
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* User section */}
-        <div className="border-t p-3">
-          <div className="flex items-center gap-3 rounded-md px-3 py-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-              {user.full_name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2)}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium">{user.full_name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {user.companies?.name}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-1 w-full justify-start text-muted-foreground"
-            onClick={handleSignOut}
-          >
-            Sign out
-          </Button>
-        </div>
+      {/* ─── Mobile sidebar drawer ─── */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-white transition-transform duration-200 ease-in-out md:hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {sidebarContent}
       </aside>
 
-      {/* Main area */}
+      {/* ─── Desktop sidebar (always visible) ─── */}
+      <aside className="hidden md:flex w-64 flex-col border-r bg-gray-50/50">
+        {sidebarContent}
+      </aside>
+
+      {/* ─── Main area ─── */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-14 items-center justify-between border-b bg-white px-6">
-          <div className="flex items-center gap-4">
-            <span className="md:hidden font-bold text-lg">4Margin</span>
+        <header className="flex h-14 items-center justify-between border-b bg-white px-4 md:px-6">
+          <div className="flex items-center gap-3">
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden rounded-md p-1.5 text-muted-foreground hover:bg-gray-100"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <h1 className="text-lg font-semibold">{pageTitle}</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -192,7 +256,8 @@ export function DashboardShell({
                     d="M12 4v16m8-8H4"
                   />
                 </svg>
-                New Supplement
+                <span className="hidden sm:inline">New Supplement</span>
+                <span className="sm:hidden">New</span>
               </Link>
             </Button>
           </div>
@@ -200,7 +265,7 @@ export function DashboardShell({
 
         {/* Content */}
         <main className="flex-1 overflow-auto">
-          <div className="container max-w-6xl p-6 lg:p-8">{children}</div>
+          <div className="container max-w-6xl p-4 md:p-6 lg:p-8">{children}</div>
         </main>
       </div>
     </div>
