@@ -6,6 +6,7 @@ import {
   useReducer,
   useCallback,
   useEffect,
+  useState,
   type ReactNode,
 } from "react";
 import type { WizardState, WizardAction, ClaimDetails, MeasurementData } from "@/types/wizard";
@@ -185,9 +186,94 @@ interface WizardContextValue {
 
 const WizardContext = createContext<WizardContextValue | null>(null);
 
+// --- localStorage persistence ---
+// Files/photos can't be serialized — we persist only text fields.
+const STORAGE_KEY = "4margin-wizard-draft";
+
+interface PersistedState {
+  currentStep: number;
+  claimDetails: ClaimDetails;
+  measurementData: MeasurementData;
+  claimName: string;
+  photoNotes: string[]; // just the notes, not the files
+}
+
+function saveToStorage(state: WizardState) {
+  try {
+    const data: PersistedState = {
+      currentStep: state.currentStep,
+      claimDetails: state.claimDetails,
+      measurementData: state.measurementData,
+      claimName: state.claimName,
+      photoNotes: state.photos.map((p) => p.note),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // localStorage full or unavailable — silently ignore
+  }
+}
+
+function loadFromStorage(): Partial<WizardState> | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data: PersistedState = JSON.parse(raw);
+    return {
+      currentStep: data.currentStep,
+      claimDetails: { ...emptyClaimDetails, ...data.claimDetails },
+      measurementData: { ...emptyMeasurementData, ...data.measurementData },
+      claimName: data.claimName ?? "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function clearWizardStorage() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 // --- Provider ---
 export function WizardProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(wizardReducer, initialState);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore from localStorage on mount
+  useEffect(() => {
+    const saved = loadFromStorage();
+    if (saved) {
+      if (saved.claimDetails) {
+        dispatch({ type: "UPDATE_CLAIM_DETAILS", details: saved.claimDetails });
+      }
+      if (saved.measurementData) {
+        dispatch({ type: "UPDATE_MEASUREMENT_DATA", data: saved.measurementData });
+      }
+      if (saved.claimName) {
+        dispatch({ type: "SET_CLAIM_NAME", name: saved.claimName });
+      }
+      // Go back to step 1 so user can re-add files (files can't be persisted)
+      dispatch({ type: "SET_STEP", step: 1 });
+    }
+    setHydrated(true);
+  }, []);
+
+  // Save to localStorage on every meaningful state change
+  useEffect(() => {
+    if (hydrated) {
+      saveToStorage(state);
+    }
+  }, [
+    hydrated,
+    state.currentStep,
+    state.claimDetails,
+    state.measurementData,
+    state.claimName,
+    state,
+  ]);
 
   const nextStep = useCallback(() => {
     dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, 4) });

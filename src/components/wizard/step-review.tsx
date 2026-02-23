@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useWizard } from "./wizard-context";
+import { useWizard, clearWizardStorage } from "./wizard-context";
 import { createClaimAndSupplement } from "@/app/(dashboard)/dashboard/upload/actions";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/supabase/storage";
@@ -155,6 +155,7 @@ export function StepReview() {
       }
 
       toast.success("Supplement created successfully!");
+      clearWizardStorage();
       router.push("/dashboard");
     } catch (err) {
       console.error("Generate error:", err);
