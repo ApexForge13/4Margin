@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { createCompanyAndProfile } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,9 +37,8 @@ export default function OnboardingPage() {
     e.preventDefault();
     setLoading(true);
 
+    // Quick check that user is still authenticated
     const supabase = createClient();
-
-    // Get current user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -49,38 +49,11 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Create the company
-    const { data: company, error: companyError } = await supabase
-      .from("companies")
-      .insert({
-        name: form.companyName,
-        phone: form.phone || null,
-        address: form.address || null,
-        city: form.city || null,
-        state: form.state || null,
-        zip: form.zip || null,
-        license_number: form.licenseNumber || null,
-      })
-      .select()
-      .single();
+    // Call server action (uses service role to bypass RLS)
+    const { error } = await createCompanyAndProfile(form);
 
-    if (companyError || !company) {
-      toast.error("Failed to create company. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    // Create the user profile linked to the company
-    const { error: userError } = await supabase.from("users").insert({
-      id: user.id,
-      company_id: company.id,
-      full_name: user.user_metadata?.full_name || user.email || "User",
-      email: user.email!,
-      role: "owner",
-    });
-
-    if (userError) {
-      toast.error("Failed to create profile. Please try again.");
+    if (error) {
+      toast.error(error);
       setLoading(false);
       return;
     }

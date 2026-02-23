@@ -36,7 +36,8 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      toast.error("Failed to send magic link. Please try again.");
+      toast.error(`Magic link error: ${error.message}`);
+      console.error("Login OTP error:", error);
       return;
     }
 

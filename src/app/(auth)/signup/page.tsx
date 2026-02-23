@@ -40,7 +40,8 @@ export default function SignupPage() {
     setLoading(false);
 
     if (error) {
-      toast.error("Failed to send magic link. Please try again.");
+      toast.error(`Magic link error: ${error.message}`);
+      console.error("Signup OTP error:", error);
       return;
     }
 

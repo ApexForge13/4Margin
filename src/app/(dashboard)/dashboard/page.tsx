@@ -1,49 +1,99 @@
-export default function DashboardPage() {
+import { createClient } from "@/lib/supabase/server";
+import { SupplementsList } from "@/components/dashboard/supplements-list";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  // Get current user's company
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  // Fetch supplements with full claim data for edit pre-fill
+  const { data: supplements } = await supabase
+    .from("supplements")
+    .select(`
+      id,
+      status,
+      adjuster_total,
+      supplement_total,
+      created_at,
+      claims (
+        id,
+        notes,
+        claim_number,
+        policy_number,
+        property_address,
+        property_city,
+        property_state,
+        property_zip,
+        date_of_loss,
+        adjuster_name,
+        adjuster_email,
+        adjuster_phone,
+        archived_at,
+        carrier_id,
+        carriers ( name )
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  const rows = (supplements ?? []) as unknown as Array<{
+    id: string;
+    status: string;
+    adjuster_total: number | null;
+    supplement_total: number | null;
+    created_at: string;
+    claims: {
+      id: string;
+      notes: string | null;
+      claim_number: string | null;
+      policy_number: string | null;
+      property_address: string | null;
+      property_city: string | null;
+      property_state: string | null;
+      property_zip: string | null;
+      date_of_loss: string | null;
+      adjuster_name: string | null;
+      adjuster_email: string | null;
+      adjuster_phone: string | null;
+      archived_at: string | null;
+      carriers: { name: string } | null;
+    };
+  }>;
+
+  // Stats (exclude archived)
+  const active = rows.filter((s) => !s.claims?.archived_at);
+  const total = active.length;
+  const pending = active.filter((s) =>
+    ["generating", "complete"].includes(s.status)
+  ).length;
+  const totalRecovered = active.reduce(
+    (sum, s) => sum + (Number(s.supplement_total) || 0),
+    0
+  );
+  const avgRecovery = total > 0 ? totalRecovered / total : 0;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome to 4Margin. Upload an adjuster estimate to get started.
-        </p>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Stat cards — placeholder for now */}
-        <StatCard title="Total Supplements" value="0" description="All time" />
-        <StatCard title="Pending Review" value="0" description="Needs action" />
-        <StatCard title="Total Recovered" value="$0" description="All time" />
+        <StatCard title="Total Supplements" value={String(total)} description="All time" />
+        <StatCard title="Pending Review" value={String(pending)} description="Needs action" />
+        <StatCard
+          title="Total Recovered"
+          value={`$${totalRecovered.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+          description="All time"
+        />
         <StatCard
           title="Avg Recovery"
-          value="$0"
+          value={`$${avgRecovery.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
           description="Per supplement"
         />
       </div>
 
-      <div className="rounded-lg border border-dashed p-12 text-center">
-        <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <svg
-              className="h-6 w-6 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold">No supplements yet</h3>
-          <p className="text-sm text-muted-foreground">
-            Upload an adjuster&apos;s Xactimate estimate to generate your first
-            supplement.
-          </p>
-        </div>
-      </div>
+      <SupplementsList supplements={rows} />
     </div>
   );
 }
