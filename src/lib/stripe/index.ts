@@ -1,8 +1,25 @@
 import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-01-28.clover",
-  typescript: true,
-});
+function getStripeClient() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    // Return a proxy that throws a clear error at call-time instead of
+    // crashing the entire build when the env var isn't set yet.
+    return new Proxy({} as Stripe, {
+      get(_, prop) {
+        if (prop === "then") return undefined; // prevent Promise detection
+        throw new Error(
+          `Stripe is not configured — set STRIPE_SECRET_KEY in your environment variables.`
+        );
+      },
+    });
+  }
+  return new Stripe(key, {
+    apiVersion: "2026-01-28.clover",
+    typescript: true,
+  });
+}
+
+export const stripe = getStripeClient();
 
 export { SUPPLEMENT_PRICE_CENTS, SUPPLEMENT_PRICE_DISPLAY } from "./constants";
