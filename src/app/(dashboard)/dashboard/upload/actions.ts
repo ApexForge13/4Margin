@@ -1,23 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import type { ClaimDetails, MeasurementData } from "@/types/wizard";
-
-interface PhotoMeta {
-  fileName: string;
-  fileSize: number;
-  mimeType: string;
-  note: string;
-  storagePath: string;
-}
-
-interface CreateClaimInput {
-  claimName: string;
-  claimDetails: ClaimDetails;
-  measurementData: MeasurementData;
-  photoMeta: PhotoMeta[];
-  estimateStoragePath: string;
-}
+import { createClaimInputSchema, validate } from "@/lib/validations/schemas";
 
 interface CreateClaimResult {
   claimId: string | null;
@@ -26,8 +10,14 @@ interface CreateClaimResult {
 }
 
 export async function createClaimAndSupplement(
-  data: CreateClaimInput
+  data: unknown
 ): Promise<CreateClaimResult> {
+  // ── Validate input ──────────────────────────────────────────
+  const parsed = validate(createClaimInputSchema, data);
+  if (!parsed.success) {
+    return { claimId: null, supplementId: null, error: parsed.error };
+  }
+  const input = parsed.data;
   const supabase = await createClient();
 
   // Verify auth
@@ -55,11 +45,11 @@ export async function createClaimAndSupplement(
 
   // Upsert carrier by name (if provided)
   let carrierId: string | null = null;
-  if (data.claimDetails.carrierName.trim()) {
+  if (input.claimDetails.carrierName?.trim()) {
     const { data: carrier, error: carrierError } = await supabase
       .from("carriers")
       .upsert(
-        { name: data.claimDetails.carrierName.trim() },
+        { name: input.claimDetails.carrierName.trim() },
         { onConflict: "name" }
       )
       .select("id")
@@ -78,59 +68,59 @@ export async function createClaimAndSupplement(
     .insert({
       company_id: companyId,
       carrier_id: carrierId,
-      claim_number: data.claimDetails.claimNumber || null,
-      policy_number: data.claimDetails.policyNumber || null,
-      property_address: data.claimDetails.propertyAddress || null,
-      property_city: data.claimDetails.propertyCity || null,
-      property_state: data.claimDetails.propertyState || null,
-      property_zip: data.claimDetails.propertyZip || null,
-      date_of_loss: data.claimDetails.dateOfLoss || null,
-      adjuster_name: data.claimDetails.adjusterName || null,
-      adjuster_email: data.claimDetails.adjusterEmail || null,
-      adjuster_phone: data.claimDetails.adjusterPhone || null,
-      roof_squares: data.measurementData.measuredSquares
-        ? parseFloat(data.measurementData.measuredSquares)
+      claim_number: input.claimDetails.claimNumber || null,
+      policy_number: input.claimDetails.policyNumber || null,
+      property_address: input.claimDetails.propertyAddress || null,
+      property_city: input.claimDetails.propertyCity || null,
+      property_state: input.claimDetails.propertyState || null,
+      property_zip: input.claimDetails.propertyZip || null,
+      date_of_loss: input.claimDetails.dateOfLoss || null,
+      adjuster_name: input.claimDetails.adjusterName || null,
+      adjuster_email: input.claimDetails.adjusterEmail || null,
+      adjuster_phone: input.claimDetails.adjusterPhone || null,
+      roof_squares: input.measurementData.measuredSquares
+        ? parseFloat(input.measurementData.measuredSquares)
         : null,
-      waste_percent: data.measurementData.wastePercent
-        ? parseFloat(data.measurementData.wastePercent)
+      waste_percent: input.measurementData.wastePercent
+        ? parseFloat(input.measurementData.wastePercent)
         : null,
-      suggested_squares: data.measurementData.suggestedSquares
-        ? parseFloat(data.measurementData.suggestedSquares)
+      suggested_squares: input.measurementData.suggestedSquares
+        ? parseFloat(input.measurementData.suggestedSquares)
         : null,
-      roof_pitch: data.measurementData.predominantPitch || null,
-      ft_ridges: data.measurementData.ftRidges
-        ? parseFloat(data.measurementData.ftRidges)
+      roof_pitch: input.measurementData.predominantPitch || null,
+      ft_ridges: input.measurementData.ftRidges
+        ? parseFloat(input.measurementData.ftRidges)
         : null,
-      ft_hips: data.measurementData.ftHips
-        ? parseFloat(data.measurementData.ftHips)
+      ft_hips: input.measurementData.ftHips
+        ? parseFloat(input.measurementData.ftHips)
         : null,
-      ft_valleys: data.measurementData.ftValleys
-        ? parseFloat(data.measurementData.ftValleys)
+      ft_valleys: input.measurementData.ftValleys
+        ? parseFloat(input.measurementData.ftValleys)
         : null,
-      ft_rakes: data.measurementData.ftRakes
-        ? parseFloat(data.measurementData.ftRakes)
+      ft_rakes: input.measurementData.ftRakes
+        ? parseFloat(input.measurementData.ftRakes)
         : null,
-      ft_eaves: data.measurementData.ftEaves
-        ? parseFloat(data.measurementData.ftEaves)
+      ft_eaves: input.measurementData.ftEaves
+        ? parseFloat(input.measurementData.ftEaves)
         : null,
-      ft_drip_edge: data.measurementData.ftDripEdge
-        ? parseFloat(data.measurementData.ftDripEdge)
+      ft_drip_edge: input.measurementData.ftDripEdge
+        ? parseFloat(input.measurementData.ftDripEdge)
         : null,
-      ft_parapet: data.measurementData.ftParapet
-        ? parseFloat(data.measurementData.ftParapet)
+      ft_parapet: input.measurementData.ftParapet
+        ? parseFloat(input.measurementData.ftParapet)
         : null,
-      ft_flashing: data.measurementData.ftFlashing
-        ? parseFloat(data.measurementData.ftFlashing)
+      ft_flashing: input.measurementData.ftFlashing
+        ? parseFloat(input.measurementData.ftFlashing)
         : null,
-      ft_step_flashing: data.measurementData.ftStepFlashing
-        ? parseFloat(data.measurementData.ftStepFlashing)
+      ft_step_flashing: input.measurementData.ftStepFlashing
+        ? parseFloat(input.measurementData.ftStepFlashing)
         : null,
-      accessories: data.measurementData.accessories || null,
-      damage_types: data.measurementData.damageTypes.length > 0
-        ? data.measurementData.damageTypes
+      accessories: input.measurementData.accessories || null,
+      damage_types: (input.measurementData.damageTypes ?? []).length > 0
+        ? input.measurementData.damageTypes
         : null,
-      description: data.claimDetails.claimDescription || null,
-      notes: data.claimName,
+      description: input.claimDetails.claimDescription || null,
+      notes: input.claimName,
       created_by: user.id,
     })
     .select("id")
@@ -152,7 +142,7 @@ export async function createClaimAndSupplement(
       claim_id: claim.id,
       // TODO: change to "generating" once AI pipeline is wired up
       status: "complete",
-      adjuster_estimate_url: data.estimateStoragePath,
+      adjuster_estimate_url: input.estimateStoragePath,
       created_by: user.id,
     })
     .select("id")
@@ -167,8 +157,8 @@ export async function createClaimAndSupplement(
   }
 
   // Create photo records
-  if (data.photoMeta.length > 0) {
-    const photoRows = data.photoMeta.map((p) => ({
+  if (input.photoMeta.length > 0) {
+    const photoRows = input.photoMeta.map((p) => ({
       claim_id: claim.id,
       company_id: companyId,
       storage_path: p.storagePath,

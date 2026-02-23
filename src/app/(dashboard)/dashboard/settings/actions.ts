@@ -1,17 +1,18 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  updateCompanySchema,
+  updateProfileSchema,
+  validate,
+} from "@/lib/validations/schemas";
 
-export async function updateCompany(data: {
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  licenseNumber: string;
-}) {
+export async function updateCompany(data: unknown) {
+  // ── Validate input ──────────────────────────────────────────
+  const parsed = validate(updateCompanySchema, data);
+  if (!parsed.success) return { error: parsed.error };
+  const input = parsed.data;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,14 +33,14 @@ export async function updateCompany(data: {
   const { error } = await supabase
     .from("companies")
     .update({
-      name: data.name,
-      phone: data.phone || null,
-      email: data.email || null,
-      address: data.address || null,
-      city: data.city || null,
-      state: data.state || null,
-      zip: data.zip || null,
-      license_number: data.licenseNumber || null,
+      name: input.name,
+      phone: input.phone || null,
+      email: input.email || null,
+      address: input.address || null,
+      city: input.city || null,
+      state: input.state || null,
+      zip: input.zip || null,
+      license_number: input.licenseNumber || null,
     })
     .eq("id", profile.company_id);
 
@@ -47,7 +48,12 @@ export async function updateCompany(data: {
   return { error: null };
 }
 
-export async function updateProfile(data: { fullName: string }) {
+export async function updateProfile(data: unknown) {
+  // ── Validate input ──────────────────────────────────────────
+  const parsed = validate(updateProfileSchema, data);
+  if (!parsed.success) return { error: parsed.error };
+  const input = parsed.data;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,7 +62,7 @@ export async function updateProfile(data: { fullName: string }) {
 
   const { error } = await supabase
     .from("users")
-    .update({ full_name: data.fullName })
+    .update({ full_name: input.fullName })
     .eq("id", user.id);
 
   if (error) return { error: error.message };

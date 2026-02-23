@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, SUPPLEMENT_PRICE_CENTS } from "@/lib/stripe";
+import { stripeCheckoutSchema, validate } from "@/lib/validations/schemas";
 
 export async function POST(request: NextRequest) {
   // ── Auth check ───────────────────────────────────────────
@@ -13,15 +14,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // ── Validate input ──────────────────────────────────────
   const body = await request.json();
-  const { supplementId } = body;
-
-  if (!supplementId) {
-    return NextResponse.json(
-      { error: "supplementId is required" },
-      { status: 400 }
-    );
+  const parsed = validate(stripeCheckoutSchema, body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
+  const { supplementId } = parsed.data;
 
   // ── Verify supplement exists and belongs to user's company ─
   const { data: supplement, error } = await supabase

@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import JSZip from "jszip";
+import { uuidParamSchema, validate } from "@/lib/validations/schemas";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
+  const rawParams = await params;
+
+  // ── Validate route param ─────────────────────────────────
+  const parsed = validate(uuidParamSchema, rawParams);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid supplement ID" }, { status: 400 });
+  }
+  const { id } = parsed.data;
+
   const supabase = await createClient();
 
   // ── Auth check ───────────────────────────────────────────

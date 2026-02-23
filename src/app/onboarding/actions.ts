@@ -2,18 +2,14 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { onboardingSchema, validate } from "@/lib/validations/schemas";
 
-interface OnboardingData {
-  companyName: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  licenseNumber: string;
-}
+export async function createCompanyAndProfile(data: unknown) {
+  // ── Validate input ──────────────────────────────────────────
+  const parsed = validate(onboardingSchema, data);
+  if (!parsed.success) return { error: parsed.error };
+  const input = parsed.data;
 
-export async function createCompanyAndProfile(data: OnboardingData) {
   // Verify the user is authenticated via their session
   const supabase = await createClient();
   const {
@@ -32,13 +28,13 @@ export async function createCompanyAndProfile(data: OnboardingData) {
   const { data: company, error: companyError } = await admin
     .from("companies")
     .insert({
-      name: data.companyName,
-      phone: data.phone || null,
-      address: data.address || null,
-      city: data.city || null,
-      state: data.state || null,
-      zip: data.zip || null,
-      license_number: data.licenseNumber || null,
+      name: input.companyName,
+      phone: input.phone || null,
+      address: input.address || null,
+      city: input.city || null,
+      state: input.state || null,
+      zip: input.zip || null,
+      license_number: input.licenseNumber || null,
     })
     .select()
     .single();
