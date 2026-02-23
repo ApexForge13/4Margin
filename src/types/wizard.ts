@@ -13,6 +13,7 @@ export interface PhotoFile {
 // --- Claim details (Step 1) ---
 export interface ClaimDetails {
   claimNumber: string;
+  claimDescription: string;
   policyNumber: string;
   carrierName: string;
   propertyAddress: string;

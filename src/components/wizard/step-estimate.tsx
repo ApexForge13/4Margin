@@ -8,6 +8,7 @@ import { FileList, type UploadedFile } from "@/components/upload/file-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 
 export function StepEstimate() {
@@ -195,6 +196,22 @@ export function StepEstimate() {
               disabled={isParsing}
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="claimDescription">Claim description *</Label>
+          <Textarea
+            id="claimDescription"
+            placeholder="Briefly describe the claim situation — e.g. &quot;Hail storm on 3/15 damaged the entire north-facing slope. Adjuster only scoped partial ridge cap and missed starter strip entirely. Homeowner reported interior leak at valley.&quot;"
+            rows={4}
+            value={claimDetails.claimDescription}
+            onChange={(e) => updateField("claimDescription", e.target.value)}
+            disabled={isParsing}
+            className="resize-y"
+          />
+          <p className="text-xs text-muted-foreground">
+            This helps us understand the full picture and build stronger supplement justifications.
+          </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

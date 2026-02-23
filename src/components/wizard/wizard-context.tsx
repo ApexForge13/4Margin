@@ -14,6 +14,7 @@ import type { WizardState, WizardAction, ClaimDetails, MeasurementData } from "@
 // --- Initial state ---
 const emptyClaimDetails: ClaimDetails = {
   claimNumber: "",
+  claimDescription: "",
   policyNumber: "",
   carrierName: "",
   propertyAddress: "",
@@ -295,7 +296,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         return (
           state.estimateFiles.length > 0 &&
           state.claimDetails.claimNumber.trim() !== "" &&
-          state.claimDetails.propertyAddress.trim() !== ""
+          state.claimDetails.propertyAddress.trim() !== "" &&
+          state.claimDetails.claimDescription.trim() !== ""
         );
       case 2:
         return true; // photos are optional

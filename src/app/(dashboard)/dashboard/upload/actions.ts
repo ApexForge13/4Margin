@@ -129,6 +129,7 @@ export async function createClaimAndSupplement(
       damage_types: data.measurementData.damageTypes.length > 0
         ? data.measurementData.damageTypes
         : null,
+      description: data.claimDetails.claimDescription || null,
       notes: data.claimName,
       created_by: user.id,
     })
