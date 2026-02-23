@@ -10,12 +10,18 @@ const nextConfig: NextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  // Suppress CLI output during build
-  silent: true,
+  // Only log Sentry build output in CI
+  silent: !process.env.CI,
 
-  // Source map settings
+  // Disable source map upload unless auth token is configured
   sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
     deleteSourcemapsAfterUpload: true,
+  },
+
+  // Disable release creation unless auth token is configured
+  release: {
+    create: !!process.env.SENTRY_AUTH_TOKEN,
   },
 
   // Tunnel Sentry events through the app to avoid ad-blockers
