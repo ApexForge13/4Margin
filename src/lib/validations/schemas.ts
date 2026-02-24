@@ -154,6 +154,10 @@ export const claimDetailsSchema = z.object({
   adjusterName: optionalString,
   adjusterEmail: optionalEmail,
   adjusterPhone: optionalString,
+  // Claim overview — narrative context
+  adjusterScopeNotes: optionalString,
+  itemsBelievedMissing: optionalString,
+  priorSupplementHistory: optionalString,
 });
 
 // ── Wizard — Measurements (Step 3) ──────────────────────────
@@ -221,6 +225,11 @@ export const updateClaimSchema = z.object({
   adjusterEmail: optionalEmail,
   adjusterPhone: optionalString,
   carrierName: optionalString,
+  // Claim overview
+  description: optionalString,
+  adjusterScopeNotes: optionalString,
+  itemsBelievedMissing: optionalString,
+  priorSupplementHistory: optionalString,
 });
 
 // ── Dashboard — Supplement status ───────────────────────────
@@ -249,6 +258,35 @@ export const stripeCheckoutSchema = z.object({
 
 export const uuidParamSchema = z.object({
   id: uuid,
+});
+
+// ── Admin — User management ─────────────────────────────────
+
+export const adminUpdateUserSchema = z.object({
+  fullName: requiredString("Full name").max(255),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  role: z.enum(["owner", "admin", "member"]),
+});
+
+// ── Admin — Claim management (cross-company) ────────────────
+
+export const adminUpdateClaimSchema = z.object({
+  notes: optionalString,
+  claimNumber: optionalString,
+  policyNumber: optionalString,
+  propertyAddress: optionalString,
+  propertyCity: optionalString,
+  propertyState: optionalString,
+  propertyZip: optionalString,
+  dateOfLoss: optionalString,
+  adjusterName: optionalString,
+  adjusterEmail: optionalEmail,
+  adjusterPhone: optionalString,
+  carrierName: optionalString,
+  description: optionalString,
+  adjusterScopeNotes: optionalString,
+  itemsBelievedMissing: optionalString,
+  priorSupplementHistory: optionalString,
 });
 
 // ── Helper: safely parse & return typed errors ──────────────

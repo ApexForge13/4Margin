@@ -159,6 +159,52 @@ export default async function SupplementDetailPage({
         <CarrierUploadCard supplementId={id} />
       )}
 
+      {/* Claim Overview — full-width narrative card */}
+      {((claim.description as string) ||
+        (claim.adjuster_scope_notes as string) ||
+        (claim.items_believed_missing as string) ||
+        (claim.prior_supplement_history as string)) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Claim Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            {(claim.description as string) && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  Claim Description
+                </p>
+                <p className="whitespace-pre-wrap">{claim.description as string}</p>
+              </div>
+            )}
+            {(claim.adjuster_scope_notes as string) && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  Adjuster&apos;s Estimate Included
+                </p>
+                <p className="whitespace-pre-wrap">{claim.adjuster_scope_notes as string}</p>
+              </div>
+            )}
+            {(claim.items_believed_missing as string) && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  Items Believed Missing / Underpaid
+                </p>
+                <p className="whitespace-pre-wrap">{claim.items_believed_missing as string}</p>
+              </div>
+            )}
+            {(claim.prior_supplement_history as string) && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+                  Previous Supplement History
+                </p>
+                <p className="whitespace-pre-wrap">{claim.prior_supplement_history as string}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Main content cards */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Claim Details */}

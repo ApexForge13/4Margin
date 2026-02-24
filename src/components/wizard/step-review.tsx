@@ -228,6 +228,54 @@ export function StepReview() {
           </CardContent>
         </Card>
 
+        {/* Claim Overview */}
+        {(claimDetails.claimDescription ||
+          claimDetails.adjusterScopeNotes ||
+          claimDetails.itemsBelievedMissing ||
+          claimDetails.priorSupplementHistory) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Claim Overview</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => goToStep(1)}
+                  disabled={isSubmitting}
+                >
+                  Edit
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {claimDetails.claimDescription && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Description</span>
+                  <p className="line-clamp-3">{claimDetails.claimDescription}</p>
+                </div>
+              )}
+              {claimDetails.adjusterScopeNotes && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Adjuster Scope</span>
+                  <p className="line-clamp-3">{claimDetails.adjusterScopeNotes}</p>
+                </div>
+              )}
+              {claimDetails.itemsBelievedMissing && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Items Missing</span>
+                  <p className="line-clamp-3">{claimDetails.itemsBelievedMissing}</p>
+                </div>
+              )}
+              {claimDetails.priorSupplementHistory && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Prior History</span>
+                  <p className="line-clamp-3">{claimDetails.priorSupplementHistory}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Files */}
         <Card>
           <CardHeader className="pb-3">

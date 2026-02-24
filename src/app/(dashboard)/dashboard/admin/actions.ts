@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import {
   xactimateCodeSchema,
   carrierSchema,
+  adminUpdateUserSchema,
+  adminUpdateClaimSchema,
   validate,
 } from "@/lib/validations/schemas";
 import { z } from "zod";
@@ -183,5 +185,87 @@ export async function deleteCarrier(carrierId: string) {
 
   if (error) return { error: error.message };
   revalidatePath("/dashboard/admin");
+  return { error: null };
+}
+
+// ── Admin — User Management ────────────────────────────────
+
+export async function adminUpdateUser(userId: string, data: unknown) {
+  const idResult = uuidSchema.safeParse(userId);
+  if (!idResult.success) return { error: "Invalid user ID." };
+
+  const parsed = validate(adminUpdateUserSchema, data);
+  if (!parsed.success) return { error: parsed.error };
+  const input = parsed.data;
+
+  const auth = await verifyAdmin();
+  if (auth.error) return { error: auth.error };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("users")
+    .update({
+      full_name: input.fullName,
+      email: input.email,
+      role: input.role,
+    })
+    .eq("id", idResult.data);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/admin");
+  return { error: null };
+}
+
+// ── Admin — Claim Management (cross-company) ───────────────
+
+export async function adminUpdateClaim(claimId: string, data: unknown) {
+  const idResult = uuidSchema.safeParse(claimId);
+  if (!idResult.success) return { error: "Invalid claim ID." };
+
+  const parsed = validate(adminUpdateClaimSchema, data);
+  if (!parsed.success) return { error: parsed.error };
+  const input = parsed.data;
+
+  const auth = await verifyAdmin();
+  if (auth.error) return { error: auth.error };
+
+  const admin = createAdminClient();
+
+  // Handle carrier upsert
+  let carrierId: string | null = null;
+  if (input.carrierName?.trim()) {
+    const { data: carrier } = await admin
+      .from("carriers")
+      .upsert({ name: input.carrierName.trim() }, { onConflict: "name" })
+      .select("id")
+      .single();
+    carrierId = carrier?.id || null;
+  }
+
+  const { error } = await admin
+    .from("claims")
+    .update({
+      notes: input.notes || null,
+      claim_number: input.claimNumber || null,
+      policy_number: input.policyNumber || null,
+      property_address: input.propertyAddress || null,
+      property_city: input.propertyCity || null,
+      property_state: input.propertyState || null,
+      date_of_loss: input.dateOfLoss || null,
+      adjuster_name: input.adjusterName || null,
+      adjuster_email: input.adjusterEmail || null,
+      adjuster_phone: input.adjusterPhone || null,
+      carrier_id: carrierId,
+      description: input.description || null,
+      adjuster_scope_notes: input.adjusterScopeNotes || null,
+      items_believed_missing: input.itemsBelievedMissing || null,
+      prior_supplement_history: input.priorSupplementHistory || null,
+    })
+    .eq("id", idResult.data);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/supplements");
   return { error: null };
 }

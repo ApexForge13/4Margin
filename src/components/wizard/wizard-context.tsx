@@ -25,6 +25,9 @@ const emptyClaimDetails: ClaimDetails = {
   adjusterName: "",
   adjusterEmail: "",
   adjusterPhone: "",
+  adjusterScopeNotes: "",
+  itemsBelievedMissing: "",
+  priorSupplementHistory: "",
 };
 
 const emptyMeasurementData: MeasurementData = {

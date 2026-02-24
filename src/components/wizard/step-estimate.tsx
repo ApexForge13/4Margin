@@ -214,6 +214,74 @@ export function StepEstimate() {
           </p>
         </div>
 
+        <Separator />
+
+        {/* Claim Overview — narrative context */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-base font-semibold">Claim Overview</h3>
+            <p className="text-sm text-muted-foreground">
+              Help us understand the full picture so we can build stronger supplement justifications.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adjusterScopeNotes">
+              What did the adjuster&apos;s estimate include?
+            </Label>
+            <Textarea
+              id="adjusterScopeNotes"
+              placeholder="e.g. &quot;Adjuster scoped 22 squares of 3-tab shingles, ridge cap, and 1 layer tear-off. Did not include starter strip, drip edge, or ice &amp; water shield at eaves and valleys.&quot;"
+              rows={3}
+              value={claimDetails.adjusterScopeNotes}
+              onChange={(e) =>
+                updateField("adjusterScopeNotes", e.target.value)
+              }
+              disabled={isParsing}
+              className="resize-y"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="itemsBelievedMissing">
+              What items do you believe are missing or underpaid?
+            </Label>
+            <Textarea
+              id="itemsBelievedMissing"
+              placeholder="e.g. &quot;Missing: starter strip (RFG STRSA), drip edge (RFG DRPEG), ice &amp; water at valleys. Underpaid: waste % should be 22% not 10% — hip/valley roof with 6 valleys and 4 dormers.&quot;"
+              rows={3}
+              value={claimDetails.itemsBelievedMissing}
+              onChange={(e) =>
+                updateField("itemsBelievedMissing", e.target.value)
+              }
+              disabled={isParsing}
+              className="resize-y"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="priorSupplementHistory">
+              Previous supplement history
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                Optional
+              </span>
+            </Label>
+            <Textarea
+              id="priorSupplementHistory"
+              placeholder="e.g. &quot;First supplement submitted 1/15 for O&amp;P — denied. Second supplement for waste % submitted 2/1 — pending response. No prior communication about missing line items.&quot;"
+              rows={3}
+              value={claimDetails.priorSupplementHistory}
+              onChange={(e) =>
+                updateField("priorSupplementHistory", e.target.value)
+              }
+              disabled={isParsing}
+              className="resize-y"
+            />
+          </div>
+        </div>
+
+        <Separator />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="carrierName">Insurance carrier</Label>

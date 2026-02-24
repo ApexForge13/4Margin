@@ -120,6 +120,9 @@ export async function createClaimAndSupplement(
         ? input.measurementData.damageTypes
         : null,
       description: input.claimDetails.claimDescription || null,
+      adjuster_scope_notes: input.claimDetails.adjusterScopeNotes || null,
+      items_believed_missing: input.claimDetails.itemsBelievedMissing || null,
+      prior_supplement_history: input.claimDetails.priorSupplementHistory || null,
       notes: input.claimName,
       created_by: user.id,
     })

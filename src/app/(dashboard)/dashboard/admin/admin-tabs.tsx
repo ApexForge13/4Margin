@@ -1,6 +1,9 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OverviewTab, type PlatformStats } from "./overview-tab";
+import { ClaimsTable, type AdminClaim } from "./claims-table";
+import { UsersTable, type AdminUser } from "./users-table";
 import { CodesTable } from "./codes-table";
 import { CarriersTable } from "./carriers-table";
 import { TeamTable } from "./team-table";
@@ -41,12 +44,29 @@ interface AdminTabsProps {
   codes: XactimateCode[];
   carriers: Carrier[];
   team: TeamMember[];
+  stats: PlatformStats;
+  allClaims: AdminClaim[];
+  allUsers: AdminUser[];
 }
 
-export function AdminTabs({ codes, carriers, team }: AdminTabsProps) {
+export function AdminTabs({
+  codes,
+  carriers,
+  team,
+  stats,
+  allClaims,
+  allUsers,
+}: AdminTabsProps) {
   return (
-    <Tabs defaultValue="codes" className="space-y-4">
-      <TabsList>
+    <Tabs defaultValue="overview" className="space-y-4">
+      <TabsList className="flex-wrap h-auto gap-1">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="claims">
+          Claims ({allClaims.length})
+        </TabsTrigger>
+        <TabsTrigger value="users">
+          Users ({allUsers.length})
+        </TabsTrigger>
         <TabsTrigger value="codes">
           Xactimate Codes ({codes.length})
         </TabsTrigger>
@@ -57,6 +77,18 @@ export function AdminTabs({ codes, carriers, team }: AdminTabsProps) {
           Team ({team.length})
         </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="overview">
+        <OverviewTab stats={stats} />
+      </TabsContent>
+
+      <TabsContent value="claims">
+        <ClaimsTable claims={allClaims} />
+      </TabsContent>
+
+      <TabsContent value="users">
+        <UsersTable users={allUsers} />
+      </TabsContent>
 
       <TabsContent value="codes">
         <CodesTable codes={codes} />

@@ -24,6 +24,10 @@ export interface ClaimDetails {
   adjusterName: string;
   adjusterEmail: string;
   adjusterPhone: string;
+  // Claim overview — narrative context
+  adjusterScopeNotes: string;
+  itemsBelievedMissing: string;
+  priorSupplementHistory: string;
 }
 
 // --- Measurement data (Step 3) — EagleView format ---
