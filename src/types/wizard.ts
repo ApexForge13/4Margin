@@ -43,6 +43,8 @@ export interface MeasurementData {
   measuredSquares: string;
   wastePercent: string;
   suggestedSquares: string;
+  steepSquares: string;
+  highStorySquares: string;
   totalRoofArea: string;                  // Total sq ft (all pitches)
   totalRoofAreaLessPenetrations: string;  // Total sq ft minus penetrations
 

@@ -183,6 +183,8 @@ export const measurementDataSchema = z.object({
     )
     .optional(),
   suggestedSquares: numericString,
+  steepSquares: numericString,
+  highStorySquares: numericString,
   totalRoofArea: numericString,
   totalRoofAreaLessPenetrations: numericString,
   ftRidges: numericString,

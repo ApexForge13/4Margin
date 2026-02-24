@@ -34,6 +34,8 @@ const emptyMeasurementData: MeasurementData = {
   measuredSquares: "",
   wastePercent: "",
   suggestedSquares: "",
+  steepSquares: "",
+  highStorySquares: "",
   totalRoofArea: "",
   totalRoofAreaLessPenetrations: "",
   ftRidges: "",
@@ -316,7 +318,12 @@ export function WizardProvider({ children }: { children: ReactNode }) {
           state.estimateFiles.length > 0 &&
           state.claimDetails.claimNumber.trim() !== "" &&
           state.claimDetails.propertyAddress.trim() !== "" &&
-          state.claimDetails.claimDescription.trim() !== ""
+          state.claimDetails.claimDescription.trim() !== "" &&
+          state.claimDetails.carrierName.trim() !== "" &&
+          state.claimDetails.dateOfLoss.trim() !== "" &&
+          state.claimDetails.propertyCity.trim() !== "" &&
+          state.claimDetails.propertyState.trim() !== "" &&
+          state.claimDetails.propertyZip.trim() !== ""
         );
       case 2:
         return true; // photos are optional

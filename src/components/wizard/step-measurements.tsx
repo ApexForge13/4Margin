@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useWizard } from "./wizard-context";
 import { parseMeasurementPdf } from "@/lib/parsers/stub";
 import { FileDropzone } from "@/components/upload/file-dropzone";
@@ -54,6 +54,16 @@ export function StepMeasurements() {
   const updateField = (field: string, value: string) => {
     dispatch({ type: "UPDATE_MEASUREMENT_DATA", data: { [field]: value } });
   };
+
+  // Auto-calculate suggested squares with waste
+  const calculatedSuggestedSquares = useMemo(() => {
+    const sq = parseFloat(measurementData.measuredSquares);
+    const wp = parseFloat(measurementData.wastePercent);
+    if (!isNaN(sq) && !isNaN(wp) && sq > 0) {
+      return (sq * (1 + wp / 100)).toFixed(2);
+    }
+    return "";
+  }, [measurementData.measuredSquares, measurementData.wastePercent]);
 
   return (
     <div className="space-y-8">
@@ -179,32 +189,7 @@ export function StepMeasurements() {
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="totalRoofArea">Total Roof Area (sq ft)</Label>
-              <Input
-                id="totalRoofArea"
-                type="number"
-                step="0.01"
-                placeholder="e.g. 3169"
-                value={measurementData.totalRoofArea}
-                onChange={(e) => updateField("totalRoofArea", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
-              <p className="text-xs text-muted-foreground">All pitches</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="totalRoofAreaLessPenetrations">Less Penetrations (sq ft)</Label>
-              <Input
-                id="totalRoofAreaLessPenetrations"
-                type="number"
-                step="0.01"
-                placeholder="e.g. 3168"
-                value={measurementData.totalRoofAreaLessPenetrations}
-                onChange={(e) => updateField("totalRoofAreaLessPenetrations", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="measuredSquares">Measured Squares</Label>
+              <Label htmlFor="measuredSquares">Squares</Label>
               <Input
                 id="measuredSquares"
                 type="number"
@@ -226,20 +211,49 @@ export function StepMeasurements() {
                 onChange={(e) => updateField("wastePercent", e.target.value)}
                 disabled={isParsing || isConfirmed}
               />
-              <p className="text-xs text-muted-foreground">Suggested by EagleView</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="suggestedSquares">Suggested Squares (w/ waste)</Label>
+              <Label htmlFor="suggestedSquares">Suggested Squares w/ Waste</Label>
               <Input
                 id="suggestedSquares"
                 type="number"
-                step="0.33"
-                placeholder="e.g. 33.00"
-                value={measurementData.suggestedSquares}
+                step="0.01"
+                placeholder="auto-calculated"
+                value={calculatedSuggestedSquares || measurementData.suggestedSquares}
                 onChange={(e) => updateField("suggestedSquares", e.target.value)}
                 disabled={isParsing || isConfirmed}
               />
-              <p className="text-xs text-muted-foreground">Increments of 0, .33, .66</p>
+              <p className="text-xs text-muted-foreground">
+                {calculatedSuggestedSquares
+                  ? "Auto-calculated from squares + waste %"
+                  : "Enter squares & waste % to auto-calculate"}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="steepSquares">Steep Squares</Label>
+              <Input
+                id="steepSquares"
+                type="number"
+                step="0.01"
+                placeholder="e.g. 12.00"
+                value={measurementData.steepSquares}
+                onChange={(e) => updateField("steepSquares", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
+              <p className="text-xs text-muted-foreground">Pitch 7/12 or steeper</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="highStorySquares">High Story Squares</Label>
+              <Input
+                id="highStorySquares"
+                type="number"
+                step="0.01"
+                placeholder="e.g. 8.00"
+                value={measurementData.highStorySquares}
+                onChange={(e) => updateField("highStorySquares", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
+              <p className="text-xs text-muted-foreground">2+ stories above ground</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="structureComplexity">Structure Complexity</Label>
@@ -257,6 +271,36 @@ export function StepMeasurements() {
               </select>
             </div>
           </div>
+
+          {/* Additional area fields — shown if populated from EagleView parsing */}
+          {(measurementData.totalRoofArea || measurementData.totalRoofAreaLessPenetrations) && (
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="totalRoofArea">Total Roof Area (sq ft)</Label>
+                <Input
+                  id="totalRoofArea"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 3169"
+                  value={measurementData.totalRoofArea}
+                  onChange={(e) => updateField("totalRoofArea", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalRoofAreaLessPenetrations">Less Penetrations (sq ft)</Label>
+                <Input
+                  id="totalRoofAreaLessPenetrations"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 3168"
+                  value={measurementData.totalRoofAreaLessPenetrations}
+                  onChange={(e) => updateField("totalRoofAreaLessPenetrations", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Pitch Breakdown (from EagleView) ── */}
@@ -309,8 +353,8 @@ export function StepMeasurements() {
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="ftRidges">Ridges (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftRidges">Ridges</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftRidges"
                   type="number"
@@ -322,20 +366,16 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numRidges}
                   onChange={(e) => updateField("numRidges", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numRidges && (
-                <p className="text-xs text-muted-foreground">{measurementData.numRidges} segments</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftHips">Hips (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftHips">Hips</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftHips"
                   type="number"
@@ -347,20 +387,16 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numHips}
                   onChange={(e) => updateField("numHips", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numHips && (
-                <p className="text-xs text-muted-foreground">{measurementData.numHips} segments</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftValleys">Valleys (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftValleys">Valleys</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftValleys"
                   type="number"
@@ -372,20 +408,16 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numValleys}
                   onChange={(e) => updateField("numValleys", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numValleys && (
-                <p className="text-xs text-muted-foreground">{measurementData.numValleys} segments</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftRakes">Rakes (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftRakes">Rakes</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftRakes"
                   type="number"
@@ -397,20 +429,16 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numRakes}
                   onChange={(e) => updateField("numRakes", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numRakes && (
-                <p className="text-xs text-muted-foreground">{measurementData.numRakes} segments</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftEaves">Eaves / Starter (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftEaves">Eaves / Starter</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftEaves"
                   type="number"
@@ -422,16 +450,12 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numEaves}
                   onChange={(e) => updateField("numEaves", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numEaves && (
-                <p className="text-xs text-muted-foreground">{measurementData.numEaves} segments</p>
-              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="ftDripEdge">Drip Edge (Eaves + Rakes)</Label>
@@ -439,27 +463,27 @@ export function StepMeasurements() {
                 id="ftDripEdge"
                 type="number"
                 step="0.01"
-                placeholder="# of LF"
+                placeholder="LF"
                 value={measurementData.ftDripEdge}
                 onChange={(e) => updateField("ftDripEdge", e.target.value)}
                 disabled={isParsing || isConfirmed}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftParapet">Parapet Walls (LF)</Label>
+              <Label htmlFor="ftParapet">Parapet Walls</Label>
               <Input
                 id="ftParapet"
                 type="number"
                 step="0.01"
-                placeholder="# of LF"
+                placeholder="LF"
                 value={measurementData.ftParapet}
                 onChange={(e) => updateField("ftParapet", e.target.value)}
                 disabled={isParsing || isConfirmed}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftFlashing">Flashing (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftFlashing">Flashing</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftFlashing"
                   type="number"
@@ -471,20 +495,16 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numFlashingLengths}
                   onChange={(e) => updateField("numFlashingLengths", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numFlashingLengths && (
-                <p className="text-xs text-muted-foreground">{measurementData.numFlashingLengths} lengths</p>
-              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftStepFlashing">Step Flashing (LF)</Label>
-              <div className="flex gap-2">
+              <Label htmlFor="ftStepFlashing">Step Flashing</Label>
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   id="ftStepFlashing"
                   type="number"
@@ -496,16 +516,12 @@ export function StepMeasurements() {
                 />
                 <Input
                   type="number"
-                  className="w-20 shrink-0"
                   placeholder="#"
                   value={measurementData.numStepFlashingLengths}
                   onChange={(e) => updateField("numStepFlashingLengths", e.target.value)}
                   disabled={isParsing || isConfirmed}
                 />
               </div>
-              {measurementData.numStepFlashingLengths && (
-                <p className="text-xs text-muted-foreground">{measurementData.numStepFlashingLengths} lengths</p>
-              )}
             </div>
           </div>
 

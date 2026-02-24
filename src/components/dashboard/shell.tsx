@@ -121,7 +121,9 @@ export function DashboardShell({
     const supabase = createClient();
     await supabase.auth.signOut();
     toast.success("Signed out");
-    router.push("/login");
+    // Use full page reload to ensure auth state is fully cleared
+    // before the proxy redirects to login
+    window.location.href = "/login";
   };
 
   const initials = user.full_name

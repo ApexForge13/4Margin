@@ -264,7 +264,7 @@ export function StepEstimate() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="carrierName">Insurance carrier</Label>
+            <Label htmlFor="carrierName">Insurance carrier *</Label>
             <Input
               id="carrierName"
               placeholder="e.g. State Farm, Allstate"
@@ -274,7 +274,7 @@ export function StepEstimate() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="dateOfLoss">Date of loss</Label>
+            <Label htmlFor="dateOfLoss">Date of loss *</Label>
             <Input
               id="dateOfLoss"
               type="date"
@@ -300,7 +300,7 @@ export function StepEstimate() {
 
         <div className="grid grid-cols-3 gap-3">
           <div className="space-y-2">
-            <Label htmlFor="propertyCity">City</Label>
+            <Label htmlFor="propertyCity">City *</Label>
             <Input
               id="propertyCity"
               placeholder="Dallas"
@@ -310,7 +310,7 @@ export function StepEstimate() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="propertyState">State</Label>
+            <Label htmlFor="propertyState">State *</Label>
             <Input
               id="propertyState"
               placeholder="TX"
@@ -323,7 +323,7 @@ export function StepEstimate() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="propertyZip">ZIP</Label>
+            <Label htmlFor="propertyZip">ZIP *</Label>
             <Input
               id="propertyZip"
               placeholder="75201"

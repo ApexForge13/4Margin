@@ -154,6 +154,12 @@ export async function createClaimAndSupplement(
         ? input.measurementData.pitchBreakdown
         : null,
       structure_complexity: input.measurementData.structureComplexity || null,
+      steep_squares: input.measurementData.steepSquares
+        ? parseFloat(input.measurementData.steepSquares)
+        : null,
+      high_story_squares: input.measurementData.highStorySquares
+        ? parseFloat(input.measurementData.highStorySquares)
+        : null,
       damage_types: (input.measurementData.damageTypes ?? []).length > 0
         ? input.measurementData.damageTypes
         : null,
