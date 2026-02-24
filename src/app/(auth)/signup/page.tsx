@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -27,25 +27,22 @@ export default function SignupPage() {
 
 function SignupForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const redirectTo = searchParams.get("redirect");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const callbackUrl = redirectTo
-      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
-      : `${window.location.origin}/auth/callback`;
-
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signUp({
       email,
+      password,
       options: {
-        emailRedirectTo: callbackUrl,
         data: {
           full_name: fullName,
         },
@@ -55,50 +52,14 @@ function SignupForm() {
     setLoading(false);
 
     if (error) {
-      toast.error(`Magic link error: ${error.message}`);
-      console.error("Signup OTP error:", error);
+      toast.error(error.message);
+      console.error("Signup error:", error);
       return;
     }
 
-    setSent(true);
-    toast.success("Magic link sent! Check your email.");
+    toast.success("Account created!");
+    router.push(redirectTo || "/onboarding");
   };
-
-  if (sent) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <svg
-                className="h-6 w-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <CardTitle className="text-2xl">Check your email</CardTitle>
-            <CardDescription>
-              We sent a magic link to <strong>{email}</strong>. Click the link to
-              complete your signup.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center">
-            <Button variant="ghost" onClick={() => setSent(false)}>
-              Use a different email
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -134,8 +95,20 @@ function SignupForm() {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Sending magic link..." : "Create account"}
+              {loading ? "Creating account..." : "Create account"}
             </Button>
           </CardContent>
         </form>
