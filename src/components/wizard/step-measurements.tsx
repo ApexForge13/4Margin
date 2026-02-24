@@ -288,17 +288,27 @@ export function StepMeasurements() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="highStorySquares">High Story Squares</Label>
+              <Label htmlFor="highStorySquares" className="flex items-center gap-2">
+                High Story Squares
+                {!measurementData.highStorySquares && !isConfirmed && (
+                  <span className="text-xs font-medium text-amber-600">Manual entry</span>
+                )}
+              </Label>
               <Input
                 id="highStorySquares"
                 type="number"
                 step="0.01"
-                placeholder="e.g. 8.00"
+                placeholder="Manual entry required"
                 value={measurementData.highStorySquares}
                 onChange={(e) => updateField("highStorySquares", e.target.value)}
                 disabled={isParsing || isConfirmed}
+                className={!measurementData.highStorySquares && !isConfirmed ? "border-amber-300 bg-amber-50/50 focus-visible:ring-amber-400" : ""}
               />
-              <p className="text-xs text-muted-foreground">2+ stories above ground</p>
+              <p className="text-xs text-muted-foreground">
+                {!measurementData.highStorySquares
+                  ? "Not available from EagleView — enter manually if applicable"
+                  : "2+ stories above ground"}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="structureComplexity">Structure Complexity</Label>
