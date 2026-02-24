@@ -28,6 +28,7 @@ export default async function DashboardPage() {
       status,
       adjuster_total,
       supplement_total,
+      approved_amount,
       created_at,
       claims (
         id,
@@ -54,6 +55,7 @@ export default async function DashboardPage() {
     status: string;
     adjuster_total: number | null;
     supplement_total: number | null;
+    approved_amount: number | null;
     created_at: string;
     claims: {
       id: string;

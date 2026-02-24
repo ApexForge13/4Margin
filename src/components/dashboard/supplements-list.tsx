@@ -35,8 +35,16 @@ interface SupplementRow {
   status: string;
   adjuster_total: number | null;
   supplement_total: number | null;
+  approved_amount: number | null;
   created_at: string;
   claims: ClaimData;
+}
+
+function formatCurrency(value: number): string {
+  return `$${value.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 interface SupplementsListProps {
@@ -140,9 +148,10 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
       )}
 
       <div className="rounded-lg border">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b bg-muted/50 px-4 py-3 text-sm font-medium text-muted-foreground">
           <span>Claim</span>
           <span>Status</span>
+          <span className="text-right">Amount</span>
           <span className="text-right">Created</span>
           <span></span>
         </div>
@@ -182,7 +191,7 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
             return (
               <div
                 key={s.id}
-                className={`grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b px-4 py-3 last:border-b-0 ${
+                className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b px-4 py-3 last:border-b-0 ${
                   isArchived ? "opacity-50" : isFinished ? "opacity-60" : ""
                 }`}
               >
@@ -210,6 +219,20 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
                 >
                   {statusInfo.label}
                 </Badge>
+                <div className="text-right whitespace-nowrap">
+                  {s.supplement_total != null ? (
+                    <span className="text-sm font-semibold">
+                      {formatCurrency(s.supplement_total)}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                  {s.status === "partially_approved" && s.approved_amount != null && (
+                    <p className="text-xs text-green-600 font-medium">
+                      {formatCurrency(s.approved_amount)} approved
+                    </p>
+                  )}
+                </div>
                 <span className="text-sm text-muted-foreground whitespace-nowrap">
                   {createdDate}
                 </span>

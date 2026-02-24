@@ -114,7 +114,7 @@ export default async function SupplementDetailPage({
 
       {/* Back nav */}
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/dashboard/supplements">
+        <Link href="/dashboard">
           <svg
             className="mr-2 h-4 w-4"
             fill="none"
@@ -128,7 +128,7 @@ export default async function SupplementDetailPage({
               d="M15 19l-7-7 7-7"
             />
           </svg>
-          Back to Supplements
+          Back to Dashboard
         </Link>
       </Button>
 
@@ -178,7 +178,7 @@ export default async function SupplementDetailPage({
       {/* ── GENERATED CONTENT ───────────────────────────────────── */}
 
       {/* Supplement Line Items — interactive review with checkboxes */}
-      {lineItems && lineItems.length > 0 && (
+      {lineItems && lineItems.length > 0 ? (
         <LineItemsReview
           supplementId={id}
           items={lineItems}
@@ -188,6 +188,30 @@ export default async function SupplementDetailPage({
           isFirstSupplement={isFirstSupplement}
           supplementTotal={supplement.supplement_total ?? null}
         />
+      ) : status !== "generating" && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="flex items-center gap-3 py-6">
+            <svg
+              className="h-5 w-5 text-amber-600 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <p className="font-medium text-amber-900">No line items detected</p>
+              <p className="text-sm text-amber-700">
+                The AI analysis did not find missing items for this claim. This may happen if the adjuster&apos;s estimate already covers all applicable line items.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Weather Verification Report */}
