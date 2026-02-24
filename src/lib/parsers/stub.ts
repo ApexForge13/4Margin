@@ -55,6 +55,7 @@ export async function parseMeasurementPdf(
   }
 
   const data = await res.json();
+  console.log("[parseMeasurementPdf] API response:", data);
 
   const { error: _error, ...parsed } = data;
   return parsed as Partial<MeasurementData>;

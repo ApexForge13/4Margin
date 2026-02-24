@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
 
+    console.log("[parse/measurement] PDF size:", (base64.length * 3 / 4 / 1024).toFixed(0), "KB");
     const parsed = await parseMeasurementWithClaude(base64);
+    console.log("[parse/measurement] Claude response:", JSON.stringify(parsed, null, 2));
 
     return NextResponse.json(parsed);
   } catch (err) {

@@ -148,7 +148,7 @@ export async function parseMeasurementWithClaude(
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         {
           role: "user",
@@ -170,11 +170,16 @@ export async function parseMeasurementWithClaude(
       ],
     });
 
+    console.log("[parseMeasurement] stop_reason:", response.stop_reason, "usage:", JSON.stringify(response.usage));
+
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       throw new Error("No text response from Claude");
     }
 
+    console.log("[parseMeasurement] raw text:", textBlock.text);
+
     return JSON.parse(textBlock.text);
   }, { label: "parseMeasurement" });
 }
+
