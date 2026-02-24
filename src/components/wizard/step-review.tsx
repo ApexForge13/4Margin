@@ -177,9 +177,16 @@ export function StepReview() {
           const stripeData = await stripeRes.json();
 
           if (stripeRes.ok && stripeData.url) {
-            toast.success("Redirecting to checkout...");
+            // Check if first supplement is free (URL contains free=true)
+            if (stripeData.url.includes("free=true")) {
+              toast.success("Your first supplement is free! Redirecting...");
+            } else {
+              toast.success("Redirecting to checkout...");
+            }
             window.location.href = stripeData.url;
             return;
+          } else {
+            console.error("Stripe checkout response error:", stripeData);
           }
         } catch (stripeErr) {
           console.error("Stripe redirect failed, falling back to detail page:", stripeErr);

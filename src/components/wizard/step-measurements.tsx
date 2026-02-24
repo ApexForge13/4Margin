@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useWizard } from "./wizard-context";
 import { parseMeasurementPdf } from "@/lib/parsers/stub";
 import { FileDropzone } from "@/components/upload/file-dropzone";
@@ -55,22 +55,56 @@ export function StepMeasurements() {
     dispatch({ type: "UPDATE_MEASUREMENT_DATA", data: { [field]: value } });
   };
 
-  // Auto-calculate suggested squares with waste — rounded UP to nearest .33
-  // Roofing squares ship in 1/3 increments: .00, .33, .66
+  // Round any number to nearest 1/3 square increment (.00, .33, .66)
+  // Roofing shingles ship in bundles of 1/3 square
+  const roundToThirds = useCallback((value: number): string => {
+    const thirds = Math.round(value * 3);
+    const whole = Math.floor(thirds / 3);
+    const remainder = thirds % 3;
+    if (remainder === 0) return `${whole}`;
+    if (remainder === 1) return `${whole}.33`;
+    return `${whole}.66`;
+  }, []);
+
+  // Auto-calculate suggested squares with waste — rounded to nearest .33
   const calculatedSuggestedSquares = useMemo(() => {
     const sq = parseFloat(measurementData.measuredSquares);
     const wp = parseFloat(measurementData.wastePercent);
     if (!isNaN(sq) && !isNaN(wp) && sq > 0) {
-      const raw = sq * (1 + wp / 100);
-      const thirds = Math.ceil(raw * 3);
-      const whole = Math.floor(thirds / 3);
-      const remainder = thirds % 3;
-      if (remainder === 0) return `${whole}`;
-      if (remainder === 1) return `${whole}.33`;
-      return `${whole}.66`;
+      return roundToThirds(sq * (1 + wp / 100));
     }
     return "";
-  }, [measurementData.measuredSquares, measurementData.wastePercent]);
+  }, [measurementData.measuredSquares, measurementData.wastePercent, roundToThirds]);
+
+  // Auto-calculate steep squares from pitch breakdown (pitches >= 7/12)
+  // Rounded to nearest whole number
+  const calculatedSteepSquares = useMemo(() => {
+    if (measurementData.pitchBreakdown.length === 0) return "";
+    const steepPitches = measurementData.pitchBreakdown.filter((pb) => {
+      const rise = parseInt(pb.pitch.split("/")[0]);
+      return rise >= 7;
+    });
+    if (steepPitches.length === 0) return "";
+    const totalSteepSqFt = steepPitches.reduce(
+      (sum, pb) => sum + (parseFloat(pb.areaSqFt) || 0),
+      0
+    );
+    const steepSq = totalSteepSqFt / 100; // convert sq ft to squares
+    return `${Math.round(steepSq)}`;
+  }, [measurementData.pitchBreakdown]);
+
+  // Sync calculated values back to state so they get saved to the DB
+  useEffect(() => {
+    if (calculatedSuggestedSquares && calculatedSuggestedSquares !== measurementData.suggestedSquares) {
+      dispatch({ type: "UPDATE_MEASUREMENT_DATA", data: { suggestedSquares: calculatedSuggestedSquares } });
+    }
+  }, [calculatedSuggestedSquares, measurementData.suggestedSquares, dispatch]);
+
+  useEffect(() => {
+    if (calculatedSteepSquares && calculatedSteepSquares !== measurementData.steepSquares) {
+      dispatch({ type: "UPDATE_MEASUREMENT_DATA", data: { steepSquares: calculatedSteepSquares } });
+    }
+  }, [calculatedSteepSquares, measurementData.steepSquares, dispatch]);
 
   return (
     <div className="space-y-8">
@@ -240,14 +274,18 @@ export function StepMeasurements() {
               <Label htmlFor="steepSquares">Steep Squares</Label>
               <Input
                 id="steepSquares"
-                type="number"
-                step="0.01"
-                placeholder="e.g. 12.00"
-                value={measurementData.steepSquares}
+                type="text"
+                inputMode="decimal"
+                placeholder="auto-calculated"
+                value={calculatedSteepSquares || measurementData.steepSquares}
                 onChange={(e) => updateField("steepSquares", e.target.value)}
                 disabled={isParsing || isConfirmed}
               />
-              <p className="text-xs text-muted-foreground">Pitch 7/12 or steeper</p>
+              <p className="text-xs text-muted-foreground">
+                {calculatedSteepSquares
+                  ? "Auto-calculated from pitch breakdown (7/12+)"
+                  : "Pitch 7/12 or steeper"}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="highStorySquares">High Story Squares</Label>

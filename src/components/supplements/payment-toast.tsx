@@ -10,11 +10,17 @@ export function PaymentToast() {
 
   useEffect(() => {
     const payment = searchParams.get("payment");
+    const isFree = searchParams.get("free") === "true";
     if (payment === "success") {
-      toast.success("Payment successful! You can now download your supplement report.");
+      if (isFree) {
+        toast.success("Your first supplement is free! Your report is being generated now.");
+      } else {
+        toast.success("Payment successful! You can now download your supplement report.");
+      }
       // Clean URL params
       const url = new URL(window.location.href);
       url.searchParams.delete("payment");
+      url.searchParams.delete("free");
       router.replace(url.pathname, { scroll: false });
     } else if (payment === "cancelled") {
       toast.info("Payment cancelled. You can try again anytime.");

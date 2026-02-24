@@ -218,8 +218,9 @@ function buildMeasurementsContext(m: AnalysisInput["measurements"]): string {
       return rise >= 7;
     });
     if (steepPitches.length > 0) {
-      const steepArea = steepPitches.reduce((sum, pb) => sum + pb.areaSqFt, 0);
-      const steepPct = steepPitches.reduce((sum, pb) => sum + pb.percentOfRoof, 0);
+      // NOTE: pitchBreakdown values may be strings from JSON storage — always coerce to Number
+      const steepArea = steepPitches.reduce((sum, pb) => sum + Number(pb.areaSqFt), 0);
+      const steepPct = steepPitches.reduce((sum, pb) => sum + Number(pb.percentOfRoof), 0);
       lines.push(`  ** STEEP PITCH AREA (7/12+): ${steepArea.toFixed(0)} sq ft (${steepPct.toFixed(1)}% of roof) — steep pitch labor charges likely apply **`);
     }
   }
