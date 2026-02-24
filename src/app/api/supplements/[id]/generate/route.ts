@@ -14,6 +14,10 @@ import { runSupplementPipeline } from "@/lib/ai/pipeline";
 import { enqueuePipelineJob, isQueueEnabled } from "@/lib/queue/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
+// Pipeline includes multiple Claude API calls — needs extended timeout
+// Vercel Hobby: max 60s, Pro: max 300s
+export const maxDuration = 120;
+
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

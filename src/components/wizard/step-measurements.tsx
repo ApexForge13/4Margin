@@ -55,12 +55,19 @@ export function StepMeasurements() {
     dispatch({ type: "UPDATE_MEASUREMENT_DATA", data: { [field]: value } });
   };
 
-  // Auto-calculate suggested squares with waste
+  // Auto-calculate suggested squares with waste — rounded UP to nearest .33
+  // Roofing squares ship in 1/3 increments: .00, .33, .66
   const calculatedSuggestedSquares = useMemo(() => {
     const sq = parseFloat(measurementData.measuredSquares);
     const wp = parseFloat(measurementData.wastePercent);
     if (!isNaN(sq) && !isNaN(wp) && sq > 0) {
-      return (sq * (1 + wp / 100)).toFixed(2);
+      const raw = sq * (1 + wp / 100);
+      const thirds = Math.ceil(raw * 3);
+      const whole = Math.floor(thirds / 3);
+      const remainder = thirds % 3;
+      if (remainder === 0) return `${whole}`;
+      if (remainder === 1) return `${whole}.33`;
+      return `${whole}.66`;
     }
     return "";
   }, [measurementData.measuredSquares, measurementData.wastePercent]);
@@ -216,8 +223,8 @@ export function StepMeasurements() {
               <Label htmlFor="suggestedSquares">Suggested Squares w/ Waste</Label>
               <Input
                 id="suggestedSquares"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 placeholder="auto-calculated"
                 value={calculatedSuggestedSquares || measurementData.suggestedSquares}
                 onChange={(e) => updateField("suggestedSquares", e.target.value)}
@@ -225,7 +232,7 @@ export function StepMeasurements() {
               />
               <p className="text-xs text-muted-foreground">
                 {calculatedSuggestedSquares
-                  ? "Auto-calculated from squares + waste %"
+                  ? "Rounded up to nearest .33 (squares + waste %)"
                   : "Enter squares & waste % to auto-calculate"}
               </p>
             </div>
@@ -571,17 +578,17 @@ export function StepMeasurements() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="accessories">Accessories</Label>
+              <Label htmlFor="accessories">Roof Accessories</Label>
               <Textarea
                 id="accessories"
-                placeholder="e.g. Skylights (2), Pipe boots (4), Chimney, Satellite dish"
+                placeholder="e.g. 2 pipe jacks, 1 skylight, 1 HVAC, 1 satellite, 15 solar panels"
                 value={measurementData.accessories}
                 onChange={(e) => updateField("accessories", e.target.value)}
                 disabled={isParsing || isConfirmed}
                 rows={2}
               />
               <p className="text-xs text-muted-foreground">
-                List roof accessories, penetrations, and features
+                Pipe jacks, skylights, HVAC units, satellite dishes, solar panels, roof vents, chimneys, etc.
               </p>
             </div>
           </div>

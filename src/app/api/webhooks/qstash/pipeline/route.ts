@@ -12,6 +12,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { Receiver } from "@upstash/qstash";
 import { runSupplementPipeline } from "@/lib/ai/pipeline";
 
+// Pipeline includes multiple Claude API calls — needs extended timeout
+export const maxDuration = 120;
+
 const receiver = process.env.QSTASH_CURRENT_SIGNING_KEY &&
   process.env.QSTASH_NEXT_SIGNING_KEY
   ? new Receiver({

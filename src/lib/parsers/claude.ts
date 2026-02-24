@@ -126,7 +126,7 @@ Return ONLY a JSON object with these fields (use empty string "" for anything yo
     { "pitch": "e.g. 7/12", "areaSqFt": "area at that pitch in sq ft", "percentOfRoof": "percent of total roof" }
   ],
   "structureComplexity": "the structure complexity rating: 'Simple', 'Normal', or 'Complex'",
-  "accessories": "list of roof accessories/penetrations (e.g. 'Skylights (2), Pipe boots (4), Chimney')"
+  "accessories": "list of roof accessories that require detach & reset — pipe jacks/boots, skylights, HVAC units, satellite dishes, solar panels, roof vents, chimneys (NOT the penetration areas/perimeters — those are separate fields). Format: '2 pipe jacks, 1 skylight, 1 satellite, 15 solar panels'"
 }
 
 CRITICAL — How to find each value in an EagleView report:
