@@ -17,6 +17,12 @@ const getClient = () => {
 
 /* ─────── Types ─────── */
 
+export interface PitchBreakdownInput {
+  pitch: string;
+  areaSqFt: number;
+  percentOfRoof: number;
+}
+
 export interface AnalysisInput {
   supplementId: string;
   estimatePdfBase64: string;
@@ -28,7 +34,11 @@ export interface AnalysisInput {
     measuredSquares: number | null;
     wastePercent: number | null;
     suggestedSquares: number | null;
+    totalRoofArea: number | null;
+    totalRoofAreaLessPenetrations: number | null;
     pitch: string | null;
+    pitchBreakdown: PitchBreakdownInput[];
+    structureComplexity: string | null;
     ftRidges: number | null;
     ftHips: number | null;
     ftValleys: number | null;
@@ -38,6 +48,13 @@ export interface AnalysisInput {
     ftParapet: number | null;
     ftFlashing: number | null;
     ftStepFlashing: number | null;
+    numRidges: number | null;
+    numHips: number | null;
+    numValleys: number | null;
+    numRakes: number | null;
+    numEaves: number | null;
+    totalPenetrationsArea: number | null;
+    totalPenetrationsPerimeter: number | null;
     accessories: string | null;
   };
 }
@@ -174,19 +191,49 @@ export async function detectMissingItems(
 
 function buildMeasurementsContext(m: AnalysisInput["measurements"]): string {
   const lines: string[] = [];
+
+  // Area summary
+  if (m.totalRoofArea) lines.push(`Total Roof Area (all pitches): ${m.totalRoofArea} sq ft`);
+  if (m.totalRoofAreaLessPenetrations) lines.push(`Total Roof Area (less penetrations): ${m.totalRoofAreaLessPenetrations} sq ft`);
   if (m.measuredSquares) lines.push(`Measured Squares: ${m.measuredSquares}`);
-  if (m.wastePercent) lines.push(`Waste %: ${m.wastePercent}%`);
+  if (m.wastePercent) lines.push(`EagleView Suggested Waste %: ${m.wastePercent}%`);
   if (m.suggestedSquares) lines.push(`Suggested Squares (w/waste): ${m.suggestedSquares}`);
+  if (m.structureComplexity) lines.push(`Structure Complexity: ${m.structureComplexity}`);
+
+  // Pitch details
   if (m.pitch) lines.push(`Predominant Pitch: ${m.pitch}`);
-  if (m.ftRidges) lines.push(`Ridges: ${m.ftRidges} LF`);
-  if (m.ftHips) lines.push(`Hips: ${m.ftHips} LF`);
-  if (m.ftValleys) lines.push(`Valleys: ${m.ftValleys} LF`);
-  if (m.ftRakes) lines.push(`Rakes: ${m.ftRakes} LF`);
-  if (m.ftEaves) lines.push(`Eaves: ${m.ftEaves} LF`);
+  if (m.pitchBreakdown.length > 0) {
+    lines.push(`\nPitch Breakdown:`);
+    for (const pb of m.pitchBreakdown) {
+      lines.push(`  ${pb.pitch}: ${pb.areaSqFt} sq ft (${pb.percentOfRoof}% of roof)`);
+    }
+    // Flag steep pitches for the AI
+    const steepPitches = m.pitchBreakdown.filter((pb) => {
+      const rise = parseInt(pb.pitch.split("/")[0]);
+      return rise >= 7;
+    });
+    if (steepPitches.length > 0) {
+      const steepArea = steepPitches.reduce((sum, pb) => sum + pb.areaSqFt, 0);
+      const steepPct = steepPitches.reduce((sum, pb) => sum + pb.percentOfRoof, 0);
+      lines.push(`  ** STEEP PITCH AREA (7/12+): ${steepArea.toFixed(0)} sq ft (${steepPct.toFixed(1)}% of roof) — steep pitch labor charges likely apply **`);
+    }
+  }
+
+  // Linear measurements with counts
+  if (m.ftRidges) lines.push(`Ridges: ${m.ftRidges} LF${m.numRidges ? ` (${m.numRidges} segments)` : ""}`);
+  if (m.ftHips) lines.push(`Hips: ${m.ftHips} LF${m.numHips ? ` (${m.numHips} segments)` : ""}`);
+  if (m.ftValleys) lines.push(`Valleys: ${m.ftValleys} LF${m.numValleys ? ` (${m.numValleys} segments)` : ""}`);
+  if (m.ftRakes) lines.push(`Rakes: ${m.ftRakes} LF${m.numRakes ? ` (${m.numRakes} segments)` : ""}`);
+  if (m.ftEaves) lines.push(`Eaves: ${m.ftEaves} LF${m.numEaves ? ` (${m.numEaves} segments)` : ""}`);
   if (m.ftDripEdge) lines.push(`Drip Edge: ${m.ftDripEdge} LF`);
   if (m.ftParapet) lines.push(`Parapet: ${m.ftParapet} LF`);
   if (m.ftFlashing) lines.push(`Flashing: ${m.ftFlashing} LF`);
   if (m.ftStepFlashing) lines.push(`Step Flashing: ${m.ftStepFlashing} LF`);
+
+  // Penetrations
+  if (m.totalPenetrationsArea) lines.push(`Total Penetrations Area: ${m.totalPenetrationsArea} sq ft`);
+  if (m.totalPenetrationsPerimeter) lines.push(`Total Penetrations Perimeter: ${m.totalPenetrationsPerimeter} LF`);
+
   if (m.accessories) lines.push(`Accessories: ${m.accessories}`);
   return lines.length > 0 ? lines.join("\n") : "No measurements provided";
 }

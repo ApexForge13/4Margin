@@ -179,6 +179,31 @@ export function StepMeasurements() {
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
+              <Label htmlFor="totalRoofArea">Total Roof Area (sq ft)</Label>
+              <Input
+                id="totalRoofArea"
+                type="number"
+                step="0.01"
+                placeholder="e.g. 3169"
+                value={measurementData.totalRoofArea}
+                onChange={(e) => updateField("totalRoofArea", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
+              <p className="text-xs text-muted-foreground">All pitches</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="totalRoofAreaLessPenetrations">Less Penetrations (sq ft)</Label>
+              <Input
+                id="totalRoofAreaLessPenetrations"
+                type="number"
+                step="0.01"
+                placeholder="e.g. 3168"
+                value={measurementData.totalRoofAreaLessPenetrations}
+                onChange={(e) => updateField("totalRoofAreaLessPenetrations", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="measuredSquares">Measured Squares</Label>
               <Input
                 id="measuredSquares"
@@ -216,76 +241,197 @@ export function StepMeasurements() {
               />
               <p className="text-xs text-muted-foreground">Increments of 0, .33, .66</p>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="structureComplexity">Structure Complexity</Label>
+              <select
+                id="structureComplexity"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={measurementData.structureComplexity}
+                onChange={(e) => updateField("structureComplexity", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              >
+                <option value="">—</option>
+                <option value="Simple">Simple</option>
+                <option value="Normal">Normal</option>
+                <option value="Complex">Complex</option>
+              </select>
+            </div>
           </div>
         </div>
+
+        {/* ── Pitch Breakdown (from EagleView) ── */}
+        {measurementData.pitchBreakdown.length > 0 && (
+          <>
+            <Separator />
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Pitch Breakdown
+              </h3>
+              <div className="rounded-lg border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-3 py-2 text-left font-medium">Pitch</th>
+                      <th className="px-3 py-2 text-right font-medium">Area (sq ft)</th>
+                      <th className="px-3 py-2 text-right font-medium">% of Roof</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {measurementData.pitchBreakdown.map((pb, i) => {
+                      const rise = parseInt(pb.pitch.split("/")[0]);
+                      const isSteep = rise >= 7;
+                      return (
+                        <tr key={i} className={`border-b last:border-0 ${isSteep ? "bg-amber-50" : ""}`}>
+                          <td className="px-3 py-2 font-mono">
+                            {pb.pitch}
+                            {isSteep && (
+                              <span className="ml-2 text-xs font-medium text-amber-600">STEEP</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right">{pb.areaSqFt}</td>
+                          <td className="px-3 py-2 text-right">{pb.percentOfRoof}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
 
         <Separator />
 
         {/* ── Linear Measurements Section ── */}
         <div>
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Linear Measurements (FT)
+            Lengths, Areas &amp; Counts
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="ftRidges">Ridges</Label>
-              <Input
-                id="ftRidges"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftRidges}
-                onChange={(e) => updateField("ftRidges", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftRidges">Ridges (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftRidges"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftRidges}
+                  onChange={(e) => updateField("ftRidges", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numRidges}
+                  onChange={(e) => updateField("numRidges", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numRidges && (
+                <p className="text-xs text-muted-foreground">{measurementData.numRidges} segments</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftHips">Hips</Label>
-              <Input
-                id="ftHips"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftHips}
-                onChange={(e) => updateField("ftHips", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftHips">Hips (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftHips"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftHips}
+                  onChange={(e) => updateField("ftHips", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numHips}
+                  onChange={(e) => updateField("numHips", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numHips && (
+                <p className="text-xs text-muted-foreground">{measurementData.numHips} segments</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftValleys">Valleys</Label>
-              <Input
-                id="ftValleys"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftValleys}
-                onChange={(e) => updateField("ftValleys", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftValleys">Valleys (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftValleys"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftValleys}
+                  onChange={(e) => updateField("ftValleys", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numValleys}
+                  onChange={(e) => updateField("numValleys", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numValleys && (
+                <p className="text-xs text-muted-foreground">{measurementData.numValleys} segments</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftRakes">Rakes</Label>
-              <Input
-                id="ftRakes"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftRakes}
-                onChange={(e) => updateField("ftRakes", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftRakes">Rakes (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftRakes"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftRakes}
+                  onChange={(e) => updateField("ftRakes", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numRakes}
+                  onChange={(e) => updateField("numRakes", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numRakes && (
+                <p className="text-xs text-muted-foreground">{measurementData.numRakes} segments</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftEaves">Eaves / Starter</Label>
-              <Input
-                id="ftEaves"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftEaves}
-                onChange={(e) => updateField("ftEaves", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftEaves">Eaves / Starter (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftEaves"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftEaves}
+                  onChange={(e) => updateField("ftEaves", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numEaves}
+                  onChange={(e) => updateField("numEaves", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numEaves && (
+                <p className="text-xs text-muted-foreground">{measurementData.numEaves} segments</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="ftDripEdge">Drip Edge (Eaves + Rakes)</Label>
@@ -300,7 +446,7 @@ export function StepMeasurements() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftParapet">Parapet Walls</Label>
+              <Label htmlFor="ftParapet">Parapet Walls (LF)</Label>
               <Input
                 id="ftParapet"
                 type="number"
@@ -312,30 +458,86 @@ export function StepMeasurements() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftFlashing">Flashing</Label>
-              <Input
-                id="ftFlashing"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftFlashing}
-                onChange={(e) => updateField("ftFlashing", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftFlashing">Flashing (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftFlashing"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftFlashing}
+                  onChange={(e) => updateField("ftFlashing", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numFlashingLengths}
+                  onChange={(e) => updateField("numFlashingLengths", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numFlashingLengths && (
+                <p className="text-xs text-muted-foreground">{measurementData.numFlashingLengths} lengths</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ftStepFlashing">Step Flashing</Label>
-              <Input
-                id="ftStepFlashing"
-                type="number"
-                step="0.01"
-                placeholder="# of LF"
-                value={measurementData.ftStepFlashing}
-                onChange={(e) => updateField("ftStepFlashing", e.target.value)}
-                disabled={isParsing || isConfirmed}
-              />
+              <Label htmlFor="ftStepFlashing">Step Flashing (LF)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="ftStepFlashing"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.ftStepFlashing}
+                  onChange={(e) => updateField("ftStepFlashing", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+                <Input
+                  type="number"
+                  className="w-20 shrink-0"
+                  placeholder="#"
+                  value={measurementData.numStepFlashingLengths}
+                  onChange={(e) => updateField("numStepFlashingLengths", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              {measurementData.numStepFlashingLengths && (
+                <p className="text-xs text-muted-foreground">{measurementData.numStepFlashingLengths} lengths</p>
+              )}
             </div>
           </div>
+
+          {/* Penetrations sub-section */}
+          {(measurementData.totalPenetrationsArea || measurementData.totalPenetrationsPerimeter) && (
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="totalPenetrationsArea">Penetrations Area (sq ft)</Label>
+                <Input
+                  id="totalPenetrationsArea"
+                  type="number"
+                  step="0.01"
+                  placeholder="sq ft"
+                  value={measurementData.totalPenetrationsArea}
+                  onChange={(e) => updateField("totalPenetrationsArea", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totalPenetrationsPerimeter">Penetrations Perimeter (LF)</Label>
+                <Input
+                  id="totalPenetrationsPerimeter"
+                  type="number"
+                  step="0.01"
+                  placeholder="LF"
+                  value={measurementData.totalPenetrationsPerimeter}
+                  onChange={(e) => updateField("totalPenetrationsPerimeter", e.target.value)}
+                  disabled={isParsing || isConfirmed}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -350,7 +552,7 @@ export function StepMeasurements() {
               <Label htmlFor="predominantPitch">Predominant Pitch</Label>
               <Input
                 id="predominantPitch"
-                placeholder="e.g. 6/12"
+                placeholder="e.g. 7/12"
                 value={measurementData.predominantPitch}
                 onChange={(e) => updateField("predominantPitch", e.target.value)}
                 disabled={isParsing || isConfirmed}

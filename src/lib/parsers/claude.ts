@@ -87,12 +87,14 @@ export async function parseEstimateWithClaude(
 
 const MEASUREMENT_EXTRACTION_PROMPT = `You are a roofing measurement expert. Extract structured roof measurement data from this PDF report (typically from EagleView, HOVER, GAF QuickMeasure, Roofr, or similar).
 
-Return ONLY a JSON object with these fields (use empty string "" for anything you cannot find):
+Return ONLY a JSON object with these fields (use empty string "" for anything you cannot find, use [] for empty arrays):
 
 {
   "measuredSquares": "total roof area in squares (1 square = 100 sq ft), as a number string",
   "wastePercent": "suggested waste percentage as a number string (e.g. '15' for 15%)",
   "suggestedSquares": "total squares including waste, as a number string",
+  "totalRoofArea": "total roof area in sq ft (all pitches), as a number string",
+  "totalRoofAreaLessPenetrations": "total roof area minus penetrations in sq ft",
   "ftRidges": "total linear feet of ridges",
   "ftHips": "total linear feet of hips",
   "ftValleys": "total linear feet of valleys",
@@ -102,14 +104,30 @@ Return ONLY a JSON object with these fields (use empty string "" for anything yo
   "ftParapet": "total linear feet of parapet walls",
   "ftFlashing": "total linear feet of flashing",
   "ftStepFlashing": "total linear feet of step flashing",
-  "predominantPitch": "the predominant roof pitch (e.g. '6/12')",
+  "numRidges": "count of ridge segments (e.g. '7' from '109 ft (7 Ridges)')",
+  "numHips": "count of hip segments",
+  "numValleys": "count of valley segments",
+  "numRakes": "count of rake segments",
+  "numEaves": "count of eave segments",
+  "numFlashingLengths": "count of flashing segments",
+  "numStepFlashingLengths": "count of step flashing segments",
+  "totalPenetrationsArea": "total penetrations area in sq ft",
+  "totalPenetrationsPerimeter": "total penetrations perimeter in linear feet",
+  "predominantPitch": "the predominant roof pitch (e.g. '7/12')",
+  "pitchBreakdown": [
+    { "pitch": "e.g. 7/12", "areaSqFt": "area at that pitch in sq ft", "percentOfRoof": "percent of total roof" }
+  ],
+  "structureComplexity": "the structure complexity rating: 'Simple', 'Normal', or 'Complex'",
   "accessories": "list of roof accessories/penetrations (e.g. 'Skylights (2), Pipe boots (4), Chimney')"
 }
 
 Important:
 - All numeric values should be strings (e.g. "28.50" not 28.50)
 - Squares are typically shown as total roof area divided by 100
-- Waste % is often a suggested value based on roof complexity
+- The "Areas per Pitch" table lists each pitch with its area (sq ft) and % of roof — extract ALL pitches into pitchBreakdown
+- The "Lengths, Areas and Pitches" section has counts in parentheses (e.g. "109 ft (7 Ridges)") — extract BOTH the linear feet AND the count numbers
+- Waste % is in the "Waste Calculation" table — look for the highlighted or recommended value
+- Structure complexity is labeled "Simple", "Normal", or "Complex" near the waste calculation table
 - Linear measurements should be in feet
 - Pitch is typically shown as rise/run (e.g. 6/12, 8/12)
 - Extract ONLY what's explicitly in the document — do not calculate or fabricate values
@@ -117,13 +135,13 @@ Important:
 
 export async function parseMeasurementWithClaude(
   pdfBase64: string
-): Promise<Record<string, string>> {
+): Promise<Record<string, unknown>> {
   return withRetry(async () => {
     const client = getClient();
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [
         {
           role: "user",

@@ -162,6 +162,12 @@ export const claimDetailsSchema = z.object({
 
 // ── Wizard — Measurements (Step 3) ──────────────────────────
 
+const pitchBreakdownSchema = z.object({
+  pitch: z.string(),
+  areaSqFt: z.string(),
+  percentOfRoof: z.string(),
+});
+
 export const measurementDataSchema = z.object({
   measuredSquares: numericString,
   wastePercent: z
@@ -177,6 +183,8 @@ export const measurementDataSchema = z.object({
     )
     .optional(),
   suggestedSquares: numericString,
+  totalRoofArea: numericString,
+  totalRoofAreaLessPenetrations: numericString,
   ftRidges: numericString,
   ftHips: numericString,
   ftValleys: numericString,
@@ -186,7 +194,18 @@ export const measurementDataSchema = z.object({
   ftParapet: numericString,
   ftFlashing: numericString,
   ftStepFlashing: numericString,
+  numRidges: numericString,
+  numHips: numericString,
+  numValleys: numericString,
+  numRakes: numericString,
+  numEaves: numericString,
+  numFlashingLengths: numericString,
+  numStepFlashingLengths: numericString,
+  totalPenetrationsArea: numericString,
+  totalPenetrationsPerimeter: numericString,
   predominantPitch: optionalString,
+  pitchBreakdown: z.array(pitchBreakdownSchema).default([]),
+  structureComplexity: optionalString,
   accessories: optionalString,
   damageTypes: z.array(z.string()).default([]),
   confirmed: z.boolean(),

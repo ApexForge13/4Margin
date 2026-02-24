@@ -116,6 +116,43 @@ export async function createClaimAndSupplement(
         ? parseFloat(input.measurementData.ftStepFlashing)
         : null,
       accessories: input.measurementData.accessories || null,
+      total_roof_area: input.measurementData.totalRoofArea
+        ? parseFloat(input.measurementData.totalRoofArea)
+        : null,
+      total_roof_area_less_penetrations: input.measurementData.totalRoofAreaLessPenetrations
+        ? parseFloat(input.measurementData.totalRoofAreaLessPenetrations)
+        : null,
+      num_ridges: input.measurementData.numRidges
+        ? parseInt(input.measurementData.numRidges)
+        : null,
+      num_hips: input.measurementData.numHips
+        ? parseInt(input.measurementData.numHips)
+        : null,
+      num_valleys: input.measurementData.numValleys
+        ? parseInt(input.measurementData.numValleys)
+        : null,
+      num_rakes: input.measurementData.numRakes
+        ? parseInt(input.measurementData.numRakes)
+        : null,
+      num_eaves: input.measurementData.numEaves
+        ? parseInt(input.measurementData.numEaves)
+        : null,
+      num_flashing_lengths: input.measurementData.numFlashingLengths
+        ? parseInt(input.measurementData.numFlashingLengths)
+        : null,
+      num_step_flashing_lengths: input.measurementData.numStepFlashingLengths
+        ? parseInt(input.measurementData.numStepFlashingLengths)
+        : null,
+      total_penetrations_area: input.measurementData.totalPenetrationsArea
+        ? parseFloat(input.measurementData.totalPenetrationsArea)
+        : null,
+      total_penetrations_perimeter: input.measurementData.totalPenetrationsPerimeter
+        ? parseFloat(input.measurementData.totalPenetrationsPerimeter)
+        : null,
+      pitch_breakdown: (input.measurementData.pitchBreakdown ?? []).length > 0
+        ? input.measurementData.pitchBreakdown
+        : null,
+      structure_complexity: input.measurementData.structureComplexity || null,
       damage_types: (input.measurementData.damageTypes ?? []).length > 0
         ? input.measurementData.damageTypes
         : null,

@@ -30,12 +30,21 @@ export interface ClaimDetails {
   priorSupplementHistory: string;
 }
 
+// --- Pitch breakdown from EagleView "Areas per Pitch" table ---
+export interface PitchBreakdown {
+  pitch: string;         // e.g. "7/12"
+  areaSqFt: string;      // e.g. "1953.2"
+  percentOfRoof: string; // e.g. "61.6"
+}
+
 // --- Measurement data (Step 3) — EagleView format ---
 export interface MeasurementData {
   // Area
   measuredSquares: string;
   wastePercent: string;
   suggestedSquares: string;
+  totalRoofArea: string;                  // Total sq ft (all pitches)
+  totalRoofAreaLessPenetrations: string;  // Total sq ft minus penetrations
 
   // Linear feet measurements
   ftRidges: string;
@@ -48,8 +57,23 @@ export interface MeasurementData {
   ftFlashing: string;
   ftStepFlashing: string;
 
+  // Counts (number of each feature from EagleView)
+  numRidges: string;
+  numHips: string;
+  numValleys: string;
+  numRakes: string;
+  numEaves: string;
+  numFlashingLengths: string;
+  numStepFlashingLengths: string;
+
+  // Penetrations
+  totalPenetrationsArea: string;      // sq ft
+  totalPenetrationsPerimeter: string; // LF
+
   // Roof details
   predominantPitch: string;
+  pitchBreakdown: PitchBreakdown[];
+  structureComplexity: string;  // "Simple" | "Normal" | "Complex" | ""
   accessories: string;
 
   // Damage — multi-select
