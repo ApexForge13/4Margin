@@ -2,7 +2,7 @@
  * POST /api/supplements/[id]/generate
  *
  * Triggers the AI supplement generation pipeline.
- * Called after claim + supplement creation to start async processing.
+ * Called after payment succeeds to start async processing.
  *
  * If QStash is configured → enqueues a durable background job with retries.
  * Otherwise → runs the pipeline inline (fire-and-forget for MVP).
@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { runSupplementPipeline } from "@/lib/ai/pipeline";
 import { enqueuePipelineJob, isQueueEnabled } from "@/lib/queue/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -42,8 +43,11 @@ export async function POST(
     );
   }
 
+  // Use admin client — RLS session doesn't reliably refresh in API routes
+  const admin = createAdminClient();
+
   // Fetch supplement to get claim_id and company_id
-  const { data: supplement, error } = await supabase
+  const { data: supplement, error } = await admin
     .from("supplements")
     .select("claim_id, company_id")
     .eq("id", supplementId)
@@ -57,12 +61,12 @@ export async function POST(
   }
 
   // Reset supplement status for retries — clear old items and reset to generating
-  await supabase
+  await admin
     .from("supplement_items")
     .delete()
     .eq("supplement_id", supplementId);
 
-  await supabase
+  await admin
     .from("supplements")
     .update({
       status: "generating",

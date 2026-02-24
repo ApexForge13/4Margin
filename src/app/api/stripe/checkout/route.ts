@@ -33,16 +33,23 @@ export async function POST(request: NextRequest) {
     // Auth is already verified above via getUser().
     const admin = createAdminClient();
 
+    // Verify admin client is properly configured
+    const serviceKeyExists = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    console.log(`[stripe/checkout] Service role key configured: ${serviceKeyExists}`);
+
     // ── Get user's company_id ─────────────────────────────────
-    const { data: userProfile } = await admin
+    const { data: userProfile, error: profileErr } = await admin
       .from("users")
       .select("company_id")
       .eq("id", user.id)
       .single();
 
     if (!userProfile?.company_id) {
-      console.log("[stripe/checkout] User has no company_id");
-      return NextResponse.json({ error: "Company not found" }, { status: 400 });
+      console.log("[stripe/checkout] User has no company_id. profileErr:", profileErr?.message);
+      return NextResponse.json(
+        { error: `Company not found (profile: ${profileErr?.message || "no company_id"}, serviceKey: ${serviceKeyExists})` },
+        { status: 400 }
+      );
     }
 
     const companyId = userProfile.company_id;
@@ -57,9 +64,21 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !supplement) {
-      console.log("[stripe/checkout] Supplement not found:", error?.message);
+      // Debug: try without company filter to see if it's a company mismatch
+      const { data: anySupp, error: anyErr } = await admin
+        .from("supplements")
+        .select("id, company_id, status")
+        .eq("id", supplementId)
+        .single();
+      console.log(
+        "[stripe/checkout] Supplement not found with company filter.",
+        "error:", error?.message,
+        "Without filter:", anySupp ? `found (company=${anySupp.company_id}, status=${anySupp.status})` : `also not found (${anyErr?.message})`
+      );
       return NextResponse.json(
-        { error: "Supplement not found" },
+        {
+          error: `Supplement not found (err: ${error?.message || "no match"}, serviceKey: ${serviceKeyExists}, withoutFilter: ${anySupp ? `exists company=${anySupp.company_id}` : anyErr?.message || "missing"})`,
+        },
         { status: 404 }
       );
     }
