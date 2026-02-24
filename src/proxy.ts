@@ -26,7 +26,17 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Public routes that don't require auth
-  const publicRoutes = ["/login", "/signup", "/auth/callback", "/auth/confirm"];
+  const publicRoutes = [
+    "/login",
+    "/signup",
+    "/auth/callback",
+    "/auth/confirm",
+    "/terms",
+    "/privacy",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/opengraph-image",
+  ];
   const isPublicRoute = publicRoutes.some((route) =>
     pathname.startsWith(route)
   );

@@ -176,7 +176,7 @@ export default function LandingPage() {
               {
                 step: "03",
                 title: "Download Your Supplement",
-                desc: "Get a professional PDF supplement with Xactimate codes, justifications, photos, and code references — ready to send to the carrier.",
+                desc: "Get a professional PDF supplement with Xactimate codes, justifications, photos, code references, and a weather verification report — ready to send to the carrier.",
                 color: "#00BFFF",
                 icon: (
                   <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,9 +249,9 @@ export default function LandingPage() {
                 emoji: "📋",
               },
               {
-                title: "Supplement Tracking",
-                desc: "Track every supplement from generation to carrier submission. See status updates, results, and total recovery across all claims.",
-                emoji: "📊",
+                title: "Weather Verification Report",
+                desc: "Auto-generated weather report pulls historical storm data for the date of loss — wind speeds, hail size, and precipitation — to back up every claim.",
+                emoji: "🌩️",
               },
             ].map((f) => (
               <div
@@ -395,6 +395,7 @@ export default function LandingPage() {
                 "Photo analysis & cross-referencing",
                 "Professional PDF supplement download",
                 "Written justifications & IRC code references",
+                "Weather verification report with storm data",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
                   <svg className="mt-0.5 h-5 w-5 shrink-0 text-[#39FF9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -440,7 +441,7 @@ export default function LandingPage() {
       <footer className="border-t border-white/5 bg-[#060A13]">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
           <Logo />
-          <div className="flex gap-6 text-sm text-gray-500">
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
             <a href="#how-it-works" className="transition hover:text-gray-300">
               How It Works
             </a>
@@ -450,6 +451,12 @@ export default function LandingPage() {
             <a href="#pricing" className="transition hover:text-gray-300">
               Pricing
             </a>
+            <Link href="/terms" className="transition hover:text-gray-300">
+              Terms
+            </Link>
+            <Link href="/privacy" className="transition hover:text-gray-300">
+              Privacy
+            </Link>
             <Link href="/login" className="transition hover:text-gray-300">
               Sign In
             </Link>
