@@ -272,6 +272,64 @@ export async function adminUpdateClaim(claimId: string, data: unknown) {
   return { error: null };
 }
 
+// ── Admin — Delete Claim ─────────────────────────────────────
+
+export async function deleteClaim(claimId: string) {
+  const idResult = uuidSchema.safeParse(claimId);
+  if (!idResult.success) return { error: "Invalid claim ID." };
+
+  const auth = await verifyAdmin();
+  if (auth.error) return { error: auth.error };
+
+  const admin = createAdminClient();
+
+  // Delete stored files from Supabase storage (photos + estimates)
+  // Fetch photo paths first
+  const { data: photos } = await admin
+    .from("photos")
+    .select("storage_path")
+    .eq("claim_id", idResult.data);
+
+  if (photos && photos.length > 0) {
+    const paths = photos.map((p) => p.storage_path).filter(Boolean);
+    if (paths.length > 0) {
+      await admin.storage.from("photos").remove(paths);
+    }
+  }
+
+  // Fetch supplement PDFs
+  const { data: supplements } = await admin
+    .from("supplements")
+    .select("generated_pdf_url, weather_pdf_url")
+    .eq("claim_id", idResult.data);
+
+  if (supplements && supplements.length > 0) {
+    const pdfPaths = supplements
+      .flatMap((s) => [s.generated_pdf_url, s.weather_pdf_url])
+      .filter(Boolean) as string[];
+    if (pdfPaths.length > 0) {
+      // Extract storage paths from full URLs if needed
+      const storagePaths = pdfPaths.map((url) => {
+        const match = url.match(/supplements\/(.+)/);
+        return match ? match[1] : url;
+      });
+      await admin.storage.from("supplements").remove(storagePaths);
+    }
+  }
+
+  // Delete claim — supplements, supplement_items, photos cascade automatically
+  const { error } = await admin
+    .from("claims")
+    .delete()
+    .eq("id", idResult.data);
+
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/supplements");
+  return { error: null };
+}
+
 // ── Team Invites ──────────────────────────────────────────────
 
 export async function inviteTeamMember(data: unknown) {

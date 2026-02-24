@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { STATUS_LABELS, type SupplementStatus } from "@/lib/constants";
 import { AdminClaimDialog } from "./admin-claim-dialog";
+import { deleteClaim } from "./actions";
 
 export interface AdminClaim {
   id: string;
@@ -64,6 +75,8 @@ export function ClaimsTable({ claims }: { claims: AdminClaim[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("created");
   const [sortAsc, setSortAsc] = useState(false);
   const [editClaim, setEditClaim] = useState<AdminClaim | null>(null);
+  const [deletingClaim, setDeletingClaim] = useState<AdminClaim | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
     let rows = claims;
@@ -207,7 +220,7 @@ export function ClaimsTable({ claims }: { claims: AdminClaim[] }) {
                 sortKeyName="created"
                 className="text-right"
               />
-              <TableHead className="w-[80px]" />
+              <TableHead className="w-[140px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -276,13 +289,23 @@ export function ClaimsTable({ claims }: { claims: AdminClaim[] }) {
                       })}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditClaim(c)}
-                      >
-                        Edit
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditClaim(c)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setDeletingClaim(c)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -302,6 +325,47 @@ export function ClaimsTable({ claims }: { claims: AdminClaim[] }) {
           }}
         />
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={!!deletingClaim}
+        onOpenChange={(open) => {
+          if (!open) setDeletingClaim(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Claim</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              <span className="font-semibold text-foreground">
+                {deletingClaim?.notes || deletingClaim?.claim_number || "this claim"}
+              </span>{" "}
+              and all associated supplements, line items, photos, and PDFs.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deletingClaim) return;
+                startTransition(async () => {
+                  const result = await deleteClaim(deletingClaim.id);
+                  if (result.error) {
+                    alert(result.error);
+                  }
+                  setDeletingClaim(null);
+                });
+              }}
+            >
+              {isPending ? "Deleting..." : "Delete Claim"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
