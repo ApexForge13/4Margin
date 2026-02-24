@@ -41,11 +41,9 @@ export async function runSupplementPipeline(
   const { supplementId, claimId, companyId } = input;
 
   try {
-    // ── Update status to analyzing ──
-    await supabase
-      .from("supplements")
-      .update({ status: "analyzing" })
-      .eq("id", supplementId);
+    // Note: status stays as "generating" during pipeline execution
+    // The "generating" status triggers AutoRefresh polling on the frontend
+    console.log(`[pipeline] Starting pipeline for supplement ${supplementId}`);
 
     // ── 1. Fetch claim data ──
     const { data: claim, error: claimError } = await supabase
@@ -69,22 +67,21 @@ export async function runSupplementPipeline(
       throw new Error("No estimate PDF found for this supplement");
     }
 
-    // ── 3. Download estimate PDF from storage ──
-    const { data: estimateBlob, error: dlError } = await supabase.storage
+    // ── 3. Generate signed URL for estimate PDF ──
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from("estimates")
-      .download(supplement.adjuster_estimate_url);
+      .createSignedUrl(supplement.adjuster_estimate_url, 600); // 10 min expiry
 
-    if (dlError || !estimateBlob) {
-      throw new Error(`Failed to download estimate: ${dlError?.message}`);
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      throw new Error(`Failed to generate signed URL for estimate: ${signedUrlError?.message}`);
     }
 
-    const estimateBuffer = await estimateBlob.arrayBuffer();
-    const estimatePdfBase64 = Buffer.from(estimateBuffer).toString("base64");
+    console.log(`[pipeline] Estimate signed URL generated for: ${supplement.adjuster_estimate_url}`);
 
     // ── 4. Run missing item detection ──
     const analysisInput: AnalysisInput = {
       supplementId,
-      estimatePdfBase64,
+      estimatePdfUrl: signedUrlData.signedUrl,
       claimDescription: claim.description || "",
       adjusterScopeNotes: claim.adjuster_scope_notes || "",
       itemsBelievedMissing: claim.items_believed_missing || "",
@@ -343,13 +340,14 @@ export async function runSupplementPipeline(
   } catch (err) {
     console.error(`[pipeline] Error for supplement ${supplementId}:`, err);
 
-    // Update status to show error (keep as "generating" so user knows something went wrong)
+    // Update supplement with error info but keep status as "complete" so the UI can display the error
     await supabase
       .from("supplements")
       .update({
         status: "complete",
         adjuster_estimate_parsed: {
           error: err instanceof Error ? err.message : "Pipeline failed",
+          error_type: "pipeline_failure",
           failed_at: new Date().toISOString(),
         },
       })

@@ -52,6 +52,25 @@ export async function POST(
     );
   }
 
+  // Reset supplement status for retries — clear old items and reset to generating
+  await supabase
+    .from("supplement_items")
+    .delete()
+    .eq("supplement_id", supplementId);
+
+  await supabase
+    .from("supplements")
+    .update({
+      status: "generating",
+      supplement_total: null,
+      adjuster_total: null,
+      adjuster_estimate_parsed: null,
+      generated_pdf_url: null,
+      weather_data: null,
+      weather_pdf_url: null,
+    })
+    .eq("id", supplementId);
+
   const pipelineInput = {
     supplementId,
     claimId: supplement.claim_id,

@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { PaymentGate } from "@/components/supplements/payment-gate";
 import { DownloadButton } from "@/components/supplements/download-button";
 import { toast } from "sonner";
@@ -27,6 +28,7 @@ interface LineItem {
   justification: string | null;
   irc_reference: string | null;
   status: string;
+  confidence?: number;
 }
 
 interface LineItemsReviewProps {
@@ -64,6 +66,23 @@ export function LineItemsReview({
     });
     return initial;
   });
+
+  // Expanded items for showing supporting arguments
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(
+    () => new Set(items.map((i) => i.id)) // All expanded by default
+  );
+
+  const toggleExpanded = (id: string) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const toggleItem = (id: string) => {
     if (!canEdit) return;
@@ -163,88 +182,79 @@ export function LineItemsReview({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Select All toggle (only in edit mode) */}
+        {/* Select All toggle + Expand All (in edit mode) */}
         {canEdit && (
-          <div className="flex items-center gap-2 mb-4 pb-3 border-b">
-            <Checkbox
-              id="select-all"
-              checked={selected.size === items.length}
-              onCheckedChange={toggleAll}
-            />
-            <label
-              htmlFor="select-all"
-              className="text-sm font-medium cursor-pointer"
+          <div className="flex items-center justify-between mb-4 pb-3 border-b">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="select-all"
+                checked={selected.size === items.length}
+                onCheckedChange={toggleAll}
+              />
+              <label
+                htmlFor="select-all"
+                className="text-sm font-medium cursor-pointer"
+              >
+                {selected.size === items.length
+                  ? "Deselect All"
+                  : "Select All"}
+              </label>
+            </div>
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => {
+                if (expandedItems.size === items.length) {
+                  setExpandedItems(new Set());
+                } else {
+                  setExpandedItems(new Set(items.map((i) => i.id)));
+                }
+              }}
             >
-              {selected.size === items.length
-                ? "Deselect All"
-                : "Select All"}
-            </label>
+              {expandedItems.size === items.length ? "Collapse All Arguments" : "Expand All Arguments"}
+            </button>
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-xs text-muted-foreground uppercase tracking-wide">
-                {canEdit && <th className="pb-2 pr-2 w-8" />}
-                <th className="pb-2 pr-4">Code</th>
-                <th className="pb-2 pr-4">Description</th>
-                <th className="pb-2 pr-4">Qty</th>
-                <th className="pb-2 pr-4">Unit</th>
-                <th className="pb-2 pr-4 text-right">Price</th>
-                <th className="pb-2 text-right">Total</th>
-                {!canEdit && <th className="pb-2 pl-3 w-20">Status</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => {
-                const isSelected = selected.has(item.id);
-                const isRejected = !canEdit && item.status === "rejected";
+        {/* Line items as expandable cards */}
+        <div className="space-y-3">
+          {items.map((item) => {
+            const isSelected = selected.has(item.id);
+            const isRejected = !canEdit && item.status === "rejected";
+            const isExpanded = expandedItems.has(item.id);
 
-                return (
-                  <tr
-                    key={item.id}
-                    className={`border-b last:border-0 transition-colors ${
-                      canEdit
-                        ? isSelected
-                          ? "hover:bg-muted/50"
-                          : "opacity-40 hover:opacity-60"
-                        : isRejected
-                          ? "opacity-40 line-through"
-                          : ""
-                    } ${canEdit ? "cursor-pointer" : ""}`}
-                    onClick={() => canEdit && toggleItem(item.id)}
-                  >
-                    {canEdit && (
-                      <td className="py-2 pr-2">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleItem(item.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </td>
-                    )}
-                    <td className="py-2 pr-4 font-mono text-xs">
-                      {item.xactimate_code}
-                    </td>
-                    <td className="py-2 pr-4">
-                      <p className="font-medium">{item.description}</p>
-                      {item.justification && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                          {item.justification}
-                        </p>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4">{item.quantity}</td>
-                    <td className="py-2 pr-4">{item.unit}</td>
-                    <td className="py-2 pr-4 text-right">
-                      ${Number(item.unit_price).toFixed(2)}
-                    </td>
-                    <td className="py-2 text-right font-medium">
-                      ${Number(item.total_price).toFixed(2)}
-                    </td>
-                    {!canEdit && (
-                      <td className="py-2 pl-3">
+            return (
+              <div
+                key={item.id}
+                className={`rounded-lg border transition-all ${
+                  canEdit
+                    ? isSelected
+                      ? "border-primary/30 bg-primary/5"
+                      : "opacity-50 hover:opacity-70"
+                    : isRejected
+                      ? "opacity-40 border-dashed"
+                      : "border-gray-200"
+                }`}
+              >
+                {/* Header row — click to toggle selection */}
+                <div
+                  className={`flex items-center gap-3 p-3 ${canEdit ? "cursor-pointer" : ""}`}
+                  onClick={() => canEdit && toggleItem(item.id)}
+                >
+                  {canEdit && (
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleItem(item.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                        {item.xactimate_code}
+                      </span>
+                      <span className="font-medium text-sm">{item.description}</span>
+                      {!canEdit && (
                         <Badge
                           variant={
                             item.status === "accepted"
@@ -261,30 +271,73 @@ export function LineItemsReview({
                               ? "Excluded"
                               : "Detected"}
                         </Badge>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 font-bold">
-                <td
-                  colSpan={canEdit ? 6 : 5}
-                  className="pt-2 text-right pr-4"
-                >
-                  {canEdit ? "Selected Total:" : "Supplement Total:"}
-                </td>
-                <td className="pt-2 text-right text-green-600">
-                  $
-                  {displayTotal.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                  })}
-                </td>
-                {!canEdit && <td />}
-              </tr>
-            </tfoot>
-          </table>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                      <span>{item.quantity} {item.unit} @ ${Number(item.unit_price).toFixed(2)}</span>
+                      <span className="font-semibold text-sm text-foreground">
+                        ${Number(item.total_price).toFixed(2)}
+                      </span>
+                      {item.irc_reference && (
+                        <span className="text-blue-600">{item.irc_reference}</span>
+                      )}
+                    </div>
+                  </div>
+                  {/* Expand/collapse button */}
+                  {item.justification && (
+                    <button
+                      type="button"
+                      className="shrink-0 p-1 rounded hover:bg-gray-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpanded(item.id);
+                      }}
+                      title={isExpanded ? "Hide supporting argument" : "Show supporting argument"}
+                    >
+                      <svg
+                        className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Supporting argument — expanded view */}
+                {item.justification && isExpanded && (
+                  <div className="px-3 pb-3 pt-0">
+                    <Separator className="mb-3" />
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Supporting Argument
+                      </p>
+                      <div className="text-sm bg-gray-50 rounded-md p-3 whitespace-pre-wrap leading-relaxed">
+                        {item.justification}
+                      </div>
+                      {item.irc_reference && (
+                        <p className="text-xs text-blue-600">
+                          Code Reference: {item.irc_reference}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Total */}
+        <div className="flex items-center justify-between mt-4 pt-4 border-t-2">
+          <span className="font-bold text-sm">
+            {canEdit ? "Selected Total:" : "Supplement Total:"}
+          </span>
+          <span className="font-bold text-lg text-green-600">
+            ${displayTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </span>
         </div>
 
         {/* Generate Supplement button (shown when items detected but no PDF yet) */}

@@ -154,7 +154,7 @@ export function StepReview() {
         return;
       }
 
-      // Fire-and-forget: trigger AI pipeline in the background
+      // Trigger AI pipeline in the background
       if (result.supplementId) {
         fetch(`/api/supplements/${result.supplementId}/generate`, {
           method: "POST",
@@ -163,8 +163,31 @@ export function StepReview() {
         });
       }
 
-      toast.success("Supplement is generating — we'll analyze your estimate now.");
       clearWizardStorage();
+
+      // Redirect to Stripe checkout (handles first-free logic automatically)
+      if (result.supplementId) {
+        try {
+          const stripeRes = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ supplementId: result.supplementId }),
+          });
+
+          const stripeData = await stripeRes.json();
+
+          if (stripeRes.ok && stripeData.url) {
+            toast.success("Redirecting to checkout...");
+            window.location.href = stripeData.url;
+            return;
+          }
+        } catch (stripeErr) {
+          console.error("Stripe redirect failed, falling back to detail page:", stripeErr);
+        }
+      }
+
+      // Fallback: redirect to supplement detail page
+      toast.success("Supplement is generating — we'll analyze your estimate now.");
       router.push(`/dashboard/supplements/${result.supplementId}`);
     } catch (err) {
       console.error("Generate error:", err);

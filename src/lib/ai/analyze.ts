@@ -25,7 +25,7 @@ export interface PitchBreakdownInput {
 
 export interface AnalysisInput {
   supplementId: string;
-  estimatePdfBase64: string;
+  estimatePdfUrl: string;
   claimDescription: string;
   adjusterScopeNotes: string;
   itemsBelievedMissing: string;
@@ -114,9 +114,11 @@ export async function detectMissingItems(
 
   const client = getClient();
 
+  console.log(`[detectMissingItems] Sending estimate URL to Claude: ${input.estimatePdfUrl.substring(0, 80)}...`);
+
   const response = await client.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 4096,
+    max_tokens: 8192,
     messages: [
       {
         role: "user",
@@ -124,9 +126,8 @@ export async function detectMissingItems(
           {
             type: "document",
             source: {
-              type: "base64",
-              media_type: "application/pdf" as const,
-              data: input.estimatePdfBase64,
+              type: "url",
+              url: input.estimatePdfUrl,
             },
           },
           {
@@ -138,10 +139,14 @@ export async function detectMissingItems(
     ],
   });
 
+  console.log(`[detectMissingItems] Claude response: stop_reason=${response.stop_reason}, usage=${JSON.stringify(response.usage)}`);
+
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("No text response from Claude");
   }
+
+  console.log(`[detectMissingItems] Raw text (first 500 chars): ${textBlock.text.substring(0, 500)}`);
 
   // Parse Claude's JSON response
   const result = JSON.parse(textBlock.text) as {
@@ -289,13 +294,38 @@ ${ctx.codesContext}
 - Ridge cap (along all ridges)
 - Hip cap (along all hips)
 - Step flashing (at walls/chimneys)
-- Pipe boot/jack flashing
+- Pipe boot/jack flashing — check quantity against accessories list
 - Underlayment (synthetic vs felt)
 - Steep pitch charges (7/12 and above)
 - High roof charges (2+ stories)
 - Permit and code upgrade
 - Haul away / dump fees
 - Ridge vent
+- Satellite dish detach & reset (D&R) — if listed in accessories
+- Solar panel detach & reset (D&R) — often $200-500+ per panel, requires licensed electrician
+- HVAC unit protection / detach & reset — if listed in accessories
+- Skylight detach & reset or re-flash — if listed in accessories
+- Overhead & Profit (O&P) — typically 10% overhead + 10% profit on complex multi-trade jobs involving 3+ trades
+
+## ACCESSORIES CHECK — CRITICAL
+The roof accessories are listed in the measurements. For EVERY accessory listed (skylights, pipe jacks/boots, HVAC units, satellite dishes, solar panels, etc.), you MUST check:
+1. Does the adjuster's estimate include a Detach & Reset (D&R) line item for it?
+2. If not, it is MISSING and should be added as a supplement item.
+3. Use the correct Xactimate code for each D&R type.
+4. For solar panels — each panel requires individual D&R. 15 panels = 15x D&R charges.
+5. For satellite dishes — include removal, re-mounting, and cable re-routing.
+
+## OVERHEAD & PROFIT (O&P)
+If the job involves 3 or more trades (roofing, gutters, siding, electrical for solar, etc.), O&P should be included. O&P is typically calculated as:
+- 10% Overhead on total job cost
+- 10% Profit on total job cost
+This is industry standard and supported by Xactimate pricing methodology. Check if the adjuster included O&P. If not, add it as a missing item.
+
+## IMPORTANT RULES
+- ALWAYS find at least the items the contractor flagged as missing in "Contractor's Notes"
+- Even if the adjuster's estimate looks comprehensive, the contractor's notes indicate specific omissions — trust their field expertise
+- For each item flagged by the contractor, create a line item even if you're not 100% sure it's missing — set confidence accordingly
+- Do NOT return an empty missing_items array if the contractor has flagged items as missing
 
 Return ONLY a JSON object — no markdown, no code fences:
 

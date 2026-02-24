@@ -19,6 +19,7 @@ import { CarrierUploadCard } from "@/components/supplements/carrier-upload-card"
 import { PaymentToast } from "@/components/supplements/payment-toast";
 import { AutoRefresh } from "@/components/supplements/auto-refresh";
 import { LineItemsReview } from "@/components/supplements/line-items-review";
+import { PipelineErrorCard } from "@/components/supplements/pipeline-error-card";
 
 export default async function SupplementDetailPage({
   params,
@@ -93,6 +94,18 @@ export default async function SupplementDetailPage({
       supplement.carrier_response_url
     );
   }
+
+  // Generate signed URL for weather report PDF
+  let weatherPdfUrl: string | null = null;
+  if (supplement.weather_pdf_url) {
+    weatherPdfUrl = await getSignedUrl("supplements", supplement.weather_pdf_url);
+  }
+
+  // Check for pipeline error
+  const parsedData = supplement.adjuster_estimate_parsed as Record<string, unknown> | null;
+  const pipelineError = parsedData?.error_type === "pipeline_failure"
+    ? (parsedData.error as string)
+    : null;
 
   const status = supplement.status as SupplementStatus;
 
@@ -178,6 +191,15 @@ export default async function SupplementDetailPage({
       {/* ── GENERATED CONTENT ───────────────────────────────────── */}
 
       {/* Supplement Line Items — interactive review with checkboxes */}
+      {/* Pipeline error state */}
+      {pipelineError && status !== "generating" && (
+        <PipelineErrorCard
+          supplementId={id}
+          error={pipelineError}
+        />
+      )}
+
+      {/* Line items review */}
       {lineItems && lineItems.length > 0 ? (
         <LineItemsReview
           supplementId={id}
@@ -188,7 +210,7 @@ export default async function SupplementDetailPage({
           isFirstSupplement={isFirstSupplement}
           supplementTotal={supplement.supplement_total ?? null}
         />
-      ) : status !== "generating" && (
+      ) : !pipelineError && status !== "generating" && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="flex items-center gap-3 py-6">
             <svg
@@ -216,7 +238,10 @@ export default async function SupplementDetailPage({
 
       {/* Weather Verification Report */}
       {supplement.weather_data && (
-        <WeatherCard weather={supplement.weather_data as Record<string, unknown>} />
+        <WeatherCard
+          weather={supplement.weather_data as Record<string, unknown>}
+          weatherPdfUrl={weatherPdfUrl}
+        />
       )}
 
       {/* ── UPLOADED CONTENT ────────────────────────────────────── */}
@@ -509,7 +534,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 // --- Weather Verification Card ---
-function WeatherCard({ weather: w }: { weather: Record<string, unknown> }) {
+function WeatherCard({ weather: w, weatherPdfUrl }: { weather: Record<string, unknown>; weatherPdfUrl: string | null }) {
   const verdict = w.verdict as string;
   const hailDetected = w.hailDetected as boolean;
   const maxWindGust = w.maxWindGust as number;
@@ -560,9 +585,24 @@ function WeatherCard({ weather: w }: { weather: Record<string, unknown> }) {
             </svg>
             Weather Verification
           </CardTitle>
-          <Badge className={verdictConfig.badgeClass}>
-            {verdictConfig.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge className={verdictConfig.badgeClass}>
+              {verdictConfig.label}
+            </Badge>
+            {weatherPdfUrl && (
+              <a
+                href={weatherPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-gray-50 transition-colors"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download PDF
+              </a>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
