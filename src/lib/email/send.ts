@@ -10,6 +10,7 @@ import {
   supplementReadyEmail,
   paymentConfirmationEmail,
   pipelineErrorEmail,
+  teamInviteEmail,
 } from "./templates";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -163,5 +164,38 @@ export async function sendPipelineErrorEmail(
     console.log(`[email] Pipeline error email sent to ${ctx.email}`);
   } catch (err) {
     console.error("[email] Failed to send pipeline error email:", err);
+  }
+}
+
+/**
+ * Send team invite email with branded template.
+ */
+export async function sendTeamInviteEmail(data: {
+  to: string;
+  inviterName: string;
+  companyName: string;
+  role: string;
+  token: string;
+}): Promise<void> {
+  try {
+    const resend = getResendClient();
+    const inviteUrl = `${APP_URL}/auth/invite?token=${data.token}`;
+    const { subject, html } = teamInviteEmail({
+      inviterName: data.inviterName,
+      companyName: data.companyName,
+      role: data.role,
+      inviteUrl,
+    });
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.to,
+      subject,
+      html,
+    });
+
+    console.log(`[email] Team invite sent to ${data.to}`);
+  } catch (err) {
+    console.error("[email] Failed to send team invite email:", err);
   }
 }

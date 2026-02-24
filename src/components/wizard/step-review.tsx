@@ -165,7 +165,7 @@ export function StepReview() {
 
       toast.success("Supplement is generating — we'll analyze your estimate now.");
       clearWizardStorage();
-      router.push("/dashboard");
+      router.push(`/dashboard/supplements/${result.supplementId}`);
     } catch (err) {
       console.error("Generate error:", err);
       toast.error("Something went wrong. Please try again.");

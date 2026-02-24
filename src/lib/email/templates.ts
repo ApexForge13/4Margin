@@ -170,6 +170,39 @@ export function welcomeEmail(data: {
   };
 }
 
+// ─── Team Invite ────────────────────────────────────────────
+
+export function teamInviteEmail(data: {
+  inviterName: string;
+  companyName: string;
+  role: string;
+  inviteUrl: string;
+}) {
+  const roleLabel = data.role === "admin" ? "Admin" : "Team Member";
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#0f172a;">You&rsquo;re invited to join ${data.companyName}</h2>
+    <p style="margin:0 0 24px;color:#52525b;font-size:14px;">
+      <strong>${data.inviterName}</strong> has invited you to join their team on 4Margin as a <strong>${roleLabel}</strong>.
+    </p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      4Margin helps roofing contractors identify missing line items and recover additional insurance funds.
+      Accept the invite below to get started.
+    </p>
+    <a href="${data.inviteUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+      Accept Invite
+    </a>
+    <p style="margin:16px 0 0;font-size:12px;color:#71717a;">
+      This invite expires in 7 days. If you didn&rsquo;t expect this, you can safely ignore it.
+    </p>
+  `;
+
+  return {
+    subject: `Join ${data.companyName} on 4Margin`,
+    html: layout(body),
+  };
+}
+
 // ─── Pipeline Error ─────────────────────────────────────────
 
 export function pipelineErrorEmail(data: {

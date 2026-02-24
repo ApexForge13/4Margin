@@ -50,11 +50,12 @@ export async function GET(
   const claim = supplement.claims as Record<string, unknown>;
   const carrier = (claim?.carriers as Record<string, unknown>) || null;
 
-  // ── Fetch supplement items ────────────────────────────────
+  // ── Fetch supplement items (only accepted / detected) ─────
   const { data: items } = await supabase
     .from("supplement_items")
     .select("*")
     .eq("supplement_id", id)
+    .in("status", ["detected", "accepted"])
     .order("category", { ascending: true })
     .order("xactimate_code", { ascending: true });
 

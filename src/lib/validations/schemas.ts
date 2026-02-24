@@ -308,6 +308,21 @@ export const adminUpdateClaimSchema = z.object({
   priorSupplementHistory: optionalString,
 });
 
+// ── API — Finalize supplement (generate PDF from selected items) ──
+
+export const finalizeSupplementSchema = z.object({
+  selectedItemIds: z
+    .array(uuid)
+    .min(1, "At least one line item must be selected"),
+});
+
+// ── Admin — Team invites ────────────────────────────────────
+
+export const inviteTeamMemberSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  role: z.enum(["user", "admin"]),
+});
+
 // ── Helper: safely parse & return typed errors ──────────────
 
 type ValidationSuccess<T> = { success: true; data: T; error?: undefined };

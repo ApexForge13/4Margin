@@ -1,20 +1,21 @@
 /**
  * AI Pipeline Orchestrator
  *
- * Runs the full supplement generation pipeline:
+ * Runs the supplement analysis pipeline:
  * 1. Download estimate PDF from storage
  * 2. Run missing item detection (Claude analyzes estimate + measurements)
  * 3. Download and analyze photos (Claude Vision)
  * 4. Insert supplement_items into DB
- * 5. Generate professional supplement PDF
- * 6. Upload PDF to storage
- * 7. Update supplement record with totals + status
+ * 5. Fetch weather data + generate weather report PDF
+ * 6. Update supplement record with totals + status
+ *
+ * NOTE: The supplement PDF is NOT generated here. Users review detected
+ * items, select/deselect, then trigger PDF via /api/supplements/[id]/finalize.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectMissingItems, type AnalysisInput } from "./analyze";
 import { analyzePhotos, type PhotoAnalysisResult } from "./photos";
-import { generateSupplementPdf, type SupplementPdfData } from "@/lib/pdf/generate-supplement";
 import { generateWeatherReportPdf } from "@/lib/pdf/generate-weather-report";
 import { fetchWeatherData, type WeatherData } from "@/lib/weather/fetch-weather";
 import { sendSupplementReadyEmail, sendPipelineErrorEmail } from "@/lib/email/send";
@@ -191,78 +192,37 @@ export async function runSupplementPipeline(
       }
     }
 
-    // ── 7. Fetch company info for PDF ──
+    // ── 7. Fetch company info for weather report ──
     const { data: company } = await supabase
       .from("companies")
       .select("name, phone, address, city, state, zip, license_number")
       .eq("id", companyId)
       .single();
 
-    const companyAddress = company
-      ? [company.address, company.city, company.state, company.zip]
-          .filter(Boolean)
-          .join(", ")
+    const propertyAddress = [
+      claim.property_address,
+      claim.property_city,
+      claim.property_state,
+      claim.property_zip,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const dateOfLossFormatted = claim.date_of_loss
+      ? new Date(claim.date_of_loss).toLocaleDateString("en-US")
       : "";
 
-    // ── 8. Generate supplement PDF ──
-    const pdfData: SupplementPdfData = {
-      companyName: company?.name || "",
-      companyPhone: company?.phone || "",
-      companyAddress,
-      companyLicense: company?.license_number || "",
-      claimName: claim.notes || `Claim #${claim.claim_number || ""}`,
-      claimNumber: claim.claim_number || "",
-      policyNumber: claim.policy_number || "",
-      carrierName: "",
-      propertyAddress: [
-        claim.property_address,
-        claim.property_city,
-        claim.property_state,
-        claim.property_zip,
-      ]
-        .filter(Boolean)
-        .join(", "),
-      dateOfLoss: claim.date_of_loss
-        ? new Date(claim.date_of_loss).toLocaleDateString("en-US")
-        : "",
-      adjusterName: claim.adjuster_name || "",
-      adjusterTotal: analysisResult.adjuster_total,
-      supplementTotal: analysisResult.supplement_total,
-      measuredSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
-      wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,
-      suggestedSquares: claim.suggested_squares ? Number(claim.suggested_squares) : null,
-      pitch: claim.roof_pitch || null,
-      items: analysisResult.items.map((item) => ({
-        xactimate_code: item.xactimate_code,
-        description: item.description,
-        category: item.category,
-        quantity: item.quantity,
-        unit: item.unit,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        justification: item.justification,
-        irc_reference: item.irc_reference,
-      })),
-      generatedDate: new Date().toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
-    };
+    const generatedDate = new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
 
-    // Get carrier name
-    if (claim.carrier_id) {
-      const { data: carrier } = await supabase
-        .from("carriers")
-        .select("name")
-        .eq("id", claim.carrier_id)
-        .single();
-      if (carrier) pdfData.carrierName = carrier.name;
-    }
+    // NOTE: Supplement PDF is NOT generated here. Users review and
+    // select/deselect line items first, then trigger PDF generation
+    // via the /api/supplements/[id]/finalize endpoint.
 
-    const pdfBuffer = generateSupplementPdf(pdfData);
-
-    // ── 8b. Fetch weather data & generate weather report PDF (non-blocking) ──
+    // ── 8. Fetch weather data & generate weather report PDF (non-blocking) ──
     let weatherData: WeatherData | null = null;
     let weatherPdfPath: string | null = null;
 
@@ -281,12 +241,12 @@ export async function runSupplementPipeline(
 
         if (weatherData) {
           const weatherPdfBuffer = generateWeatherReportPdf({
-            propertyAddress: pdfData.propertyAddress,
-            dateOfLoss: pdfData.dateOfLoss,
-            claimNumber: pdfData.claimNumber,
-            companyName: pdfData.companyName,
+            propertyAddress,
+            dateOfLoss: dateOfLossFormatted,
+            claimNumber: claim.claim_number || "",
+            companyName: company?.name || "",
             weather: weatherData,
-            generatedDate: pdfData.generatedDate,
+            generatedDate,
           });
 
           weatherPdfPath = `${companyId}/${supplementId}/weather-report.pdf`;
@@ -322,22 +282,7 @@ export async function runSupplementPipeline(
       }
     }
 
-    // ── 9. Upload PDF to storage ──
-    const pdfPath = `${companyId}/${supplementId}/supplement.pdf`;
-    const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
-
-    const { error: uploadError } = await supabase.storage
-      .from("supplements")
-      .upload(pdfPath, pdfBlob, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.error("Failed to upload supplement PDF:", uploadError);
-    }
-
-    // ── 10. Check if first supplement (free tier) ──
+    // ── 9. Check if first supplement (free tier) ──
     const { count: priorPaidCount } = await supabase
       .from("supplements")
       .select("id", { count: "exact", head: true })
@@ -356,7 +301,7 @@ export async function runSupplementPipeline(
 
     const shouldAutoUnlock = isFirstSupplement && (priorCompleteCount ?? 0) === 0;
 
-    // ── 11. Update supplement record ──
+    // ── 10. Update supplement record ──
     await supabase
       .from("supplements")
       .update({
@@ -368,7 +313,7 @@ export async function runSupplementPipeline(
             ? analysisResult.supplement_total
             : null,
         waste_adjuster: analysisResult.waste_adjuster,
-        generated_pdf_url: uploadError ? null : pdfPath,
+        generated_pdf_url: null, // PDF generated later after user reviews items
         adjuster_estimate_parsed: {
           summary: analysisResult.summary,
           item_count: analysisResult.items.length,
@@ -382,7 +327,7 @@ export async function runSupplementPipeline(
       })
       .eq("id", supplementId);
 
-    // ── 12. Send "supplement ready" email (fire-and-forget) ──
+    // ── 11. Send "supplement ready" email (fire-and-forget) ──
     sendSupplementReadyEmail(
       supplementId,
       analysisResult.items.length,

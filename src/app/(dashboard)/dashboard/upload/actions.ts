@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createClaimInputSchema, validate } from "@/lib/validations/schemas";
 
@@ -216,6 +217,10 @@ export async function createClaimAndSupplement(
       // Non-fatal — claim and supplement already created
     }
   }
+
+  // Revalidate dashboard caches so the new supplement appears immediately
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/supplements");
 
   return { claimId: claim.id, supplementId: supplement.id, error: null };
 }

@@ -8,8 +8,10 @@ import {
   carrierSchema,
   adminUpdateUserSchema,
   adminUpdateClaimSchema,
+  inviteTeamMemberSchema,
   validate,
 } from "@/lib/validations/schemas";
+import { sendTeamInviteEmail } from "@/lib/email/send";
 import { z } from "zod";
 
 // ── Helpers ─────────────────────────────────────────────────
@@ -27,7 +29,7 @@ async function verifyAdmin() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "admin") {
+  if (!profile || (profile.role !== "admin" && profile.role !== "owner")) {
     return { error: "Permission denied." as const, profile: null };
   }
   return { error: null, profile };
@@ -267,5 +269,85 @@ export async function adminUpdateClaim(claimId: string, data: unknown) {
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/supplements");
+  return { error: null };
+}
+
+// ── Team Invites ──────────────────────────────────────────────
+
+export async function inviteTeamMember(data: unknown) {
+  const parsed = validate(inviteTeamMemberSchema, data);
+  if (!parsed.success) return { error: parsed.error };
+  const input = parsed.data;
+
+  const auth = await verifyAdmin();
+  if (auth.error) return { error: auth.error };
+
+  const admin = createAdminClient();
+
+  // Check if the email is already a member of this company
+  const { data: existingUser } = await admin
+    .from("users")
+    .select("id")
+    .eq("email", input.email)
+    .eq("company_id", auth.profile!.company_id)
+    .maybeSingle();
+
+  if (existingUser) {
+    return { error: "This person is already a member of your team." };
+  }
+
+  // Check for existing pending invite
+  const { data: existingInvite } = await admin
+    .from("invites")
+    .select("id")
+    .eq("email", input.email)
+    .eq("company_id", auth.profile!.company_id)
+    .is("accepted_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .maybeSingle();
+
+  if (existingInvite) {
+    return { error: "An invite has already been sent to this email." };
+  }
+
+  // Create invite record
+  const { data: invite, error } = await admin
+    .from("invites")
+    .insert({
+      company_id: auth.profile!.company_id,
+      email: input.email,
+      role: input.role,
+      invited_by: auth.profile!.id,
+    })
+    .select("token")
+    .single();
+
+  if (error || !invite) {
+    return { error: error?.message || "Failed to create invite." };
+  }
+
+  // Get inviter name + company name for the email
+  const { data: inviter } = await admin
+    .from("users")
+    .select("full_name")
+    .eq("id", auth.profile!.id)
+    .single();
+
+  const { data: company } = await admin
+    .from("companies")
+    .select("name")
+    .eq("id", auth.profile!.company_id)
+    .single();
+
+  // Send invite email (non-blocking)
+  await sendTeamInviteEmail({
+    to: input.email,
+    inviterName: inviter?.full_name || "Your teammate",
+    companyName: company?.name || "your team",
+    role: input.role,
+    token: invite.token,
+  });
+
+  revalidatePath("/dashboard/admin");
   return { error: null };
 }

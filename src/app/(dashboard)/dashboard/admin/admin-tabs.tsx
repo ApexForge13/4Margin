@@ -40,10 +40,19 @@ export interface TeamMember {
   created_at: string;
 }
 
+export interface PendingInvite {
+  id: string;
+  email: string;
+  role: string;
+  expires_at: string;
+  created_at: string;
+}
+
 interface AdminTabsProps {
   codes: XactimateCode[];
   carriers: Carrier[];
   team: TeamMember[];
+  pendingInvites: PendingInvite[];
   stats: PlatformStats;
   allClaims: AdminClaim[];
   allUsers: AdminUser[];
@@ -53,6 +62,7 @@ export function AdminTabs({
   codes,
   carriers,
   team,
+  pendingInvites,
   stats,
   allClaims,
   allUsers,
@@ -99,7 +109,7 @@ export function AdminTabs({
       </TabsContent>
 
       <TabsContent value="team">
-        <TeamTable team={team} />
+        <TeamTable team={team} pendingInvites={pendingInvites} />
       </TabsContent>
     </Tabs>
   );

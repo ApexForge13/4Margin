@@ -36,6 +36,7 @@ export async function proxy(request: NextRequest) {
     "/robots.txt",
     "/sitemap.xml",
     "/opengraph-image",
+    "/auth/invite",
   ];
   const isPublicContent = publicContentRoutes.some((route) =>
     pathname.startsWith(route)

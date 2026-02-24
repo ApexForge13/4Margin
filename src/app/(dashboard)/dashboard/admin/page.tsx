@@ -32,6 +32,7 @@ export default async function AdminPage() {
     allClaimsRes,
     allSupplementsRes,
     companiesCountRes,
+    pendingInvitesRes,
   ] = await Promise.all([
     // Existing: reference data
     admin
@@ -81,6 +82,14 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false }),
     // NEW: company count
     admin.from("companies").select("id", { count: "exact", head: true }),
+    // Pending invites for this company
+    supabase
+      .from("invites")
+      .select("id, email, role, expires_at, created_at")
+      .eq("company_id", profile.company_id)
+      .is("accepted_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false }),
   ]);
 
   // --- Build allUsers list with counts ---
@@ -236,6 +245,7 @@ export default async function AdminPage() {
         codes={codesRes.data ?? []}
         carriers={carriersRes.data ?? []}
         team={teamRes.data ?? []}
+        pendingInvites={pendingInvitesRes.data ?? []}
         stats={stats}
         allClaims={allClaims}
         allUsers={allUsers}

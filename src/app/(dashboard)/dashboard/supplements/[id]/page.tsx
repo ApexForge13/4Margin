@@ -16,9 +16,9 @@ import { Separator } from "@/components/ui/separator";
 import { StatusTracker } from "@/components/supplements/status-tracker";
 import { StatusActions } from "./status-actions";
 import { CarrierUploadCard } from "@/components/supplements/carrier-upload-card";
-import { DownloadButton } from "@/components/supplements/download-button";
-import { PaymentGate } from "@/components/supplements/payment-gate";
 import { PaymentToast } from "@/components/supplements/payment-toast";
+import { AutoRefresh } from "@/components/supplements/auto-refresh";
+import { LineItemsReview } from "@/components/supplements/line-items-review";
 
 export default async function SupplementDetailPage({
   params,
@@ -106,9 +106,12 @@ export default async function SupplementDetailPage({
     { month: "long", day: "numeric", year: "numeric" }
   );
 
+  const hasPdf = !!supplement.generated_pdf_url;
+
   return (
     <div className="space-y-6">
       <PaymentToast />
+
       {/* Back nav */}
       <Button variant="ghost" size="sm" asChild>
         <Link href="/dashboard/supplements">
@@ -129,12 +132,13 @@ export default async function SupplementDetailPage({
         </Link>
       </Button>
 
-      {/* Status Tracker */}
+      {/* Status Tracker + Auto-refresh while generating */}
       <StatusTracker
         status={status}
         approvedAmount={supplement.approved_amount ?? null}
         supplementTotal={supplement.supplement_total ?? null}
       />
+      <AutoRefresh status={status} />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -150,19 +154,6 @@ export default async function SupplementDetailPage({
           <Badge variant={statusInfo.variant} className="text-sm">
             {statusInfo.label}
           </Badge>
-          {(status === "complete" ||
-            status === "submitted" ||
-            status === "approved" ||
-            status === "partially_approved" ||
-            status === "denied") && (
-            <PaymentGate
-              supplementId={id}
-              paid={!!supplement.paid_at}
-              isFirstSupplement={isFirstSupplement}
-            >
-              <DownloadButton supplementId={id} variant="button" />
-            </PaymentGate>
-          )}
           <StatusActions
             supplementId={id}
             status={status}
@@ -171,9 +162,54 @@ export default async function SupplementDetailPage({
         </div>
       </div>
 
-      {/* Carrier upload prompt (shown when submitted) */}
-      {status === "submitted" && (
-        <CarrierUploadCard supplementId={id} />
+      {/* Generating indicator */}
+      {status === ("generating" as SupplementStatus) && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex items-center gap-3 py-6">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            <div>
+              <p className="font-medium text-blue-900">Analyzing your estimate...</p>
+              <p className="text-sm text-blue-700">Our AI is reviewing the adjuster&apos;s scope, identifying missing items, and generating your supplement. This usually takes 1-2 minutes.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── GENERATED CONTENT ───────────────────────────────────── */}
+
+      {/* Supplement Line Items — interactive review with checkboxes */}
+      {lineItems && lineItems.length > 0 && (
+        <LineItemsReview
+          supplementId={id}
+          items={lineItems}
+          supplementStatus={status}
+          hasPdf={hasPdf}
+          paid={!!supplement.paid_at}
+          isFirstSupplement={isFirstSupplement}
+          supplementTotal={supplement.supplement_total ?? null}
+        />
+      )}
+
+      {/* Weather Verification Report */}
+      {supplement.weather_data && (
+        <WeatherCard weather={supplement.weather_data as Record<string, unknown>} />
+      )}
+
+      {/* ── UPLOADED CONTENT ────────────────────────────────────── */}
+
+      {/* Section divider */}
+      {(status === "complete" ||
+        status === "submitted" ||
+        status === "approved" ||
+        status === "partially_approved" ||
+        status === "denied") && (
+        <div className="flex items-center gap-3 pt-2">
+          <Separator className="flex-1" />
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Uploaded Claim Information
+          </span>
+          <Separator className="flex-1" />
+        </div>
       )}
 
       {/* Claim Overview — full-width narrative card */}
@@ -222,87 +258,7 @@ export default async function SupplementDetailPage({
         </Card>
       )}
 
-      {/* Weather Verification Report */}
-      {supplement.weather_data && (
-        <WeatherCard weather={supplement.weather_data as Record<string, unknown>} />
-      )}
-
-      {/* Supplement Line Items — full width */}
-      {lineItems && lineItems.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>
-                Supplement Line Items
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({lineItems.length})
-                </span>
-              </CardTitle>
-              {supplement.supplement_total && (
-                <span className="text-lg font-bold text-green-600">
-                  +${Number(supplement.supplement_total).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                </span>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs text-muted-foreground uppercase tracking-wide">
-                    <th className="pb-2 pr-4">Code</th>
-                    <th className="pb-2 pr-4">Description</th>
-                    <th className="pb-2 pr-4">Qty</th>
-                    <th className="pb-2 pr-4">Unit</th>
-                    <th className="pb-2 pr-4 text-right">Price</th>
-                    <th className="pb-2 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineItems.map((item) => (
-                    <tr key={item.id} className="border-b last:border-0">
-                      <td className="py-2 pr-4 font-mono text-xs">{item.xactimate_code}</td>
-                      <td className="py-2 pr-4">
-                        <p className="font-medium">{item.description}</p>
-                        {item.justification && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.justification}</p>
-                        )}
-                      </td>
-                      <td className="py-2 pr-4">{item.quantity}</td>
-                      <td className="py-2 pr-4">{item.unit}</td>
-                      <td className="py-2 pr-4 text-right">${Number(item.unit_price).toFixed(2)}</td>
-                      <td className="py-2 text-right font-medium">${Number(item.total_price).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 font-bold">
-                    <td colSpan={5} className="pt-2 text-right pr-4">Supplement Total:</td>
-                    <td className="pt-2 text-right text-green-600">
-                      ${lineItems.reduce((sum, i) => sum + Number(i.total_price || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Generating indicator */}
-      {status === ("generating" as SupplementStatus) && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="flex items-center gap-3 py-6">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-            <div>
-              <p className="font-medium text-blue-900">Analyzing your estimate...</p>
-              <p className="text-sm text-blue-700">Our AI is reviewing the adjuster&apos;s scope, identifying missing items, and generating your supplement. This usually takes 1-2 minutes.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main content cards */}
+      {/* Main content cards — Claim details + Measurements */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Claim Details */}
         <Card>
@@ -508,6 +464,11 @@ export default async function SupplementDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Carrier upload prompt (shown when submitted — at very bottom) */}
+      {status === "submitted" && (
+        <CarrierUploadCard supplementId={id} />
+      )}
     </div>
   );
 }
