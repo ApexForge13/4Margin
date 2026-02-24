@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import JSZip from "jszip";
 import { uuidParamSchema, validate } from "@/lib/validations/schemas";
+import {
+  generateSupplementPdf,
+  type SupplementPdfData,
+} from "@/lib/pdf/generate-supplement";
+import {
+  generateJustificationPdf,
+  type JustificationPdfData,
+} from "@/lib/pdf/generate-justification";
 
 export async function GET(
   _request: NextRequest,
@@ -17,6 +26,7 @@ export async function GET(
   const { id } = parsed.data;
 
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   // ── Auth check ───────────────────────────────────────────
   const {
@@ -27,7 +37,7 @@ export async function GET(
   }
 
   // ── Fetch supplement + claim + carrier ────────────────────
-  const { data: supplement, error } = await supabase
+  const { data: supplement, error } = await admin
     .from("supplements")
     .select(
       `*, claims ( *, carriers ( * ) )`
@@ -51,7 +61,7 @@ export async function GET(
   const carrier = (claim?.carriers as Record<string, unknown>) || null;
 
   // ── Fetch supplement items (only accepted / detected) ─────
-  const { data: items } = await supabase
+  const { data: items } = await admin
     .from("supplement_items")
     .select("*")
     .eq("supplement_id", id)
@@ -60,11 +70,40 @@ export async function GET(
     .order("xactimate_code", { ascending: true });
 
   // ── Fetch photos ──────────────────────────────────────────
-  const { data: photos } = await supabase
+  const { data: photos } = await admin
     .from("photos")
     .select("*")
     .eq("claim_id", claim.id as string)
     .order("created_at", { ascending: true });
+
+  // ── Fetch company info ────────────────────────────────────
+  const { data: company } = await admin
+    .from("companies")
+    .select("name, phone, address, city, state, zip, license_number")
+    .eq("id", supplement.company_id)
+    .single();
+
+  const companyAddress = company
+    ? [company.address, company.city, company.state, company.zip]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
+  const carrierName = (carrier?.name as string) || "";
+  const propertyAddress = [
+    claim.property_address,
+    claim.property_city,
+    claim.property_state,
+    claim.property_zip,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const generatedDate = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   // ── Create ZIP ────────────────────────────────────────────
   const zip = new JSZip();
@@ -77,7 +116,7 @@ export async function GET(
   // ── 1. Adjuster Estimate PDF ──────────────────────────────
   if (supplement.adjuster_estimate_url) {
     try {
-      const { data: estimateBlob } = await supabase.storage
+      const { data: estimateBlob } = await admin.storage
         .from("estimates")
         .download(supplement.adjuster_estimate_url);
       if (estimateBlob) {
@@ -89,10 +128,70 @@ export async function GET(
     }
   }
 
-  // ── 1b. Generated Supplement PDF ──────────────────────────
-  if (supplement.generated_pdf_url) {
+  // ── 2. Supplement Report PDF (generate fresh with latest branding) ──
+  if (items && items.length > 0) {
     try {
-      const { data: pdfBlob } = await supabase.storage
+      const pdfData: SupplementPdfData = {
+        companyName: company?.name || "",
+        companyPhone: company?.phone || "",
+        companyAddress,
+        companyLicense: company?.license_number || "",
+        claimName,
+        claimNumber: (claim.claim_number as string) || "",
+        policyNumber: (claim.policy_number as string) || "",
+        carrierName,
+        propertyAddress,
+        dateOfLoss: claim.date_of_loss
+          ? new Date(claim.date_of_loss as string).toLocaleDateString("en-US")
+          : "",
+        adjusterName: (claim.adjuster_name as string) || "",
+        adjusterTotal: supplement.adjuster_total
+          ? Number(supplement.adjuster_total)
+          : null,
+        supplementTotal: Number(supplement.supplement_total || 0),
+        measuredSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
+        wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,
+        suggestedSquares: claim.suggested_squares
+          ? Number(claim.suggested_squares)
+          : null,
+        pitch: (claim.roof_pitch as string) || null,
+        items: items.map((item) => ({
+          xactimate_code: item.xactimate_code,
+          description: item.description,
+          category: item.category || "",
+          quantity: Number(item.quantity),
+          unit: item.unit,
+          unit_price: Number(item.unit_price),
+          total_price: Number(item.total_price),
+          justification: item.justification || "",
+          irc_reference: item.irc_reference || "",
+        })),
+        generatedDate,
+      };
+
+      const supplementPdfBuffer = generateSupplementPdf(pdfData);
+      zip.file("Supplement_Report.pdf", supplementPdfBuffer);
+    } catch (pdfErr) {
+      console.error("[download] Failed to generate supplement PDF:", pdfErr);
+      // Fallback: try to download the stored PDF
+      if (supplement.generated_pdf_url) {
+        try {
+          const { data: pdfBlob } = await admin.storage
+            .from("supplements")
+            .download(supplement.generated_pdf_url);
+          if (pdfBlob) {
+            const buffer = await pdfBlob.arrayBuffer();
+            zip.file("Supplement_Report.pdf", buffer);
+          }
+        } catch {
+          // Skip
+        }
+      }
+    }
+  } else if (supplement.generated_pdf_url) {
+    // No items but PDF exists — use stored version
+    try {
+      const { data: pdfBlob } = await admin.storage
         .from("supplements")
         .download(supplement.generated_pdf_url);
       if (pdfBlob) {
@@ -100,14 +199,14 @@ export async function GET(
         zip.file("Supplement_Report.pdf", buffer);
       }
     } catch {
-      // Skip if file can't be downloaded
+      // Skip
     }
   }
 
-  // ── 1c. Weather Verification Report PDF ──────────────────
+  // ── 3. Weather Verification Report PDF ──────────────────
   if (supplement.weather_pdf_url) {
     try {
-      const { data: weatherBlob } = await supabase.storage
+      const { data: weatherBlob } = await admin.storage
         .from("supplements")
         .download(supplement.weather_pdf_url);
       if (weatherBlob) {
@@ -119,10 +218,43 @@ export async function GET(
     }
   }
 
-  // ── 2. Carrier Response (if exists) ───────────────────────
+  // ── 4. Justification & Support Points PDF ──────────────
+  if (items && items.length > 0) {
+    try {
+      const justData: JustificationPdfData = {
+        claimNumber: (claim.claim_number as string) || "",
+        carrierName,
+        propertyAddress,
+        companyName: company?.name || "",
+        generatedDate,
+        items: items.map((item) => ({
+          xactimate_code: item.xactimate_code,
+          description: item.description,
+          quantity: Number(item.quantity),
+          unit: item.unit,
+          total_price: Number(item.total_price),
+          justification: item.justification || "",
+          irc_reference: item.irc_reference || "",
+          photo_references: item.photo_references as string[] | undefined,
+        })),
+        wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,
+        roofSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
+        suggestedSquares: claim.suggested_squares
+          ? Number(claim.suggested_squares)
+          : null,
+      };
+
+      const justPdfBuffer = generateJustificationPdf(justData);
+      zip.file("Justification_Support_Points.pdf", justPdfBuffer);
+    } catch (justErr) {
+      console.error("[download] Failed to generate justification PDF:", justErr);
+    }
+  }
+
+  // ── 5. Carrier Response (if exists) ───────────────────────
   if (supplement.carrier_response_url) {
     try {
-      const { data: responseBlob } = await supabase.storage
+      const { data: responseBlob } = await admin.storage
         .from("carrier-responses")
         .download(supplement.carrier_response_url);
       if (responseBlob) {
@@ -135,14 +267,14 @@ export async function GET(
     }
   }
 
-  // ── 3. Photos folder ──────────────────────────────────────
+  // ── 6. Photos folder ──────────────────────────────────────
   if (photos && photos.length > 0) {
     const photosFolder = zip.folder("Photos");
     if (photosFolder) {
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
         try {
-          const { data: photoBlob } = await supabase.storage
+          const { data: photoBlob } = await admin.storage
             .from("photos")
             .download(photo.storage_path);
           if (photoBlob) {
@@ -160,261 +292,6 @@ export async function GET(
       }
     }
   }
-
-  // ── 4. Supplement Summary (line items) ────────────────────
-  const summaryLines: string[] = [];
-  summaryLines.push("=".repeat(70));
-  summaryLines.push("SUPPLEMENT SUMMARY");
-  summaryLines.push("=".repeat(70));
-  summaryLines.push("");
-  summaryLines.push(`Claim:              ${claimName}`);
-  summaryLines.push(`Claim #:            ${claim.claim_number || "—"}`);
-  summaryLines.push(`Policy #:           ${claim.policy_number || "—"}`);
-  summaryLines.push(`Carrier:            ${(carrier?.name as string) || "—"}`);
-  summaryLines.push(
-    `Property:           ${[
-      claim.property_address,
-      claim.property_city,
-      claim.property_state,
-      claim.property_zip,
-    ]
-      .filter(Boolean)
-      .join(", ") || "—"}`
-  );
-  summaryLines.push(
-    `Date of Loss:       ${
-      claim.date_of_loss
-        ? new Date(claim.date_of_loss as string).toLocaleDateString("en-US")
-        : "—"
-    }`
-  );
-  summaryLines.push("");
-  summaryLines.push("-".repeat(70));
-  summaryLines.push("FINANCIAL SUMMARY");
-  summaryLines.push("-".repeat(70));
-  summaryLines.push(
-    `Adjuster Total:     ${
-      supplement.adjuster_total
-        ? `$${Number(supplement.adjuster_total).toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          })}`
-        : "—"
-    }`
-  );
-  summaryLines.push(
-    `Supplement Total:   ${
-      supplement.supplement_total
-        ? `$${Number(supplement.supplement_total).toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          })}`
-        : "—"
-    }`
-  );
-  const recovery =
-    supplement.supplement_total && supplement.adjuster_total
-      ? Number(supplement.supplement_total) - Number(supplement.adjuster_total)
-      : null;
-  summaryLines.push(
-    `Recovery Amount:    ${
-      recovery != null
-        ? `$${recovery.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-          })}`
-        : "—"
-    }`
-  );
-
-  // Measurements
-  if (claim.roof_squares || claim.roof_pitch) {
-    summaryLines.push("");
-    summaryLines.push("-".repeat(70));
-    summaryLines.push("MEASUREMENTS");
-    summaryLines.push("-".repeat(70));
-    if (claim.roof_squares)
-      summaryLines.push(`Measured Squares:   ${claim.roof_squares}`);
-    if (claim.waste_percent)
-      summaryLines.push(`Waste %:            ${claim.waste_percent}%`);
-    if (claim.suggested_squares)
-      summaryLines.push(`Suggested Squares:  ${claim.suggested_squares}`);
-    if (claim.roof_pitch)
-      summaryLines.push(`Pitch:              ${claim.roof_pitch}`);
-    if (claim.ft_ridges)
-      summaryLines.push(`Ridges:             ${claim.ft_ridges} ft`);
-    if (claim.ft_hips)
-      summaryLines.push(`Hips:               ${claim.ft_hips} ft`);
-    if (claim.ft_valleys)
-      summaryLines.push(`Valleys:            ${claim.ft_valleys} ft`);
-    if (claim.ft_rakes)
-      summaryLines.push(`Rakes:              ${claim.ft_rakes} ft`);
-    if (claim.ft_eaves)
-      summaryLines.push(`Eaves:              ${claim.ft_eaves} ft`);
-    if (claim.ft_drip_edge)
-      summaryLines.push(`Drip Edge:          ${claim.ft_drip_edge} ft`);
-    if (claim.ft_flashing)
-      summaryLines.push(`Flashing:           ${claim.ft_flashing} ft`);
-    if (claim.ft_step_flashing)
-      summaryLines.push(`Step Flashing:      ${claim.ft_step_flashing} ft`);
-  }
-
-  // Weather verification
-  const wd = supplement.weather_data as Record<string, unknown> | null;
-  if (wd) {
-    summaryLines.push("");
-    summaryLines.push("-".repeat(70));
-    summaryLines.push("WEATHER VERIFICATION");
-    summaryLines.push("-".repeat(70));
-    summaryLines.push(
-      `Date:               ${
-        claim.date_of_loss
-          ? new Date(claim.date_of_loss as string).toLocaleDateString("en-US")
-          : "—"
-      }`
-    );
-    summaryLines.push(`Conditions:         ${wd.conditions || "—"}`);
-    summaryLines.push(`Max Wind Speed:     ${wd.windspeed || "—"} mph`);
-    summaryLines.push(`Max Wind Gust:      ${wd.maxWindGust || "—"} mph`);
-    summaryLines.push(
-      `Hail Detected:      ${wd.hailDetected ? "YES" : "No"}`
-    );
-    if (wd.hailDetected && wd.hailSizeMax) {
-      summaryLines.push(
-        `Max Hail Size:      ${wd.hailSizeMax}" diameter`
-      );
-    }
-    summaryLines.push(`Severe Risk Index:  ${wd.severerisk ?? "—"}`);
-    summaryLines.push(`Verdict:            ${wd.verdictText || "—"}`);
-  }
-
-  // Line items
-  if (items && items.length > 0) {
-    summaryLines.push("");
-    summaryLines.push("-".repeat(70));
-    summaryLines.push("SUPPLEMENT LINE ITEMS");
-    summaryLines.push("-".repeat(70));
-    summaryLines.push("");
-
-    items.forEach((item, i) => {
-      summaryLines.push(`${i + 1}. ${item.xactimate_code} — ${item.description}`);
-      summaryLines.push(`   Category:  ${item.category || "—"}`);
-      summaryLines.push(
-        `   Quantity:  ${item.quantity ?? "—"} ${item.unit || ""}`
-      );
-      if (item.unit_price)
-        summaryLines.push(`   Unit Price: $${Number(item.unit_price).toFixed(2)}`);
-      if (item.total_price)
-        summaryLines.push(`   Total:      $${Number(item.total_price).toFixed(2)}`);
-      summaryLines.push("");
-    });
-  }
-
-  summaryLines.push("");
-  summaryLines.push("=".repeat(70));
-  summaryLines.push(
-    `Generated by 4Margin on ${new Date().toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    })}`
-  );
-
-  zip.file("Supplement_Summary.txt", summaryLines.join("\n"));
-
-  // ── 5. Justification / Support Document ───────────────────
-  const justLines: string[] = [];
-  justLines.push("=".repeat(70));
-  justLines.push("SUPPLEMENT JUSTIFICATION — SUPPORTING POINTS");
-  justLines.push("=".repeat(70));
-  justLines.push("");
-  justLines.push(
-    "Use the following points to support your supplement when"
-  );
-  justLines.push(
-    "communicating with the carrier. Personalize the language before"
-  );
-  justLines.push("including in your email or written correspondence.");
-  justLines.push("");
-  justLines.push(`Claim #:   ${claim.claim_number || "—"}`);
-  justLines.push(`Carrier:   ${(carrier?.name as string) || "—"}`);
-  justLines.push(`Property:  ${claim.property_address || "—"}`);
-  justLines.push("");
-
-  if (items && items.length > 0) {
-    justLines.push("-".repeat(70));
-    justLines.push("");
-
-    items.forEach((item, i) => {
-      justLines.push(
-        `${i + 1}. ${item.xactimate_code} — ${item.description}`
-      );
-      justLines.push("");
-      if (item.justification) {
-        justLines.push(`   JUSTIFICATION:`);
-        justLines.push(`   ${item.justification}`);
-        justLines.push("");
-      }
-      if (item.irc_reference) {
-        justLines.push(`   CODE REFERENCE: ${item.irc_reference}`);
-        justLines.push("");
-      }
-      if (
-        item.photo_references &&
-        (item.photo_references as string[]).length > 0
-      ) {
-        justLines.push(
-          `   PHOTO EVIDENCE: See ${(item.photo_references as string[]).join(", ")}`
-        );
-        justLines.push("");
-      }
-      justLines.push("-".repeat(70));
-      justLines.push("");
-    });
-  } else {
-    justLines.push(
-      "[No line items have been added to this supplement yet.]"
-    );
-    justLines.push("");
-    justLines.push(
-      "Once the AI pipeline processes the estimate, justifications"
-    );
-    justLines.push("for each missing or underpaid item will appear here.");
-    justLines.push("");
-  }
-
-  // Waste justification (always useful)
-  if (claim.waste_percent && claim.roof_squares) {
-    justLines.push("=".repeat(70));
-    justLines.push("WASTE PERCENTAGE JUSTIFICATION");
-    justLines.push("=".repeat(70));
-    justLines.push("");
-    justLines.push(
-      `The roof measures ${claim.roof_squares} squares with a calculated waste`
-    );
-    justLines.push(
-      `factor of ${claim.waste_percent}%. This accounts for cuts required by`
-    );
-    justLines.push(
-      `the roof geometry (hips, valleys, dormers) and manufacturer`
-    );
-    justLines.push(`specifications for the installed product.`);
-    justLines.push("");
-    if (claim.suggested_squares) {
-      justLines.push(
-        `Adjusted total: ${claim.suggested_squares} squares including waste.`
-      );
-    }
-    justLines.push("");
-  }
-
-  justLines.push("─".repeat(70));
-  justLines.push(
-    `Generated by 4Margin on ${new Date().toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    })}`
-  );
-
-  zip.file("Justification_Support_Points.txt", justLines.join("\n"));
 
   // ── Generate ZIP and respond ──────────────────────────────
   const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });

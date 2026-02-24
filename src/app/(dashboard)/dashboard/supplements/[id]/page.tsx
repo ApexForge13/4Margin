@@ -21,6 +21,7 @@ import { AutoRefresh } from "@/components/supplements/auto-refresh";
 import { LineItemsReview } from "@/components/supplements/line-items-review";
 import { PipelineErrorCard } from "@/components/supplements/pipeline-error-card";
 import { DraftPaymentCard } from "@/components/supplements/draft-payment-card";
+import { DownloadButton } from "@/components/supplements/download-button";
 
 export default async function SupplementDetailPage({
   params,
@@ -264,6 +265,44 @@ export default async function SupplementDetailPage({
           weather={supplement.weather_data as Record<string, unknown>}
           weatherPdfUrl={weatherPdfUrl}
         />
+      )}
+
+      {/* ── DOWNLOAD SECTION ─────────────────────────────────────── */}
+      {status !== "draft" && status !== "generating" && !!supplement.paid_at && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg className="h-5 w-5 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Download Reports
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Full ZIP Download */}
+              <DownloadButton supplementId={id} variant="button" />
+
+              {/* Weather Report — standalone PDF download */}
+              {supplement.weather_pdf_url && weatherPdfUrl && (
+                <a
+                  href={weatherPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-md border border-cyan-200 bg-cyan-50 px-4 py-2.5 text-sm font-medium text-cyan-700 hover:bg-cyan-100 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                  </svg>
+                  Weather Report PDF
+                </a>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              The ZIP includes the supplement report, justifications, weather verification, adjuster estimate, and photos — all as PDFs.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── UPLOADED CONTENT ────────────────────────────────────── */}
