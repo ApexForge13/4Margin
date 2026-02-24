@@ -30,12 +30,19 @@ export async function POST(request: NextRequest) {
     // ── Verify supplement exists and belongs to user's company ─
     const { data: supplement, error } = await supabase
       .from("supplements")
-      .select("id, status, paid_at, claims(id, claim_number, property_address)")
+      .select("id, status, paid_at, company_id, claim_id, claims(id, claim_number, property_address)")
       .eq("id", supplementId)
       .single();
 
     if (error || !supplement) {
-      console.log("[stripe/checkout] Supplement not found:", error?.message);
+      console.log("[stripe/checkout] Supplement not found:", error?.message, error?.code, error?.details);
+      // Try a simpler query to diagnose RLS vs missing record
+      const { data: basic, error: basicErr } = await supabase
+        .from("supplements")
+        .select("id")
+        .eq("id", supplementId)
+        .single();
+      console.log("[stripe/checkout] Basic query result:", basic ? "found" : "not found", basicErr?.message);
       return NextResponse.json(
         { error: "Supplement not found" },
         { status: 404 }

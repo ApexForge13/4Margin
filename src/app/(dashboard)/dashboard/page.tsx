@@ -89,7 +89,7 @@ export default async function DashboardPage() {
   const active = rows.filter((s) => !s.claims?.archived_at);
   const total = active.length;
   const pending = active.filter((s) =>
-    ["generating", "complete"].includes(s.status)
+    ["draft", "generating", "complete"].includes(s.status)
   ).length;
   // Total Recovered: approved → full supplement_total, partially_approved → approved_amount
   const totalRecovered = active.reduce((sum, s) => {

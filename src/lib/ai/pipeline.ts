@@ -279,26 +279,9 @@ export async function runSupplementPipeline(
       }
     }
 
-    // ── 9. Check if first supplement (free tier) ──
-    const { count: priorPaidCount } = await supabase
-      .from("supplements")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", companyId)
-      .not("paid_at", "is", null);
-
-    const isFirstSupplement = (priorPaidCount ?? 0) === 0;
-
-    // Also check there are no other completed supplements with paid_at
-    const { count: priorCompleteCount } = await supabase
-      .from("supplements")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", companyId)
-      .eq("status", "complete")
-      .neq("id", supplementId);
-
-    const shouldAutoUnlock = isFirstSupplement && (priorCompleteCount ?? 0) === 0;
-
-    // ── 10. Update supplement record ──
+    // ── 9. Update supplement record ──
+    // Note: paid_at is already set by checkout route (free) or Stripe webhook (paid)
+    // before the pipeline runs — no auto-unlock logic needed here.
     await supabase
       .from("supplements")
       .update({
@@ -319,16 +302,14 @@ export async function runSupplementPipeline(
         // Weather verification data
         weather_data: weatherData,
         weather_pdf_url: weatherPdfPath,
-        // Auto-unlock first supplement for free
-        ...(shouldAutoUnlock ? { paid_at: new Date().toISOString() } : {}),
       })
       .eq("id", supplementId);
 
-    // ── 11. Send "supplement ready" email (fire-and-forget) ──
+    // ── 10. Send "supplement ready" email (fire-and-forget) ──
     sendSupplementReadyEmail(
       supplementId,
       analysisResult.items.length,
-      shouldAutoUnlock
+      false
     ).catch(() => {});
 
     return {

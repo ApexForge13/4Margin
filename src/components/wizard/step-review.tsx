@@ -154,18 +154,10 @@ export function StepReview() {
         return;
       }
 
-      // Trigger AI pipeline in the background
-      if (result.supplementId) {
-        fetch(`/api/supplements/${result.supplementId}/generate`, {
-          method: "POST",
-        }).catch((err) => {
-          console.error("Pipeline trigger failed:", err);
-        });
-      }
-
       clearWizardStorage();
 
       // Redirect to Stripe checkout (handles first-free logic automatically)
+      // Pipeline will be triggered AFTER payment succeeds (from the detail page)
       if (result.supplementId) {
         try {
           const stripeRes = await fetch("/api/stripe/checkout", {
@@ -194,7 +186,7 @@ export function StepReview() {
       }
 
       // Fallback: redirect to supplement detail page
-      toast.success("Supplement is generating — we'll analyze your estimate now.");
+      toast.success("Supplement created! Redirecting to your claim...");
       router.push(`/dashboard/supplements/${result.supplementId}`);
     } catch (err) {
       console.error("Generate error:", err);

@@ -1,6 +1,7 @@
 // --- Supplement status types ---
 
 export type SupplementStatus =
+  | "draft"
   | "generating"
   | "complete"
   | "submitted"
@@ -14,6 +15,7 @@ export const STATUS_LABELS: Record<
   string,
   { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
 > = {
+  draft: { label: "Awaiting Payment", variant: "secondary" },
   generating: { label: "Generating", variant: "secondary" },
   complete: { label: "Supplement Complete", variant: "default" },
   submitted: { label: "Submitted to Insurance", variant: "outline" },
@@ -23,6 +25,7 @@ export const STATUS_LABELS: Record<
 };
 
 export const SUPPLEMENT_STATUS_ORDER: SupplementStatus[] = [
+  "draft",
   "generating",
   "complete",
   "submitted",
@@ -40,6 +43,7 @@ export interface StatusStep {
 }
 
 export const STATUS_STEPS: StatusStep[] = [
+  { key: "payment", label: "Payment", statuses: ["draft"] },
   { key: "generating", label: "Generating", statuses: ["generating"] },
   { key: "complete", label: "Complete", statuses: ["complete"] },
   { key: "submitted", label: "Submitted", statuses: ["submitted"] },

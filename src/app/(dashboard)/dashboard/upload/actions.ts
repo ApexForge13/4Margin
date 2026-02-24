@@ -187,7 +187,7 @@ export async function createClaimAndSupplement(
     .insert({
       company_id: companyId,
       claim_id: claim.id,
-      status: "generating",
+      status: "draft",
       adjuster_estimate_url: input.estimateStoragePath,
       created_by: user.id,
     })

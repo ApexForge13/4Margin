@@ -151,7 +151,7 @@ export default async function SupplementDetailPage({
         approvedAmount={supplement.approved_amount ?? null}
         supplementTotal={supplement.supplement_total ?? null}
       />
-      <AutoRefresh status={status} />
+      <AutoRefresh status={status} paid={!!supplement.paid_at} />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -175,6 +175,46 @@ export default async function SupplementDetailPage({
         </div>
       </div>
 
+      {/* Draft / awaiting payment indicator */}
+      {status === ("draft" as SupplementStatus) && !supplement.paid_at && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="flex items-center gap-3 py-6">
+            <svg
+              className="h-5 w-5 text-amber-600 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <p className="font-medium text-amber-900">Awaiting Payment</p>
+              <p className="text-sm text-amber-700">
+                Your supplement has been created. Complete payment to start the AI analysis.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Draft but paid — pipeline starting */}
+      {status === ("draft" as SupplementStatus) && !!supplement.paid_at && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex items-center gap-3 py-6">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            <div>
+              <p className="font-medium text-blue-900">Starting analysis...</p>
+              <p className="text-sm text-blue-700">Payment confirmed. Your supplement analysis is about to begin.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Generating indicator */}
       {status === ("generating" as SupplementStatus) && (
         <Card className="border-blue-200 bg-blue-50">
@@ -192,7 +232,7 @@ export default async function SupplementDetailPage({
 
       {/* Supplement Line Items — interactive review with checkboxes */}
       {/* Pipeline error state */}
-      {pipelineError && status !== "generating" && (
+      {pipelineError && status !== "generating" && status !== "draft" && (
         <PipelineErrorCard
           supplementId={id}
           error={pipelineError}
@@ -210,7 +250,7 @@ export default async function SupplementDetailPage({
           isFirstSupplement={isFirstSupplement}
           supplementTotal={supplement.supplement_total ?? null}
         />
-      ) : !pipelineError && status !== "generating" && (
+      ) : !pipelineError && status !== "generating" && status !== "draft" && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="flex items-center gap-3 py-6">
             <svg
