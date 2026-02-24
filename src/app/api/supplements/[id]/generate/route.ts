@@ -61,6 +61,8 @@ export async function POST(
   }
 
   // Reset supplement status for retries — clear old items and reset to generating
+  // Also set paid_at as fallback — if webhook didn't fire, this endpoint is
+  // only called after successful Stripe checkout redirect, so payment is confirmed.
   await admin
     .from("supplement_items")
     .delete()
@@ -70,6 +72,7 @@ export async function POST(
     .from("supplements")
     .update({
       status: "generating",
+      paid_at: new Date().toISOString(),
       supplement_total: null,
       adjuster_total: null,
       adjuster_estimate_parsed: null,
