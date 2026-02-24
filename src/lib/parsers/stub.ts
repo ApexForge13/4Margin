@@ -1,46 +1,61 @@
 /**
- * Stub parsers for PDF document extraction.
+ * PDF parsers that call the server-side Claude API routes.
  *
- * These will be replaced with real parsers (Claude API / pdf-parse)
- * that extract structured data from Xactimate estimates and
- * EagleView/HOVER measurement reports.
- *
- * The UI is built to handle the parse-then-confirm flow:
- * 1. User uploads PDF
- * 2. System shows "Analyzing..." spinner
- * 3. Parser returns extracted data (or empty for stub)
- * 4. Editable form fields populate with results
- * 5. User reviews, corrects, clicks Next
+ * These run client-side in the wizard and send the PDF to our API
+ * routes which handle Claude API calls (keeping the API key server-side).
  */
 
 import type { ClaimDetails, MeasurementData } from "@/types/wizard";
 
 /**
  * Parse an adjuster's Xactimate estimate PDF.
- * Extracts claim number, carrier, property address, adjuster info, etc.
+ * Sends to /api/parse/estimate → Claude extracts structured claim data.
  */
 export async function parseEstimatePdf(
-  _file: File
+  file: File
 ): Promise<Partial<ClaimDetails>> {
-  // Simulate a brief processing delay so the UI shows the analyzing state
-  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const formData = new FormData();
+  formData.append("file", file);
 
-  // Stub: return empty — user fills in manually
-  // Real implementation will use Claude API to extract structured data
-  return {};
+  const res = await fetch("/api/parse/estimate", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Parse failed (${res.status})`);
+  }
+
+  const data = await res.json();
+
+  // Strip out the error field if present, return only ClaimDetails fields
+  const { error: _error, ...parsed } = data;
+  return parsed as Partial<ClaimDetails>;
 }
 
 /**
  * Parse an EagleView, HOVER, or other measurement report PDF.
- * Extracts roof squares, pitch, valleys, hips, ridges, waste %, etc.
+ * Sends to /api/parse/measurement → Claude extracts roof measurement data.
  */
 export async function parseMeasurementPdf(
-  _file: File
+  file: File
 ): Promise<Partial<MeasurementData>> {
-  // Simulate a brief processing delay
-  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const formData = new FormData();
+  formData.append("file", file);
 
-  // Stub: return empty — user fills in manually
-  // Real implementation will use Claude API to extract structured data
-  return {};
+  const res = await fetch("/api/parse/measurement", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Parse failed (${res.status})`);
+  }
+
+  const data = await res.json();
+
+  const { error: _error, ...parsed } = data;
+  return parsed as Partial<MeasurementData>;
 }

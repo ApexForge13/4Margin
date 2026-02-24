@@ -88,6 +88,36 @@ export async function GET(
     }
   }
 
+  // ── 1b. Generated Supplement PDF ──────────────────────────
+  if (supplement.generated_pdf_url) {
+    try {
+      const { data: pdfBlob } = await supabase.storage
+        .from("supplements")
+        .download(supplement.generated_pdf_url);
+      if (pdfBlob) {
+        const buffer = await pdfBlob.arrayBuffer();
+        zip.file("Supplement_Report.pdf", buffer);
+      }
+    } catch {
+      // Skip if file can't be downloaded
+    }
+  }
+
+  // ── 1c. Weather Verification Report PDF ──────────────────
+  if (supplement.weather_pdf_url) {
+    try {
+      const { data: weatherBlob } = await supabase.storage
+        .from("supplements")
+        .download(supplement.weather_pdf_url);
+      if (weatherBlob) {
+        const buffer = await weatherBlob.arrayBuffer();
+        zip.file("Weather_Verification_Report.pdf", buffer);
+      }
+    } catch {
+      // Skip if file can't be downloaded
+    }
+  }
+
   // ── 2. Carrier Response (if exists) ───────────────────────
   if (supplement.carrier_response_url) {
     try {
@@ -223,6 +253,35 @@ export async function GET(
       summaryLines.push(`Flashing:           ${claim.ft_flashing} ft`);
     if (claim.ft_step_flashing)
       summaryLines.push(`Step Flashing:      ${claim.ft_step_flashing} ft`);
+  }
+
+  // Weather verification
+  const wd = supplement.weather_data as Record<string, unknown> | null;
+  if (wd) {
+    summaryLines.push("");
+    summaryLines.push("-".repeat(70));
+    summaryLines.push("WEATHER VERIFICATION");
+    summaryLines.push("-".repeat(70));
+    summaryLines.push(
+      `Date:               ${
+        claim.date_of_loss
+          ? new Date(claim.date_of_loss as string).toLocaleDateString("en-US")
+          : "—"
+      }`
+    );
+    summaryLines.push(`Conditions:         ${wd.conditions || "—"}`);
+    summaryLines.push(`Max Wind Speed:     ${wd.windspeed || "—"} mph`);
+    summaryLines.push(`Max Wind Gust:      ${wd.maxWindGust || "—"} mph`);
+    summaryLines.push(
+      `Hail Detected:      ${wd.hailDetected ? "YES" : "No"}`
+    );
+    if (wd.hailDetected && wd.hailSizeMax) {
+      summaryLines.push(
+        `Max Hail Size:      ${wd.hailSizeMax}" diameter`
+      );
+    }
+    summaryLines.push(`Severe Risk Index:  ${wd.severerisk ?? "—"}`);
+    summaryLines.push(`Verdict:            ${wd.verdictText || "—"}`);
   }
 
   // Line items

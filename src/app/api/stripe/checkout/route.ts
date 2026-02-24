@@ -44,6 +44,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── First Supplement Free ─────────────────────────────────
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
+
+  if (userProfile?.company_id) {
+    const { count: priorPaidCount } = await supabase
+      .from("supplements")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", userProfile.company_id)
+      .not("paid_at", "is", null);
+
+    if ((priorPaidCount ?? 0) === 0) {
+      // First supplement — auto-unlock for free
+      await supabase
+        .from("supplements")
+        .update({ paid_at: new Date().toISOString() })
+        .eq("id", supplementId);
+
+      const origin = request.headers.get("origin") || "http://localhost:3000";
+      return NextResponse.json({
+        url: `${origin}/dashboard/supplements/${supplementId}?payment=success&free=true`,
+      });
+    }
+  }
+
   const claim = supplement.claims as unknown as Record<string, unknown>;
   const claimLabel =
     (claim?.claim_number as string) ||

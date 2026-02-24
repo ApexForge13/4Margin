@@ -184,7 +184,8 @@ export function SettingsForm({ profile }: SettingsFormProps) {
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Only owners and admins can edit company information.
+              Only company owners can edit company information. Contact your
+              company owner if changes are needed.
             </p>
           )}
         </CardContent>

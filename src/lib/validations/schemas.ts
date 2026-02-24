@@ -265,7 +265,7 @@ export const uuidParamSchema = z.object({
 export const adminUpdateUserSchema = z.object({
   fullName: requiredString("Full name").max(255),
   email: z.string().trim().toLowerCase().email("Invalid email address"),
-  role: z.enum(["owner", "admin", "member"]),
+  role: z.enum(["owner", "admin", "user"]),
 });
 
 // ── Admin — Claim management (cross-company) ────────────────

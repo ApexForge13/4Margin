@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendPaymentConfirmationEmail } from "@/lib/email/send";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -58,6 +59,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Payment recorded for supplement ${supplementId}`);
+
+    // Send payment confirmation email (fire-and-forget)
+    const amountPaid = session.amount_total
+      ? session.amount_total / 100
+      : 149;
+    sendPaymentConfirmationEmail(supplementId, amountPaid).catch(() => {});
   }
 
   return NextResponse.json({ received: true });

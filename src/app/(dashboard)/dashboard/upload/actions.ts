@@ -143,8 +143,7 @@ export async function createClaimAndSupplement(
     .insert({
       company_id: companyId,
       claim_id: claim.id,
-      // TODO: change to "generating" once AI pipeline is wired up
-      status: "complete",
+      status: "generating",
       adjuster_estimate_url: input.estimateStoragePath,
       created_by: user.id,
     })

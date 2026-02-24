@@ -48,6 +48,22 @@ export default async function SupplementDetailPage({
   const claim = supplement.claims as Record<string, unknown>;
   const carrier = (claim?.carriers as Record<string, unknown>) || null;
 
+  // Check if first supplement (for free tier display)
+  const { count: paidCount } = await supabase
+    .from("supplements")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", supplement.company_id)
+    .not("paid_at", "is", null);
+  const isFirstSupplement = (paidCount ?? 0) === 0;
+
+  // Fetch supplement line items
+  const { data: lineItems } = await supabase
+    .from("supplement_items")
+    .select("*")
+    .eq("supplement_id", id)
+    .order("category", { ascending: true })
+    .order("xactimate_code", { ascending: true });
+
   // Fetch photos for this claim
   const { data: photos } = await supabase
     .from("photos")
@@ -142,6 +158,7 @@ export default async function SupplementDetailPage({
             <PaymentGate
               supplementId={id}
               paid={!!supplement.paid_at}
+              isFirstSupplement={isFirstSupplement}
             >
               <DownloadButton supplementId={id} variant="button" />
             </PaymentGate>
@@ -201,6 +218,86 @@ export default async function SupplementDetailPage({
                 <p className="whitespace-pre-wrap">{claim.prior_supplement_history as string}</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Weather Verification Report */}
+      {supplement.weather_data && (
+        <WeatherCard weather={supplement.weather_data as Record<string, unknown>} />
+      )}
+
+      {/* Supplement Line Items — full width */}
+      {lineItems && lineItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>
+                Supplement Line Items
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({lineItems.length})
+                </span>
+              </CardTitle>
+              {supplement.supplement_total && (
+                <span className="text-lg font-bold text-green-600">
+                  +${Number(supplement.supplement_total).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs text-muted-foreground uppercase tracking-wide">
+                    <th className="pb-2 pr-4">Code</th>
+                    <th className="pb-2 pr-4">Description</th>
+                    <th className="pb-2 pr-4">Qty</th>
+                    <th className="pb-2 pr-4">Unit</th>
+                    <th className="pb-2 pr-4 text-right">Price</th>
+                    <th className="pb-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lineItems.map((item) => (
+                    <tr key={item.id} className="border-b last:border-0">
+                      <td className="py-2 pr-4 font-mono text-xs">{item.xactimate_code}</td>
+                      <td className="py-2 pr-4">
+                        <p className="font-medium">{item.description}</p>
+                        {item.justification && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.justification}</p>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">{item.quantity}</td>
+                      <td className="py-2 pr-4">{item.unit}</td>
+                      <td className="py-2 pr-4 text-right">${Number(item.unit_price).toFixed(2)}</td>
+                      <td className="py-2 text-right font-medium">${Number(item.total_price).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 font-bold">
+                    <td colSpan={5} className="pt-2 text-right pr-4">Supplement Total:</td>
+                    <td className="pt-2 text-right text-green-600">
+                      ${lineItems.reduce((sum, i) => sum + Number(i.total_price || 0), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Generating indicator */}
+      {status === ("generating" as SupplementStatus) && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex items-center gap-3 py-6">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+            <div>
+              <p className="font-medium text-blue-900">Analyzing your estimate...</p>
+              <p className="text-sm text-blue-700">Our AI is reviewing the adjuster&apos;s scope, identifying missing items, and generating your supplement. This usually takes 1-2 minutes.</p>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -422,6 +519,137 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between gap-4">
       <span className="text-muted-foreground shrink-0">{label}</span>
       <span className="font-medium text-right truncate">{value}</span>
+    </div>
+  );
+}
+
+// --- Weather Verification Card ---
+function WeatherCard({ weather: w }: { weather: Record<string, unknown> }) {
+  const verdict = w.verdict as string;
+  const hailDetected = w.hailDetected as boolean;
+  const maxWindGust = w.maxWindGust as number;
+  const hailSizeMax = w.hailSizeMax as number | null;
+  const conditions = w.conditions as string;
+  const severerisk = w.severerisk as number;
+  const verdictText = w.verdictText as string;
+  const windspeed = w.windspeed as number;
+  const precip = w.precip as number;
+  const tempmax = w.tempmax as number;
+  const tempmin = w.tempmin as number;
+
+  const verdictConfig = {
+    severe_confirmed: {
+      label: "SEVERE WEATHER CONFIRMED",
+      badgeClass: "bg-red-600 text-white hover:bg-red-600",
+    },
+    moderate_weather: {
+      label: "MODERATE WEATHER",
+      badgeClass: "bg-amber-500 text-white hover:bg-amber-500",
+    },
+    no_significant_weather: {
+      label: "NO SIGNIFICANT WEATHER",
+      badgeClass: "bg-gray-200 text-gray-700 hover:bg-gray-200",
+    },
+  }[verdict] || {
+    label: String(verdict),
+    badgeClass: "bg-gray-200 text-gray-700 hover:bg-gray-200",
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <svg
+              className="h-5 w-5 text-cyan-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+              />
+            </svg>
+            Weather Verification
+          </CardTitle>
+          <Badge className={verdictConfig.badgeClass}>
+            {verdictConfig.label}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+          <WeatherStat
+            label="Max Wind Gust"
+            value={`${Math.round(maxWindGust)} mph`}
+            highlight={maxWindGust >= 58}
+          />
+          <WeatherStat
+            label="Hail"
+            value={
+              hailDetected
+                ? hailSizeMax
+                  ? `Detected — ${hailSizeMax}" diameter`
+                  : "Detected"
+                : "Not reported"
+            }
+            highlight={hailDetected}
+          />
+          <WeatherStat label="Conditions" value={conditions} />
+          <WeatherStat
+            label="Severe Risk"
+            value={`${Math.round(severerisk)} / 100`}
+            highlight={severerisk > 50}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
+          <WeatherStat
+            label="Avg Wind Speed"
+            value={`${Math.round(windspeed)} mph`}
+          />
+          <WeatherStat
+            label="Precipitation"
+            value={`${precip?.toFixed(2) || "0.00"} in`}
+          />
+          <WeatherStat
+            label="High / Low"
+            value={`${Math.round(tempmax)}°F / ${Math.round(tempmin)}°F`}
+          />
+          <WeatherStat
+            label="Location"
+            value={(w.resolvedAddress as string) || "—"}
+          />
+        </div>
+        <Separator className="my-4" />
+        <p className="text-sm text-muted-foreground">{verdictText}</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Source: Visual Crossing Historical Weather Data
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WeatherStat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        {label}
+      </p>
+      <p className={`text-sm font-semibold ${highlight ? "text-red-600" : ""}`}>
+        {value}
+      </p>
     </div>
   );
 }

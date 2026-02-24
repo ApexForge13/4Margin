@@ -8,10 +8,11 @@ import { SUPPLEMENT_PRICE_DISPLAY } from "@/lib/stripe/constants";
 interface PaymentGateProps {
   supplementId: string;
   paid: boolean;
+  isFirstSupplement?: boolean;
   children: React.ReactNode; // The download button (shown when paid)
 }
 
-export function PaymentGate({ supplementId, paid, children }: PaymentGateProps) {
+export function PaymentGate({ supplementId, paid, isFirstSupplement, children }: PaymentGateProps) {
   const [loading, setLoading] = useState(false);
 
   if (paid) {
@@ -89,7 +90,7 @@ export function PaymentGate({ supplementId, paid, children }: PaymentGateProps) 
               d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
             />
           </svg>
-          Unlock Report — {SUPPLEMENT_PRICE_DISPLAY}
+          {isFirstSupplement ? "Unlock Report — FREE" : `Unlock Report — ${SUPPLEMENT_PRICE_DISPLAY}`}
         </>
       )}
     </Button>

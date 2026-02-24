@@ -154,7 +154,16 @@ export function StepReview() {
         return;
       }
 
-      toast.success("Supplement created successfully!");
+      // Fire-and-forget: trigger AI pipeline in the background
+      if (result.supplementId) {
+        fetch(`/api/supplements/${result.supplementId}/generate`, {
+          method: "POST",
+        }).catch((err) => {
+          console.error("Pipeline trigger failed:", err);
+        });
+      }
+
+      toast.success("Supplement is generating — we'll analyze your estimate now.");
       clearWizardStorage();
       router.push("/dashboard");
     } catch (err) {

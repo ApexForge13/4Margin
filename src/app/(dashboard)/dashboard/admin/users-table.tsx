@@ -29,7 +29,7 @@ export interface AdminUser {
 const ROLE_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
   owner: "default",
   admin: "secondary",
-  member: "outline",
+  user: "outline",
 };
 
 type SortKey =

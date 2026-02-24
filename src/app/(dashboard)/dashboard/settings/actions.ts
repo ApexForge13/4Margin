@@ -26,7 +26,7 @@ export async function updateCompany(data: unknown) {
     .single();
 
   if (!profile) return { error: "Profile not found." };
-  if (profile.role === "member") {
+  if (profile.role === "user") {
     return { error: "Only owners and admins can update company info." };
   }
 

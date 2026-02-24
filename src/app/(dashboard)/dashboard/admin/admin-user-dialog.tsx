@@ -52,7 +52,7 @@ export function AdminUserDialog({
     const result = await adminUpdateUser(user.id, {
       fullName,
       email,
-      role: role as "owner" | "admin" | "member",
+      role: role as "owner" | "admin" | "user",
     });
     setSaving(false);
 
@@ -98,16 +98,23 @@ export function AdminUserDialog({
 
           <div className="space-y-2">
             <Label htmlFor="edit-user-role">Role</Label>
-            <Select value={role} onValueChange={setRole} disabled={saving}>
-              <SelectTrigger id="edit-user-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="owner">Owner</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
-              </SelectContent>
-            </Select>
+            {user.role === "admin" ? (
+              <Input
+                id="edit-user-role"
+                value="Platform Admin"
+                disabled
+              />
+            ) : (
+              <Select value={role} onValueChange={setRole} disabled={saving}>
+                <SelectTrigger id="edit-user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owner">Owner</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">

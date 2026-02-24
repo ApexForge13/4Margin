@@ -27,7 +27,7 @@ async function verifyAdmin() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role === "member") {
+  if (!profile || profile.role !== "admin") {
     return { error: "Permission denied." as const, profile: null };
   }
   return { error: null, profile };

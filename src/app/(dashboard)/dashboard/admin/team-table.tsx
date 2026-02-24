@@ -15,7 +15,7 @@ import type { TeamMember } from "./admin-tabs";
 const ROLE_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
   owner: "default",
   admin: "secondary",
-  member: "outline",
+  user: "outline",
 };
 
 interface TeamTableProps {
