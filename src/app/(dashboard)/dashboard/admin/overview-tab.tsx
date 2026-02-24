@@ -37,9 +37,13 @@ function formatCurrency(cents: number): string {
 }
 
 export function OverviewTab({ stats }: { stats: PlatformStats }) {
+  // Avg recovery only counts resolved supplements (approved + partially_approved)
+  const resolvedCount =
+    (stats.statusCounts["approved"] || 0) +
+    (stats.statusCounts["partially_approved"] || 0);
   const avgRecovery =
-    stats.totalSupplements > 0
-      ? stats.totalRecovery / stats.totalSupplements
+    resolvedCount > 0
+      ? stats.totalRecovery / resolvedCount
       : 0;
 
   return (

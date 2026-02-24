@@ -91,11 +91,16 @@ export default async function DashboardPage() {
   const pending = active.filter((s) =>
     ["generating", "complete"].includes(s.status)
   ).length;
-  const totalRecovered = active.reduce(
-    (sum, s) => sum + (Number(s.supplement_total) || 0),
-    0
-  );
-  const avgRecovery = total > 0 ? totalRecovered / total : 0;
+  // Total Recovered: approved → full supplement_total, partially_approved → approved_amount
+  const totalRecovered = active.reduce((sum, s) => {
+    if (s.status === "approved") return sum + (Number(s.supplement_total) || 0);
+    if (s.status === "partially_approved") return sum + (Number(s.approved_amount) || 0);
+    return sum;
+  }, 0);
+  const resolved = active.filter((s) =>
+    ["approved", "partially_approved"].includes(s.status)
+  ).length;
+  const avgRecovery = resolved > 0 ? totalRecovered / resolved : 0;
 
   return (
     <div className="space-y-6">

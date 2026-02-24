@@ -215,7 +215,12 @@ export default async function AdminPage() {
 
   for (const s of supplementsRaw) {
     statusCounts[s.status] = (statusCounts[s.status] || 0) + 1;
-    totalRecovery += Number(s.supplement_total) || 0;
+    // Total Recovery: approved → full supplement_total, partially_approved → approved_amount
+    if (s.status === "approved") {
+      totalRecovery += Number(s.supplement_total) || 0;
+    } else if (s.status === "partially_approved") {
+      totalRecovery += Number(s.approved_amount) || 0;
+    }
     totalApproved += Number(s.approved_amount) || 0;
   }
 
