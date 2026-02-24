@@ -25,31 +25,31 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Public routes that don't require auth
-  const publicRoutes = [
-    "/login",
-    "/signup",
-    "/auth/callback",
-    "/auth/confirm",
+  // Auth pages — redirect logged-in users to dashboard
+  const authRoutes = ["/login", "/signup", "/auth/callback", "/auth/confirm"];
+  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+
+  // Public content pages — accessible to everyone regardless of auth
+  const publicContentRoutes = [
     "/terms",
     "/privacy",
     "/robots.txt",
     "/sitemap.xml",
     "/opengraph-image",
   ];
-  const isPublicRoute = publicRoutes.some((route) =>
+  const isPublicContent = publicContentRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
   // If not logged in and trying to access protected route → redirect to login
-  if (!user && !isPublicRoute && pathname !== "/") {
+  if (!user && !isAuthRoute && !isPublicContent && pathname !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   // If logged in and trying to access auth pages → redirect to dashboard
-  if (user && isPublicRoute) {
+  if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
