@@ -189,7 +189,7 @@ export function StepMeasurements() {
           </h3>
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="measuredSquares">Squares</Label>
+              <Label htmlFor="measuredSquares">Measured Squares</Label>
               <Input
                 id="measuredSquares"
                 type="number"
@@ -272,35 +272,33 @@ export function StepMeasurements() {
             </div>
           </div>
 
-          {/* Additional area fields — shown if populated from EagleView parsing */}
-          {(measurementData.totalRoofArea || measurementData.totalRoofAreaLessPenetrations) && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="totalRoofArea">Total Roof Area (sq ft)</Label>
-                <Input
-                  id="totalRoofArea"
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g. 3169"
-                  value={measurementData.totalRoofArea}
-                  onChange={(e) => updateField("totalRoofArea", e.target.value)}
-                  disabled={isParsing || isConfirmed}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="totalRoofAreaLessPenetrations">Less Penetrations (sq ft)</Label>
-                <Input
-                  id="totalRoofAreaLessPenetrations"
-                  type="number"
-                  step="0.01"
-                  placeholder="e.g. 3168"
-                  value={measurementData.totalRoofAreaLessPenetrations}
-                  onChange={(e) => updateField("totalRoofAreaLessPenetrations", e.target.value)}
-                  disabled={isParsing || isConfirmed}
-                />
-              </div>
+          {/* Total area fields */}
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="totalRoofArea">Total Roof Area (sq ft)</Label>
+              <Input
+                id="totalRoofArea"
+                type="number"
+                step="0.01"
+                placeholder="e.g. 3169"
+                value={measurementData.totalRoofArea}
+                onChange={(e) => updateField("totalRoofArea", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="totalRoofAreaLessPenetrations">Less Penetrations (sq ft)</Label>
+              <Input
+                id="totalRoofAreaLessPenetrations"
+                type="number"
+                step="0.01"
+                placeholder="e.g. 3168"
+                value={measurementData.totalRoofAreaLessPenetrations}
+                onChange={(e) => updateField("totalRoofAreaLessPenetrations", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
+            </div>
+          </div>
         </div>
 
         {/* ── Pitch Breakdown (from EagleView) ── */}
@@ -526,34 +524,32 @@ export function StepMeasurements() {
           </div>
 
           {/* Penetrations sub-section */}
-          {(measurementData.totalPenetrationsArea || measurementData.totalPenetrationsPerimeter) && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="totalPenetrationsArea">Penetrations Area (sq ft)</Label>
-                <Input
-                  id="totalPenetrationsArea"
-                  type="number"
-                  step="0.01"
-                  placeholder="sq ft"
-                  value={measurementData.totalPenetrationsArea}
-                  onChange={(e) => updateField("totalPenetrationsArea", e.target.value)}
-                  disabled={isParsing || isConfirmed}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="totalPenetrationsPerimeter">Penetrations Perimeter (LF)</Label>
-                <Input
-                  id="totalPenetrationsPerimeter"
-                  type="number"
-                  step="0.01"
-                  placeholder="LF"
-                  value={measurementData.totalPenetrationsPerimeter}
-                  onChange={(e) => updateField("totalPenetrationsPerimeter", e.target.value)}
-                  disabled={isParsing || isConfirmed}
-                />
-              </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="totalPenetrationsArea">Penetrations Area (sq ft)</Label>
+              <Input
+                id="totalPenetrationsArea"
+                type="number"
+                step="0.01"
+                placeholder="sq ft"
+                value={measurementData.totalPenetrationsArea}
+                onChange={(e) => updateField("totalPenetrationsArea", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="totalPenetrationsPerimeter">Penetrations Perimeter (LF)</Label>
+              <Input
+                id="totalPenetrationsPerimeter"
+                type="number"
+                step="0.01"
+                placeholder="LF"
+                value={measurementData.totalPenetrationsPerimeter}
+                onChange={(e) => updateField("totalPenetrationsPerimeter", e.target.value)}
+                disabled={isParsing || isConfirmed}
+              />
+            </div>
+          </div>
         </div>
 
         <Separator />

@@ -90,21 +90,23 @@ const MEASUREMENT_EXTRACTION_PROMPT = `You are a roofing measurement expert. Ext
 Return ONLY a JSON object with these fields (use empty string "" for anything you cannot find, use [] for empty arrays):
 
 {
-  "measuredSquares": "total roof area in squares (1 square = 100 sq ft), as a number string",
-  "wastePercent": "suggested waste percentage as a number string (e.g. '15' for 15%)",
-  "suggestedSquares": "total squares including waste, as a number string",
-  "totalRoofArea": "total roof area in sq ft (all pitches), as a number string",
-  "totalRoofAreaLessPenetrations": "total roof area minus penetrations in sq ft",
-  "ftRidges": "total linear feet of ridges",
+  "measuredSquares": "the BASE measured squares WITHOUT waste — from 'Total Roof Area' or 'Total Squares' (NOT the suggested/with-waste number)",
+  "wastePercent": "the waste percentage as a number string (e.g. '15' for 15%) — from the Waste Calculation table",
+  "suggestedSquares": "the suggested squares WITH waste included — labeled 'Suggested Squares w/ Waste' or similar",
+  "steepSquares": "squares at pitch 7/12 or steeper — sum of squares from pitches >= 7/12 in the pitch breakdown",
+  "highStorySquares": "squares on 2nd story or higher — from 'High' or '2nd Story' area if listed",
+  "totalRoofArea": "total roof area in sq ft (all pitches combined)",
+  "totalRoofAreaLessPenetrations": "total roof area minus penetrations in sq ft — labeled 'Total Area Less Penetrations' or 'Less Penetrations'",
+  "ftRidges": "total linear feet of ridges — from the Lengths table",
   "ftHips": "total linear feet of hips",
   "ftValleys": "total linear feet of valleys",
   "ftRakes": "total linear feet of rakes",
-  "ftEaves": "total linear feet of eaves/starter",
-  "ftDripEdge": "total linear feet of drip edge (often eaves + rakes)",
+  "ftEaves": "total linear feet of eaves — may be labeled 'Eaves' or 'Starter'",
+  "ftDripEdge": "total linear feet of drip edge (often eaves + rakes combined)",
   "ftParapet": "total linear feet of parapet walls",
   "ftFlashing": "total linear feet of flashing",
   "ftStepFlashing": "total linear feet of step flashing",
-  "numRidges": "count of ridge segments (e.g. '7' from '109 ft (7 Ridges)')",
+  "numRidges": "count of ridge segments — the number in parentheses like '(7 Ridges)'",
   "numHips": "count of hip segments",
   "numValleys": "count of valley segments",
   "numRakes": "count of rake segments",
@@ -113,7 +115,7 @@ Return ONLY a JSON object with these fields (use empty string "" for anything yo
   "numStepFlashingLengths": "count of step flashing segments",
   "totalPenetrationsArea": "total penetrations area in sq ft",
   "totalPenetrationsPerimeter": "total penetrations perimeter in linear feet",
-  "predominantPitch": "the predominant roof pitch (e.g. '7/12')",
+  "predominantPitch": "the predominant/primary roof pitch (e.g. '7/12') — the pitch with the largest area",
   "pitchBreakdown": [
     { "pitch": "e.g. 7/12", "areaSqFt": "area at that pitch in sq ft", "percentOfRoof": "percent of total roof" }
   ],
@@ -121,17 +123,22 @@ Return ONLY a JSON object with these fields (use empty string "" for anything yo
   "accessories": "list of roof accessories/penetrations (e.g. 'Skylights (2), Pipe boots (4), Chimney')"
 }
 
-Important:
-- All numeric values should be strings (e.g. "28.50" not 28.50)
-- Squares are typically shown as total roof area divided by 100
-- The "Areas per Pitch" table lists each pitch with its area (sq ft) and % of roof — extract ALL pitches into pitchBreakdown
-- The "Lengths, Areas and Pitches" section has counts in parentheses (e.g. "109 ft (7 Ridges)") — extract BOTH the linear feet AND the count numbers
-- Waste % is in the "Waste Calculation" table — look for the highlighted or recommended value
-- Structure complexity is labeled "Simple", "Normal", or "Complex" near the waste calculation table
-- Linear measurements should be in feet
-- Pitch is typically shown as rise/run (e.g. 6/12, 8/12)
-- Extract ONLY what's explicitly in the document — do not calculate or fabricate values
-- Return valid JSON only, no markdown, no code fences`;
+CRITICAL — How to find each value in an EagleView report:
+1. MEASURED SQUARES vs SUGGESTED SQUARES: These are TWO DIFFERENT values.
+   - "measuredSquares" = the BASE measurement WITHOUT waste. Look for "Total Squares", "Total Area" divided by 100, or the squares value BEFORE waste is applied. On EagleView page 11/12 this is often in the "Roof Summary" as the total area converted to squares.
+   - "suggestedSquares" = the LARGER number that INCLUDES waste. Labeled "Suggested Squares w/ Waste" or "Total w/ Waste". This is always larger than measuredSquares.
+   - If you see only ONE squares number, check if there's a waste table — if so, the single number is likely the suggested (with waste) value, and you should calculate measuredSquares by dividing by (1 + waste%/100).
+2. WASTE %: Found in the "Waste Calculation" table. Look for the highlighted or recommended row. Common values: 10%, 12%, 15%.
+3. STEEP SQUARES: Sum the areas (converted to squares) for all pitches >= 7/12 from the pitch breakdown table. If pitch breakdown shows 7/12 = 1953 sq ft and 9/12 = 500 sq ft, steep squares = (1953+500)/100 = 24.53.
+4. LINEAR MEASUREMENTS: Found in the "Lengths, Areas and Pitches" section. Format is typically "109 ft (7 Ridges)" — extract "109" as ftRidges and "7" as numRidges. Do this for ALL line items: Ridges, Hips, Valleys, Rakes, Eaves, Flashing, Step Flashing.
+5. PREDOMINANT PITCH: The pitch with the highest percentage or largest area in the pitch breakdown.
+6. DRIP EDGE: May be listed separately, or calculate as ftEaves + ftRakes.
+7. STRUCTURE COMPLEXITY: Near the waste calculation — labeled "Simple", "Normal", or "Complex".
+8. LESS PENETRATIONS: Look for "Total Area Less Penetrations" or "Roof Area Less Penetrations".
+
+All numeric values MUST be strings (e.g. "28.50" not 28.50).
+Extract ONLY what's explicitly in the document — do not guess or fabricate values.
+Return valid JSON only, no markdown, no code fences.`;
 
 export async function parseMeasurementWithClaude(
   pdfBase64: string
