@@ -20,6 +20,7 @@ import { PaymentToast } from "@/components/supplements/payment-toast";
 import { AutoRefresh } from "@/components/supplements/auto-refresh";
 import { LineItemsReview } from "@/components/supplements/line-items-review";
 import { PipelineErrorCard } from "@/components/supplements/pipeline-error-card";
+import { DraftPaymentCard } from "@/components/supplements/draft-payment-card";
 
 export default async function SupplementDetailPage({
   params,
@@ -175,31 +176,12 @@ export default async function SupplementDetailPage({
         </div>
       </div>
 
-      {/* Draft / awaiting payment indicator */}
+      {/* Draft / awaiting payment — actionable payment card */}
       {status === ("draft" as SupplementStatus) && !supplement.paid_at && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="flex items-center gap-3 py-6">
-            <svg
-              className="h-5 w-5 text-amber-600 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-medium text-amber-900">Awaiting Payment</p>
-              <p className="text-sm text-amber-700">
-                Your supplement has been created. Complete payment to start the AI analysis.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <DraftPaymentCard
+          supplementId={id}
+          isFirstSupplement={isFirstSupplement}
+        />
       )}
 
       {/* Draft but paid — pipeline starting */}

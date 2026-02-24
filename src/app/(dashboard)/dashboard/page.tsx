@@ -29,6 +29,7 @@ export default async function DashboardPage() {
       adjuster_total,
       supplement_total,
       approved_amount,
+      paid_at,
       created_at,
       claims (
         id,
@@ -56,6 +57,7 @@ export default async function DashboardPage() {
     adjuster_total: number | null;
     supplement_total: number | null;
     approved_amount: number | null;
+    paid_at: string | null;
     created_at: string;
     claims: {
       id: string;
@@ -101,6 +103,7 @@ export default async function DashboardPage() {
     ["approved", "partially_approved"].includes(s.status)
   ).length;
   const avgRecovery = resolved > 0 ? totalRecovered / resolved : 0;
+  const isFirstSupplement = active.filter((s) => !!s.paid_at).length === 0;
 
   return (
     <div className="space-y-6">
@@ -127,7 +130,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <SupplementsList supplements={rows} />
+      <SupplementsList supplements={rows} isFirstSupplement={isFirstSupplement} />
     </div>
   );
 }

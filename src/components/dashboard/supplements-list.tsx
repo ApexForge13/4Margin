@@ -10,6 +10,7 @@ import { STATUS_LABELS, RESULT_STATUSES } from "@/lib/constants";
 import type { SupplementStatus } from "@/lib/constants";
 import { ClaimEditDialog } from "./claim-edit-dialog";
 import { ClaimDeleteDialog } from "./claim-delete-dialog";
+import { CheckoutButton } from "@/components/supplements/checkout-button";
 import { restoreClaim } from "@/app/(dashboard)/dashboard/actions";
 import { toast } from "sonner";
 
@@ -36,6 +37,7 @@ interface SupplementRow {
   adjuster_total: number | null;
   supplement_total: number | null;
   approved_amount: number | null;
+  paid_at: string | null;
   created_at: string;
   claims: ClaimData;
 }
@@ -49,9 +51,10 @@ function formatCurrency(value: number): string {
 
 interface SupplementsListProps {
   supplements: SupplementRow[];
+  isFirstSupplement?: boolean;
 }
 
-export function SupplementsList({ supplements }: SupplementsListProps) {
+export function SupplementsList({ supplements, isFirstSupplement }: SupplementsListProps) {
   const [showArchived, setShowArchived] = useState(false);
   const [editClaim, setEditClaim] = useState<ClaimData | null>(null);
   const [archiveClaim, setArchiveClaim] = useState<{
@@ -295,6 +298,13 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
                           />
                         </svg>
                       </Button>
+                      {/* Pay button for draft supplements */}
+                      {s.status === "draft" && !s.paid_at && (
+                        <CheckoutButton
+                          supplementId={s.id}
+                          isFirstSupplement={isFirstSupplement}
+                        />
+                      )}
                       {/* View button */}
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={`/dashboard/supplements/${s.id}`}>
