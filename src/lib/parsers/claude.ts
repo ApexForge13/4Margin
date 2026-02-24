@@ -3,6 +3,9 @@
  *
  * Uses Anthropic's document understanding to extract structured data from
  * insurance adjuster PDFs and EagleView/HOVER measurement reports.
+ *
+ * PDFs are passed via signed URL (Supabase storage) so Claude fetches them
+ * directly — avoids sending large base64 payloads through Vercel functions.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -45,7 +48,7 @@ Important:
 - Return valid JSON only, no markdown, no code fences`;
 
 export async function parseEstimateWithClaude(
-  pdfBase64: string
+  pdfUrl: string
 ): Promise<Record<string, string>> {
   return withRetry(async () => {
     const client = getClient();
@@ -60,9 +63,8 @@ export async function parseEstimateWithClaude(
             {
               type: "document",
               source: {
-                type: "base64",
-                media_type: "application/pdf" as const,
-                data: pdfBase64,
+                type: "url",
+                url: pdfUrl,
               },
             },
             {
@@ -74,10 +76,14 @@ export async function parseEstimateWithClaude(
       ],
     });
 
+    console.log("[parseEstimate] stop_reason:", response.stop_reason, "usage:", JSON.stringify(response.usage));
+
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       throw new Error("No text response from Claude");
     }
+
+    console.log("[parseEstimate] raw text:", textBlock.text);
 
     return JSON.parse(textBlock.text);
   }, { label: "parseEstimate" });
@@ -141,7 +147,7 @@ Extract ONLY what's explicitly in the document — do not guess or fabricate val
 Return valid JSON only, no markdown, no code fences.`;
 
 export async function parseMeasurementWithClaude(
-  pdfBase64: string
+  pdfUrl: string
 ): Promise<Record<string, unknown>> {
   return withRetry(async () => {
     const client = getClient();
@@ -156,9 +162,8 @@ export async function parseMeasurementWithClaude(
             {
               type: "document",
               source: {
-                type: "base64",
-                media_type: "application/pdf" as const,
-                data: pdfBase64,
+                type: "url",
+                url: pdfUrl,
               },
             },
             {
@@ -182,4 +187,3 @@ export async function parseMeasurementWithClaude(
     return JSON.parse(textBlock.text);
   }, { label: "parseMeasurement" });
 }
-

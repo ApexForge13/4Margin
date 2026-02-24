@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { parseEstimateWithClaude } from "@/lib/parsers/claude";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
@@ -23,31 +24,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+    const { storagePath } = await request.json();
 
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (!storagePath || typeof storagePath !== "string") {
+      return NextResponse.json({ error: "No storage path provided" }, { status: 400 });
     }
 
-    if (file.type !== "application/pdf") {
+    // Generate a signed URL for Claude to fetch the PDF directly
+    const admin = createAdminClient();
+    const { data: signedUrlData, error: urlError } = await admin.storage
+      .from("temp-parsing")
+      .createSignedUrl(storagePath, 300); // 5 min expiry
+
+    if (urlError || !signedUrlData?.signedUrl) {
       return NextResponse.json(
-        { error: "Only PDF files are supported" },
+        { error: "Failed to access uploaded file" },
         { status: 400 }
       );
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: "File exceeds 25 MB limit" },
-        { status: 400 }
-      );
-    }
+    console.log("[parse/estimate] Processing file:", storagePath);
+    const parsed = await parseEstimateWithClaude(signedUrlData.signedUrl);
+    console.log("[parse/estimate] Claude response:", JSON.stringify(parsed, null, 2));
 
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-
-    const parsed = await parseEstimateWithClaude(base64);
+    // Clean up temp file (server-side backup cleanup)
+    admin.storage.from("temp-parsing").remove([storagePath]).catch(() => {});
 
     return NextResponse.json(parsed);
   } catch (err) {
