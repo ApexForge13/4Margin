@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { SupplementsList } from "@/components/dashboard/supplements-list";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 
@@ -74,13 +73,6 @@ export default async function DashboardPage() {
     };
   }>;
 
-  // Check onboarding progress for checklist
-  const admin = createAdminClient();
-  const [carriersRes, codesRes] = await Promise.all([
-    admin.from("carriers").select("id", { count: "exact", head: true }),
-    admin.from("xactimate_codes").select("id", { count: "exact", head: true }),
-  ]);
-
   const company = profile.companies as unknown as {
     name: string;
     phone: string | null;
@@ -88,10 +80,8 @@ export default async function DashboardPage() {
   } | null;
 
   const hasCompany = !!(company?.name && (company?.phone || company?.address));
-  const hasCarriers = (carriersRes.count ?? 0) > 0;
-  const hasCodes = (codesRes.count ?? 0) > 0;
   const hasSupplements = rows.length > 0;
-  const showChecklist = !hasCompany || !hasCarriers || !hasCodes || !hasSupplements;
+  const showChecklist = !hasCompany || !hasSupplements;
 
   // Stats (exclude archived)
   const active = rows.filter((s) => !s.claims?.archived_at);
@@ -112,8 +102,6 @@ export default async function DashboardPage() {
         <OnboardingChecklist
           hasCompany={hasCompany}
           hasSupplements={hasSupplements}
-          hasCarriers={hasCarriers}
-          hasCodes={hasCodes}
         />
       )}
 

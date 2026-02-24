@@ -281,15 +281,18 @@ export function WizardProvider({ children }: { children: ReactNode }) {
 
   const nextStep = useCallback(() => {
     dispatch({ type: "SET_STEP", step: Math.min(state.currentStep + 1, 4) });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [state.currentStep]);
 
   const prevStep = useCallback(() => {
     dispatch({ type: "SET_STEP", step: Math.max(state.currentStep - 1, 1) });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [state.currentStep]);
 
   const goToStep = useCallback((step: number) => {
     if (step >= 1 && step <= 4) {
       dispatch({ type: "SET_STEP", step });
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, []);
 

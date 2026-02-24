@@ -198,22 +198,6 @@ export function StepEstimate() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="claimDescription">Claim description *</Label>
-          <Textarea
-            id="claimDescription"
-            placeholder="Briefly describe the claim situation — e.g. &quot;Hail storm on 3/15 damaged the entire north-facing slope. Adjuster only scoped partial ridge cap and missed starter strip entirely. Homeowner reported interior leak at valley.&quot;"
-            rows={4}
-            value={claimDetails.claimDescription}
-            onChange={(e) => updateField("claimDescription", e.target.value)}
-            disabled={isParsing}
-            className="resize-y"
-          />
-          <p className="text-xs text-muted-foreground">
-            This helps us understand the full picture and build stronger supplement justifications.
-          </p>
-        </div>
-
         <Separator />
 
         {/* Claim Overview — narrative context */}
@@ -221,22 +205,18 @@ export function StepEstimate() {
           <div>
             <h3 className="text-base font-semibold">Claim Overview</h3>
             <p className="text-sm text-muted-foreground">
-              Help us understand the full picture so we can build stronger supplement justifications.
+              Help us understand what happened so we can build stronger supplement justifications.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="adjusterScopeNotes">
-              What did the adjuster&apos;s estimate include?
-            </Label>
+            <Label htmlFor="claimDescription">Describe the claim *</Label>
             <Textarea
-              id="adjusterScopeNotes"
-              placeholder="e.g. &quot;Adjuster scoped 22 squares of 3-tab shingles, ridge cap, and 1 layer tear-off. Did not include starter strip, drip edge, or ice &amp; water shield at eaves and valleys.&quot;"
+              id="claimDescription"
+              placeholder="e.g. &quot;Hail storm on 3/15 damaged the entire north-facing slope. Adjuster only scoped partial ridge cap and missed starter strip entirely. Homeowner reported interior leak at valley.&quot;"
               rows={3}
-              value={claimDetails.adjusterScopeNotes}
-              onChange={(e) =>
-                updateField("adjusterScopeNotes", e.target.value)
-              }
+              value={claimDetails.claimDescription}
+              onChange={(e) => updateField("claimDescription", e.target.value)}
               disabled={isParsing}
               className="resize-y"
             />
@@ -244,11 +224,11 @@ export function StepEstimate() {
 
           <div className="space-y-2">
             <Label htmlFor="itemsBelievedMissing">
-              What items do you believe are missing or underpaid?
+              What items are missing, incomplete, or underpaid in the adjuster&apos;s scope?
             </Label>
             <Textarea
               id="itemsBelievedMissing"
-              placeholder="e.g. &quot;Missing: starter strip (RFG STRSA), drip edge (RFG DRPEG), ice &amp; water at valleys. Underpaid: waste % should be 22% not 10% — hip/valley roof with 6 valleys and 4 dormers.&quot;"
+              placeholder="e.g. &quot;Adjuster scoped 22 SQ shingles + ridge cap but missed: starter strip, drip edge, ice &amp; water at valleys. Waste % should be 22% not 10% — hip/valley roof with 6 valleys and 4 dormers.&quot;"
               rows={3}
               value={claimDetails.itemsBelievedMissing}
               onChange={(e) =>
@@ -268,8 +248,8 @@ export function StepEstimate() {
             </Label>
             <Textarea
               id="priorSupplementHistory"
-              placeholder="e.g. &quot;First supplement submitted 1/15 for O&amp;P — denied. Second supplement for waste % submitted 2/1 — pending response. No prior communication about missing line items.&quot;"
-              rows={3}
+              placeholder="e.g. &quot;First supplement submitted 1/15 for O&amp;P — denied. Second supplement for waste % submitted 2/1 — pending response.&quot;"
+              rows={2}
               value={claimDetails.priorSupplementHistory}
               onChange={(e) =>
                 updateField("priorSupplementHistory", e.target.value)

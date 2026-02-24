@@ -104,7 +104,7 @@ export function FileDropzone({
 
   return (
     <div
-      className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+      className={`relative rounded-lg border-2 border-dashed px-4 py-4 text-center transition-colors ${
         isDragging
           ? "border-primary bg-primary/5"
           : "border-gray-300 hover:border-gray-400"
@@ -114,17 +114,17 @@ export function FileDropzone({
       onDragOver={handleDrag}
       onDrop={handleDrop}
     >
-      <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+      <div className="mx-auto flex items-center justify-center gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
           {icon}
         </div>
-        <div>
+        <div className="text-left min-w-0">
           <p className="text-sm font-semibold">{label}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
-        <label>
+        <label className="shrink-0">
           <Button variant="outline" size="sm" asChild>
-            <span>Browse files</span>
+            <span>Browse</span>
           </Button>
           <input
             type="file"
@@ -134,9 +134,6 @@ export function FileDropzone({
             onChange={handleFileInput}
           />
         </label>
-        <p className="text-xs text-muted-foreground">
-          Max {maxSizeMB}MB per file
-        </p>
       </div>
     </div>
   );

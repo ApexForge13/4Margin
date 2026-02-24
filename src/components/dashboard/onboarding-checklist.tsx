@@ -13,13 +13,11 @@ interface ChecklistItem {
 export function OnboardingChecklist({
   hasCompany,
   hasSupplements,
-  hasCarriers,
-  hasCodes,
 }: {
   hasCompany: boolean;
   hasSupplements: boolean;
-  hasCarriers: boolean;
-  hasCodes: boolean;
+  hasCarriers?: boolean;
+  hasCodes?: boolean;
 }) {
   const items: ChecklistItem[] = [
     {
@@ -27,18 +25,6 @@ export function OnboardingChecklist({
       description: "Add your business name, address, and license number",
       href: "/dashboard/settings",
       done: hasCompany,
-    },
-    {
-      label: "Add insurance carriers",
-      description: "Add the carriers you work with most (State Farm, Allstate, etc.)",
-      href: "/dashboard/admin",
-      done: hasCarriers,
-    },
-    {
-      label: "Add Xactimate codes",
-      description: "Build your code library for common roofing line items",
-      href: "/dashboard/admin",
-      done: hasCodes,
     },
     {
       label: "Create your first supplement",

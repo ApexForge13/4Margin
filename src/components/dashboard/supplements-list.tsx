@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { STATUS_LABELS } from "@/lib/constants";
+import { STATUS_LABELS, RESULT_STATUSES } from "@/lib/constants";
+import type { SupplementStatus } from "@/lib/constants";
 import { ClaimEditDialog } from "./claim-edit-dialog";
 import { ClaimDeleteDialog } from "./claim-delete-dialog";
 import { restoreClaim } from "@/app/(dashboard)/dashboard/actions";
@@ -51,9 +52,16 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
   } | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
 
-  const filtered = showArchived
+  // Sort finished claims (approved/partially_approved/denied) to the bottom
+  const filtered = (showArchived
     ? supplements
-    : supplements.filter((s) => !s.claims?.archived_at);
+    : supplements.filter((s) => !s.claims?.archived_at)
+  ).slice().sort((a, b) => {
+    const aFinished = RESULT_STATUSES.includes(a.status as SupplementStatus);
+    const bFinished = RESULT_STATUSES.includes(b.status as SupplementStatus);
+    if (aFinished !== bFinished) return aFinished ? 1 : -1;
+    return 0; // preserve original order within groups
+  });
 
   const handleRestore = async (claimId: string) => {
     setRestoringId(claimId);
@@ -148,6 +156,7 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
           filtered.map((s) => {
             const claim = s.claims;
             const isArchived = !!claim?.archived_at;
+            const isFinished = RESULT_STATUSES.includes(s.status as SupplementStatus);
             const statusInfo = STATUS_LABELS[s.status] || {
               label: s.status,
               variant: "secondary" as const,
@@ -159,11 +168,22 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
             const claimName =
               claim?.notes || `Claim #${claim?.claim_number || "—"}`;
 
+            // Bright result badge colors
+            const resultBadgeClass = isFinished
+              ? s.status === "approved"
+                ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                : s.status === "partially_approved"
+                  ? "bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+                  : s.status === "denied"
+                    ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+                    : ""
+              : "";
+
             return (
               <div
                 key={s.id}
                 className={`grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b px-4 py-3 last:border-b-0 ${
-                  isArchived ? "opacity-50" : ""
+                  isArchived ? "opacity-50" : isFinished ? "opacity-60" : ""
                 }`}
               >
                 <div className="min-w-0">
@@ -184,7 +204,12 @@ export function SupplementsList({ supplements }: SupplementsListProps) {
                     </p>
                   )}
                 </div>
-                <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                <Badge
+                  variant={isFinished ? "default" : statusInfo.variant}
+                  className={resultBadgeClass}
+                >
+                  {statusInfo.label}
+                </Badge>
                 <span className="text-sm text-muted-foreground whitespace-nowrap">
                   {createdDate}
                 </span>

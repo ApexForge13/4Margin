@@ -233,7 +233,7 @@ export function StepMeasurements() {
                 id="ftRidges"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftRidges}
                 onChange={(e) => updateField("ftRidges", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -245,7 +245,7 @@ export function StepMeasurements() {
                 id="ftHips"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftHips}
                 onChange={(e) => updateField("ftHips", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -257,7 +257,7 @@ export function StepMeasurements() {
                 id="ftValleys"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftValleys}
                 onChange={(e) => updateField("ftValleys", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -269,7 +269,7 @@ export function StepMeasurements() {
                 id="ftRakes"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftRakes}
                 onChange={(e) => updateField("ftRakes", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -281,7 +281,7 @@ export function StepMeasurements() {
                 id="ftEaves"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftEaves}
                 onChange={(e) => updateField("ftEaves", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -293,7 +293,7 @@ export function StepMeasurements() {
                 id="ftDripEdge"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftDripEdge}
                 onChange={(e) => updateField("ftDripEdge", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -305,7 +305,7 @@ export function StepMeasurements() {
                 id="ftParapet"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftParapet}
                 onChange={(e) => updateField("ftParapet", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -317,7 +317,7 @@ export function StepMeasurements() {
                 id="ftFlashing"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftFlashing}
                 onChange={(e) => updateField("ftFlashing", e.target.value)}
                 disabled={isParsing || isConfirmed}
@@ -329,7 +329,7 @@ export function StepMeasurements() {
                 id="ftStepFlashing"
                 type="number"
                 step="0.01"
-                placeholder="0"
+                placeholder="# of LF"
                 value={measurementData.ftStepFlashing}
                 onChange={(e) => updateField("ftStepFlashing", e.target.value)}
                 disabled={isParsing || isConfirmed}

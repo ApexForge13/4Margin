@@ -28,6 +28,7 @@ import { DownloadButton } from "@/components/supplements/download-button";
 import {
   STATUS_LABELS,
   SUPPLEMENT_STATUS_ORDER,
+  RESULT_STATUSES,
 } from "@/lib/constants";
 import type { SupplementStatus } from "@/lib/constants";
 import { restoreClaim } from "@/app/(dashboard)/dashboard/actions";
@@ -204,8 +205,14 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
       });
     }
 
-    // Sort
+    // Sort — finished claims (approved / partially_approved / denied) always at bottom
     const sorted = [...result].sort((a, b) => {
+      const aFinished = RESULT_STATUSES.includes(a.status as SupplementStatus);
+      const bFinished = RESULT_STATUSES.includes(b.status as SupplementStatus);
+
+      // Push finished to bottom regardless of sort column
+      if (aFinished !== bFinished) return aFinished ? 1 : -1;
+
       let cmp = 0;
       const ca = a.claims;
       const cb = b.claims;
@@ -427,6 +434,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
               filtered.map((s) => {
                 const claim = s.claims;
                 const isArchived = !!claim?.archived_at;
+                const isFinished = RESULT_STATUSES.includes(s.status as SupplementStatus);
                 const statusInfo = STATUS_LABELS[s.status] || {
                   label: s.status,
                   variant: "secondary" as const,
@@ -447,11 +455,22 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                   .filter(Boolean)
                   .join(", ");
 
+                // Bright result badge colors for finished claims
+                const resultBadgeClass = isFinished
+                  ? s.status === "approved"
+                    ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                    : s.status === "partially_approved"
+                      ? "bg-amber-500 text-white hover:bg-amber-600 border-amber-500"
+                      : s.status === "denied"
+                        ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+                        : ""
+                  : "";
+
                 return (
                   <TableRow
                     key={s.id}
                     className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                      isArchived ? "opacity-50" : ""
+                      isArchived ? "opacity-50" : isFinished ? "opacity-60" : ""
                     }`}
                     onClick={() =>
                       router.push(`/dashboard/supplements/${s.id}`)
@@ -467,7 +486,10 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                       {claim?.carriers?.name || "—"}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusInfo.variant}>
+                      <Badge
+                        variant={isFinished ? "default" : statusInfo.variant}
+                        className={resultBadgeClass}
+                      >
                         {statusInfo.label}
                       </Badge>
                     </TableCell>
