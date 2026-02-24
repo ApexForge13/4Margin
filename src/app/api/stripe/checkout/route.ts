@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, SUPPLEMENT_PRICE_CENTS } from "@/lib/stripe";
 import { stripeCheckoutSchema, validate } from "@/lib/validations/schemas";
 
@@ -27,22 +28,36 @@ export async function POST(request: NextRequest) {
 
     console.log(`[stripe/checkout] Processing for supplement ${supplementId}, user ${user.id}`);
 
+    // Use admin client for DB queries — the RLS user session doesn't
+    // reliably refresh in API routes without Next.js middleware wired up.
+    // Auth is already verified above via getUser().
+    const admin = createAdminClient();
+
+    // ── Get user's company_id ─────────────────────────────────
+    const { data: userProfile } = await admin
+      .from("users")
+      .select("company_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!userProfile?.company_id) {
+      console.log("[stripe/checkout] User has no company_id");
+      return NextResponse.json({ error: "Company not found" }, { status: 400 });
+    }
+
+    const companyId = userProfile.company_id;
+    console.log(`[stripe/checkout] User company_id: ${companyId}`);
+
     // ── Verify supplement exists and belongs to user's company ─
-    const { data: supplement, error } = await supabase
+    const { data: supplement, error } = await admin
       .from("supplements")
       .select("id, status, paid_at, company_id, claim_id, claims(id, claim_number, property_address)")
       .eq("id", supplementId)
+      .eq("company_id", companyId)
       .single();
 
     if (error || !supplement) {
-      console.log("[stripe/checkout] Supplement not found:", error?.message, error?.code, error?.details);
-      // Try a simpler query to diagnose RLS vs missing record
-      const { data: basic, error: basicErr } = await supabase
-        .from("supplements")
-        .select("id")
-        .eq("id", supplementId)
-        .single();
-      console.log("[stripe/checkout] Basic query result:", basic ? "found" : "not found", basicErr?.message);
+      console.log("[stripe/checkout] Supplement not found:", error?.message);
       return NextResponse.json(
         { error: "Supplement not found" },
         { status: 404 }
@@ -59,35 +74,25 @@ export async function POST(request: NextRequest) {
     }
 
     // ── First Supplement Free ─────────────────────────────────
-    const { data: userProfile } = await supabase
-      .from("users")
-      .select("company_id")
-      .eq("id", user.id)
-      .single();
+    const { count: priorPaidCount } = await admin
+      .from("supplements")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", companyId)
+      .not("paid_at", "is", null);
 
-    console.log(`[stripe/checkout] User company_id: ${userProfile?.company_id || "NONE"}`);
+    console.log(`[stripe/checkout] Prior paid supplements: ${priorPaidCount}`);
 
-    if (userProfile?.company_id) {
-      const { count: priorPaidCount } = await supabase
+    if ((priorPaidCount ?? 0) === 0) {
+      // First supplement — auto-unlock for free
+      await admin
         .from("supplements")
-        .select("id", { count: "exact", head: true })
-        .eq("company_id", userProfile.company_id)
-        .not("paid_at", "is", null);
+        .update({ paid_at: new Date().toISOString() })
+        .eq("id", supplementId);
 
-      console.log(`[stripe/checkout] Prior paid supplements: ${priorPaidCount}`);
-
-      if ((priorPaidCount ?? 0) === 0) {
-        // First supplement — auto-unlock for free
-        await supabase
-          .from("supplements")
-          .update({ paid_at: new Date().toISOString() })
-          .eq("id", supplementId);
-
-        const origin = request.headers.get("origin") || "http://localhost:3000";
-        const freeUrl = `${origin}/dashboard/supplements/${supplementId}?payment=success&free=true`;
-        console.log(`[stripe/checkout] First supplement free — redirecting to: ${freeUrl}`);
-        return NextResponse.json({ url: freeUrl });
-      }
+      const origin = request.headers.get("origin") || "http://localhost:3000";
+      const freeUrl = `${origin}/dashboard/supplements/${supplementId}?payment=success&free=true`;
+      console.log(`[stripe/checkout] First supplement free — redirecting to: ${freeUrl}`);
+      return NextResponse.json({ url: freeUrl });
     }
 
     const claim = supplement.claims as unknown as Record<string, unknown>;
@@ -129,7 +134,7 @@ export async function POST(request: NextRequest) {
     console.log(`[stripe/checkout] Stripe session created: ${session.id}, url: ${session.url}`);
 
     // Save session ID to supplement for webhook matching
-    await supabase
+    await admin
       .from("supplements")
       .update({ stripe_checkout_session_id: session.id })
       .eq("id", supplementId);
