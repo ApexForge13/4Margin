@@ -30,6 +30,7 @@ export interface AnalysisInput {
   adjusterScopeNotes: string;
   itemsBelievedMissing: string;
   damageTypes: string[];
+  policyContext?: string | null; // From policy decoder
   measurements: {
     measuredSquares: number | null;
     wastePercent: number | null;
@@ -110,6 +111,7 @@ export async function detectMissingItems(
     adjusterScopeNotes: input.adjusterScopeNotes,
     itemsBelievedMissing: input.itemsBelievedMissing,
     damageTypes: input.damageTypes,
+    policyContext: input.policyContext || null,
   });
 
   const client = getClient();
@@ -251,6 +253,7 @@ function buildAnalysisPrompt(ctx: {
   adjusterScopeNotes: string;
   itemsBelievedMissing: string;
   damageTypes: string[];
+  policyContext: string | null;
 }): string {
   return `You are a senior roofing insurance supplement specialist with 20+ years of experience. Your job is to review the adjuster's Xactimate estimate (the PDF above) and identify MISSING or UNDERPAID line items that should be included in a supplement.
 
@@ -266,6 +269,7 @@ function buildAnalysisPrompt(ctx: {
 
 **Roof Measurements:**
 ${ctx.measurementsContext}
+${ctx.policyContext ? `\n## POLICY ANALYSIS\nThe homeowner's policy has been analyzed. Use this information to strengthen justifications and be aware of potential issues:\n${ctx.policyContext}` : ""}
 
 ## XACTIMATE CODES DATABASE
 These are valid Xactimate codes you can reference. Use these codes when possible:

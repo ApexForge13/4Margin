@@ -189,6 +189,7 @@ export async function createClaimAndSupplement(
       claim_id: claim.id,
       status: "draft",
       adjuster_estimate_url: input.estimateStoragePath,
+      policy_analysis: input.policyAnalysis ?? null,
       created_by: user.id,
     })
     .select("id")

@@ -31,40 +31,67 @@ export async function POST(request: NextRequest) {
   // ── Handle checkout.session.completed ─────────────────────
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
-
-    const supplementId = session.metadata?.supplementId;
-    if (!supplementId) {
-      console.error("No supplementId in session metadata");
-      return NextResponse.json({ received: true });
-    }
-
     const admin = createAdminClient();
 
-    // Mark supplement as paid
-    const { error } = await admin
-      .from("supplements")
-      .update({
-        stripe_payment_id: session.payment_intent as string,
-        paid_at: new Date().toISOString(),
-        stripe_checkout_session_id: session.id,
-      })
-      .eq("id", supplementId);
+    // Check if this is a policy decoder payment
+    if (session.metadata?.type === "policy_decoder") {
+      const policyDecodingId = session.metadata?.policyDecodingId;
+      if (!policyDecodingId) {
+        console.error("No policyDecodingId in session metadata");
+        return NextResponse.json({ received: true });
+      }
 
-    if (error) {
-      console.error("Failed to update supplement payment:", error);
-      return NextResponse.json(
-        { error: "Database update failed" },
-        { status: 500 }
-      );
+      const { error } = await admin
+        .from("policy_decodings")
+        .update({
+          stripe_payment_id: session.payment_intent as string,
+          paid_at: new Date().toISOString(),
+          stripe_checkout_session_id: session.id,
+        })
+        .eq("id", policyDecodingId);
+
+      if (error) {
+        console.error("Failed to update policy decoding payment:", error);
+        return NextResponse.json(
+          { error: "Database update failed" },
+          { status: 500 }
+        );
+      }
+
+      console.log(`Payment recorded for policy decoding ${policyDecodingId}`);
+    } else {
+      // Supplement payment (existing flow)
+      const supplementId = session.metadata?.supplementId;
+      if (!supplementId) {
+        console.error("No supplementId in session metadata");
+        return NextResponse.json({ received: true });
+      }
+
+      const { error } = await admin
+        .from("supplements")
+        .update({
+          stripe_payment_id: session.payment_intent as string,
+          paid_at: new Date().toISOString(),
+          stripe_checkout_session_id: session.id,
+        })
+        .eq("id", supplementId);
+
+      if (error) {
+        console.error("Failed to update supplement payment:", error);
+        return NextResponse.json(
+          { error: "Database update failed" },
+          { status: 500 }
+        );
+      }
+
+      console.log(`Payment recorded for supplement ${supplementId}`);
+
+      // Send payment confirmation email (fire-and-forget)
+      const amountPaid = session.amount_total
+        ? session.amount_total / 100
+        : 149;
+      sendPaymentConfirmationEmail(supplementId, amountPaid).catch(() => {});
     }
-
-    console.log(`Payment recorded for supplement ${supplementId}`);
-
-    // Send payment confirmation email (fire-and-forget)
-    const amountPaid = session.amount_total
-      ? session.amount_total / 100
-      : 149;
-    sendPaymentConfirmationEmail(supplementId, amountPaid).catch(() => {});
   }
 
   return NextResponse.json({ received: true });

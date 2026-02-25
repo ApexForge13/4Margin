@@ -56,10 +56,10 @@ export async function runSupplementPipeline(
       throw new Error(`Claim not found: ${claimError?.message}`);
     }
 
-    // ── 2. Fetch supplement to get estimate URL ──
+    // ── 2. Fetch supplement to get estimate URL + policy analysis ──
     const { data: supplement } = await supabase
       .from("supplements")
-      .select("adjuster_estimate_url")
+      .select("adjuster_estimate_url, policy_analysis")
       .eq("id", supplementId)
       .single();
 
@@ -79,6 +79,32 @@ export async function runSupplementPipeline(
     console.log(`[pipeline] Estimate signed URL generated for: ${supplement.adjuster_estimate_url}`);
 
     // ── 4. Run missing item detection ──
+    // Build policy context string for the AI if policy analysis exists
+    const policyAnalysisData = supplement.policy_analysis as Record<string, unknown> | null;
+    let policyContext: string | null = null;
+    if (policyAnalysisData) {
+      const pa = policyAnalysisData;
+      const parts: string[] = [];
+      parts.push(`Policy Type: ${pa.policyType || "Unknown"}`);
+      parts.push(`Depreciation: ${pa.depreciationMethod || "Unknown"}`);
+      if (Array.isArray(pa.deductibles) && pa.deductibles.length > 0) {
+        parts.push(`Deductibles: ${(pa.deductibles as Array<{amount: string; appliesTo: string}>).map(d => `${d.amount} (${d.appliesTo})`).join("; ")}`);
+      }
+      if (Array.isArray(pa.landmines) && pa.landmines.length > 0) {
+        parts.push(`\nWARNING — Policy Landmines (dangerous provisions that may limit coverage):`);
+        (pa.landmines as Array<{name: string; impact: string; actionItem: string}>).forEach(l => {
+          parts.push(`- ${l.name}: ${l.impact}. Action: ${l.actionItem}`);
+        });
+      }
+      if (Array.isArray(pa.favorableProvisions) && pa.favorableProvisions.length > 0) {
+        parts.push(`\nFAVORABLE — Provisions that support the supplement:`);
+        (pa.favorableProvisions as Array<{name: string; impact: string; supplementRelevance: string}>).forEach(f => {
+          parts.push(`- ${f.name}: ${f.impact}. Relevance: ${f.supplementRelevance}`);
+        });
+      }
+      policyContext = parts.join("\n");
+    }
+
     const analysisInput: AnalysisInput = {
       supplementId,
       estimatePdfUrl: signedUrlData.signedUrl,
@@ -86,6 +112,7 @@ export async function runSupplementPipeline(
       adjusterScopeNotes: claim.adjuster_scope_notes || "",
       itemsBelievedMissing: claim.items_believed_missing || "",
       damageTypes: claim.damage_types || [],
+      policyContext,
       measurements: {
         measuredSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
         wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,

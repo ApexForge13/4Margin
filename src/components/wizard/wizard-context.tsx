@@ -70,6 +70,8 @@ const initialState: WizardState = {
   policyFiles: [],
   claimDetails: emptyClaimDetails,
   estimateParsingStatus: "idle",
+  policyParsingStatus: "idle",
+  policyAnalysis: null,
   photos: [],
   measurementFiles: [],
   measurementData: emptyMeasurementData,
@@ -109,6 +111,12 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       };
     case "SET_ESTIMATE_PARSING":
       return { ...state, estimateParsingStatus: action.status };
+
+    // Step 1 — policy analysis
+    case "SET_POLICY_PARSING":
+      return { ...state, policyParsingStatus: action.status };
+    case "SET_POLICY_ANALYSIS":
+      return { ...state, policyAnalysis: action.analysis };
 
     // Step 2 — photos
     case "ADD_PHOTOS":

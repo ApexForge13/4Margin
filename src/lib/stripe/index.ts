@@ -22,4 +22,9 @@ function getStripeClient() {
 
 export const stripe = getStripeClient();
 
-export { SUPPLEMENT_PRICE_CENTS, SUPPLEMENT_PRICE_DISPLAY } from "./constants";
+export {
+  SUPPLEMENT_PRICE_CENTS,
+  SUPPLEMENT_PRICE_DISPLAY,
+  POLICY_DECODER_PRICE_CENTS,
+  POLICY_DECODER_PRICE_DISPLAY,
+} from "./constants";

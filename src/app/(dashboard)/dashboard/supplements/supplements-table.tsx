@@ -507,7 +507,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                      {["complete", "submitted", "approved", "partially_approved", "denied"].includes(s.status) && s.paid_at && (
+                      {["complete", "approved", "partially_approved", "denied"].includes(s.status) && s.paid_at && (
                         <DownloadButton supplementId={s.id} variant="icon" />
                       )}
                       <DropdownMenu>

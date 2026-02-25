@@ -8,6 +8,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { ClaimDetails, MeasurementData } from "@/types/wizard";
+import type { PolicyAnalysis } from "@/lib/ai/policy-parser";
 
 /**
  * Upload a PDF to the temp-parsing bucket and return the storage path.
@@ -63,6 +64,36 @@ export async function parseEstimatePdf(
     // Strip out the error field if present, return only ClaimDetails fields
     const { error: _error, ...parsed } = data;
     return parsed as Partial<ClaimDetails>;
+  } finally {
+    cleanupTempFile(storagePath);
+  }
+}
+
+/**
+ * Parse a homeowner policy PDF.
+ * Uploads to temp storage → /api/parse/policy → Claude extracts policy analysis.
+ */
+export async function parsePolicyPdf(
+  file: File,
+  claimType?: string
+): Promise<PolicyAnalysis> {
+  const storagePath = await uploadToTempBucket(file);
+
+  try {
+    const res = await fetch("/api/parse/policy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storagePath, claimType }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Policy parse failed (${res.status})`);
+    }
+
+    const data = await res.json();
+    console.log("[parsePolicyPdf] API response:", data);
+    return data as PolicyAnalysis;
   } finally {
     cleanupTempFile(storagePath);
   }

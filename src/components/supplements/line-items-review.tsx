@@ -166,7 +166,6 @@ export function LineItemsReview({
             {/* Show PaymentGate + Download when PDF exists */}
             {hasPdf &&
               (supplementStatus === "complete" ||
-                supplementStatus === "submitted" ||
                 supplementStatus === "approved" ||
                 supplementStatus === "partially_approved" ||
                 supplementStatus === "denied") && (

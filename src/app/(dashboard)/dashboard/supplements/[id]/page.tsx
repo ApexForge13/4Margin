@@ -15,13 +15,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { StatusTracker } from "@/components/supplements/status-tracker";
 import { StatusActions } from "./status-actions";
-import { CarrierUploadCard } from "@/components/supplements/carrier-upload-card";
 import { PaymentToast } from "@/components/supplements/payment-toast";
 import { AutoRefresh } from "@/components/supplements/auto-refresh";
 import { LineItemsReview } from "@/components/supplements/line-items-review";
 import { PipelineErrorCard } from "@/components/supplements/pipeline-error-card";
 import { DraftPaymentCard } from "@/components/supplements/draft-payment-card";
 import { DownloadButton } from "@/components/supplements/download-button";
+import { PolicyAnalysisCard } from "@/components/supplements/policy-analysis-card";
 
 export default async function SupplementDetailPage({
   params,
@@ -88,15 +88,6 @@ export default async function SupplementDetailPage({
     estimateUrl = await getSignedUrl("estimates", supplement.adjuster_estimate_url);
   }
 
-  // Generate signed URL for carrier response
-  let carrierResponseUrl: string | null = null;
-  if (supplement.carrier_response_url) {
-    carrierResponseUrl = await getSignedUrl(
-      "carrier-responses",
-      supplement.carrier_response_url
-    );
-  }
-
   // Generate signed URL for weather report PDF
   let weatherPdfUrl: string | null = null;
   if (supplement.weather_pdf_url) {
@@ -108,6 +99,9 @@ export default async function SupplementDetailPage({
   const pipelineError = parsedData?.error_type === "pipeline_failure"
     ? (parsedData.error as string)
     : null;
+
+  // Policy analysis (from policy decoder)
+  const policyAnalysis = supplement.policy_analysis as Record<string, unknown> | null;
 
   const status = supplement.status as SupplementStatus;
 
@@ -172,7 +166,6 @@ export default async function SupplementDetailPage({
           <StatusActions
             supplementId={id}
             status={status}
-            carrierName={carrier?.name as string | undefined}
           />
         </div>
       </div>
@@ -259,6 +252,13 @@ export default async function SupplementDetailPage({
         </Card>
       )}
 
+      {/* Policy Analysis — from Policy Decoder */}
+      {policyAnalysis && (
+        <PolicyAnalysisCard
+          analysis={policyAnalysis as unknown as Parameters<typeof PolicyAnalysisCard>[0]["analysis"]}
+        />
+      )}
+
       {/* Weather Verification Report */}
       {supplement.weather_data && (
         <WeatherCard
@@ -309,7 +309,6 @@ export default async function SupplementDetailPage({
 
       {/* Section divider */}
       {(status === "complete" ||
-        status === "submitted" ||
         status === "approved" ||
         status === "partially_approved" ||
         status === "denied") && (
@@ -482,36 +481,6 @@ export default async function SupplementDetailPage({
               <p className="text-muted-foreground">No estimate uploaded</p>
             )}
 
-            {/* Carrier Response Document */}
-            {carrierResponseUrl && (
-              <a
-                href={carrierResponseUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50/50 p-3 hover:bg-green-50 transition-colors"
-              >
-                <svg
-                  className="h-5 w-5 text-green-600 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                  />
-                </svg>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">Carrier Response</p>
-                  <p className="text-xs text-muted-foreground">Uploaded document</p>
-                </div>
-                <Badge variant="outline" className="border-green-300 text-green-700">
-                  Response
-                </Badge>
-              </a>
-            )}
           </CardContent>
         </Card>
 
@@ -575,10 +544,6 @@ export default async function SupplementDetailPage({
         </Card>
       </div>
 
-      {/* Carrier upload prompt (shown when submitted — at very bottom) */}
-      {status === "submitted" && (
-        <CarrierUploadCard supplementId={id} />
-      )}
     </div>
   );
 }

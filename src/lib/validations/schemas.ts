@@ -229,6 +229,7 @@ export const createClaimInputSchema = z.object({
   measurementData: measurementDataSchema,
   photoMeta: z.array(photoMetaSchema),
   estimateStoragePath: z.string().min(1, "Estimate file is required"),
+  policyAnalysis: z.record(z.unknown()).nullable().optional(),
 });
 
 // ── Dashboard — Claim update ────────────────────────────────
@@ -253,26 +254,29 @@ export const updateClaimSchema = z.object({
   priorSupplementHistory: optionalString,
 });
 
-// ── Dashboard — Supplement status ───────────────────────────
-
-export const updateSupplementStatusSchema = z.object({
-  supplementId: uuid,
-  newStatus: z.literal("submitted"),
-  submittedTo: optionalString,
-});
+// ── Dashboard — Supplement result ────────────────────────────
 
 export const resultSupplementSchema = z.object({
   supplementId: uuid,
   outcome: z.enum(["approved", "partially_approved", "denied"]),
   approvedAmount: z.number().positive().optional(),
   denialReason: optionalString,
-  carrierResponseUrl: optionalString,
 });
 
 // ── API — Stripe checkout ───────────────────────────────────
 
 export const stripeCheckoutSchema = z.object({
   supplementId: uuid,
+});
+
+export const policyDecoderCheckoutSchema = z.object({
+  policyDecodingId: uuid,
+});
+
+export const createPolicyDecodingSchema = z.object({
+  storagePath: requiredString("Storage path"),
+  originalFilename: requiredString("Filename"),
+  notes: optionalString,
 });
 
 // ── Shared UUID param ───────────────────────────────────────

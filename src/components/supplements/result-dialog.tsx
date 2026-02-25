@@ -14,10 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import {
-  resultSupplement,
-  uploadCarrierResponse,
-} from "@/app/(dashboard)/dashboard/actions";
+import { resultSupplement } from "@/app/(dashboard)/dashboard/actions";
 
 type Outcome = "approved" | "partially_approved" | "denied";
 
@@ -61,26 +58,10 @@ export function ResultDialog({
   const [outcome, setOutcome] = useState<Outcome>("approved");
   const [approvedAmount, setApprovedAmount] = useState("");
   const [denialReason, setDenialReason] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
 
   const handleResult = async () => {
     setSaving(true);
-
-    let carrierResponseUrl: string | undefined;
-
-    // Upload carrier response file if provided
-    if (file) {
-      const formData = new FormData();
-      formData.append("file", file);
-      const uploadResult = await uploadCarrierResponse(supplementId, formData);
-      if (uploadResult.error) {
-        toast.error(`File upload failed: ${uploadResult.error}`);
-        setSaving(false);
-        return;
-      }
-      carrierResponseUrl = uploadResult.url || undefined;
-    }
 
     const result = await resultSupplement(supplementId, outcome, {
       approvedAmount:
@@ -88,7 +69,6 @@ export function ResultDialog({
           ? parseFloat(approvedAmount)
           : undefined,
       denialReason: outcome === "denied" ? denialReason : undefined,
-      carrierResponseUrl,
     });
 
     setSaving(false);
@@ -110,7 +90,7 @@ export function ResultDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Record Carrier Response</DialogTitle>
+          <DialogTitle>Record Result</DialogTitle>
           <DialogDescription>
             What was the insurance carrier&apos;s decision on this supplement?
           </DialogDescription>
@@ -169,46 +149,6 @@ export function ResultDialog({
             </div>
           )}
 
-          {/* Carrier response document upload */}
-          <div className="space-y-2">
-            <Label>Carrier Response Document</Label>
-            <p className="text-xs text-muted-foreground">
-              Upload the carrier&apos;s final estimate, approval letter, or denial
-              explanation.
-            </p>
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed p-4 transition-colors hover:border-primary hover:bg-primary/5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                <svg
-                  className="h-5 w-5 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                {file ? (
-                  <p className="text-sm font-medium truncate">{file.name}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Click to upload PDF or image
-                  </p>
-                )}
-              </div>
-              <input
-                type="file"
-                className="sr-only"
-                accept="application/pdf,image/jpeg,image/png,image/webp"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
-            </label>
-          </div>
         </div>
 
         <DialogFooter>

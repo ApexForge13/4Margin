@@ -146,6 +146,7 @@ export function StepReview() {
         measurementData: state.measurementData,
         photoMeta,
         estimateStoragePath,
+        policyAnalysis: state.policyAnalysis ?? null,
       });
 
       if (result.error) {
