@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getPolicyDecoding } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,10 +28,29 @@ export default async function PolicyDecodingDetailPage({
 
   const { id } = await params;
   const { payment } = await searchParams;
-  const { decoding, error } = await getPolicyDecoding(id);
+  let { decoding, error } = await getPolicyDecoding(id);
 
   if (error || !decoding) {
     notFound();
+  }
+
+  // ── Handle Stripe webhook race condition ──────────────────────────────
+  // After checkout, Stripe redirects here with ?payment=success immediately,
+  // but the webhook that sets paid_at may not have fired yet. If we see
+  // payment=success but paid_at is still null, set it now so the upload
+  // box appears without requiring a page refresh.
+  if (payment === "success" && !decoding.paid_at) {
+    const admin = createAdminClient();
+    await admin
+      .from("policy_decodings")
+      .update({ paid_at: new Date().toISOString() })
+      .eq("id", decoding.id);
+
+    // Re-fetch so the rest of the page renders correctly
+    const refreshed = await getPolicyDecoding(id);
+    if (refreshed.decoding) {
+      decoding = refreshed.decoding;
+    }
   }
 
   const statusInfo = DECODER_STATUS_LABELS[decoding.status] || {
