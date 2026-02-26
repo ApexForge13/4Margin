@@ -91,6 +91,8 @@ export interface AnalysisResult {
   supplement_total: number;
   waste_adjuster: number | null;
   summary: string;
+  /** Raw Claude response text (first 1000 chars) for debugging */
+  debugRawResponse?: string;
 }
 
 /* ─────── Core Analysis ─────── */
@@ -139,6 +141,7 @@ export async function detectMissingItems(
       client.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 8192,
+        system: `You are an aggressive roofing supplement specialist with 20 years of experience. Your job is to find EVERY missing or underpaid item in an adjuster's estimate. Adjusters almost ALWAYS miss items — that is why contractors hire supplement companies. You must find at minimum 5-10 missing items on any roofing claim. Common items adjusters miss: starter strip, drip edge, ice & water shield in valleys, ridge cap, pipe boot flashing, step flashing, steep pitch charges, high roof charges, waste factor adjustments, permits, dumpster/haul-off, D&R of accessories (solar, HVAC, satellite dishes), and overhead & profit. If you genuinely cannot read the PDF or find any items, explain why in the summary field — but an empty missing_items array on a roofing claim means something went wrong.`,
         messages: [
           {
             role: "user",
@@ -199,13 +202,17 @@ export async function detectMissingItems(
 
   if (!result.missing_items || result.missing_items.length === 0) {
     console.warn(`[detectMissingItems] WARNING: Claude returned 0 missing items. Summary: ${result.summary}`);
-    // If contractor flagged items as missing, 0 results means something went wrong
-    if (input.itemsBelievedMissing && input.itemsBelievedMissing.trim().length > 0) {
-      throw new Error(
-        `AI returned 0 items despite contractor notes: "${input.itemsBelievedMissing.substring(0, 100)}". ` +
-        `Claude summary: "${result.summary || "none"}". Please retry.`
-      );
-    }
+    // A supplement claim that returns 0 items is ALWAYS wrong — adjusters never
+    // create perfect estimates, and the contractor is paying for this analysis.
+    // Throw so the pipeline surfaces the error and the user can retry.
+    const reason = input.itemsBelievedMissing?.trim()
+      ? `Contractor flagged: "${input.itemsBelievedMissing.substring(0, 100)}"`
+      : "No contractor notes — but a supplement claim should always have missing items";
+    throw new Error(
+      `AI returned 0 missing items. ${reason}. ` +
+      `Claude summary: "${result.summary || "none"}". ` +
+      `This usually means the PDF could not be read properly or the AI was too conservative. Please retry.`
+    );
   }
 
   // Map to DetectedItem format + enrich IRC references with verified data
@@ -247,6 +254,7 @@ export async function detectMissingItems(
     supplement_total: Math.round(supplement_total * 100) / 100,
     waste_adjuster: result.waste_percent_adjuster,
     summary: result.summary,
+    debugRawResponse: textBlock.text.substring(0, 1000),
   };
 }
 
@@ -347,10 +355,12 @@ Note: You may also use valid Xactimate codes from your training knowledge if app
 4. For solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician)
 
 ## CRITICAL RULES
-- NEVER return an empty missing_items array if contractor flagged items above
+- NEVER return an empty missing_items array. Every roofing estimate has missing items.
+- If you cannot read the PDF clearly, state that in the summary AND still return common missing items based on measurements (starter strip, drip edge, ice & water, ridge cap, etc.)
 - For each contractor-flagged item, create a line item even at lower confidence
 - Use measurements for quantities (ridge LF for ridge cap, valley LF for ice & water, etc.)
 - Cite IRC codes or manufacturer specs in justifications
+- Minimum 5 items for any roofing claim — adjusters routinely miss common items
 
 Return ONLY JSON — no markdown, no code fences:
 {

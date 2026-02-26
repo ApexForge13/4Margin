@@ -13,28 +13,48 @@ interface PipelineErrorCardProps {
 
 export function PipelineErrorCard({ supplementId, error }: PipelineErrorCardProps) {
   const router = useRouter();
-  const [retrying, setRetrying] = useState(false);
+  /** Show generating state locally while the pipeline retries in background */
+  const [regenerating, setRegenerating] = useState(false);
 
   const handleRetry = async () => {
-    setRetrying(true);
-    try {
-      const res = await fetch(`/api/supplements/${supplementId}/generate`, {
-        method: "POST",
-      });
+    setRegenerating(true);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to retry");
-      }
+    // Fire the generate request — don't await the full pipeline response.
+    // The API sets status="generating" immediately, then runs the 1-2 min pipeline.
+    fetch(`/api/supplements/${supplementId}/generate`, {
+      method: "POST",
+    }).catch((err) => {
+      console.error("[PipelineErrorCard] Generate request failed:", err);
+    });
 
-      toast.success("Re-analyzing your estimate. This may take 1-2 minutes.");
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to retry pipeline");
-    } finally {
-      setRetrying(false);
-    }
+    toast.success("Re-analyzing your estimate. This usually takes 1-2 minutes.");
+
+    // Wait for the DB status to update, then refresh.
+    // The server component will render the generating spinner + AutoRefresh.
+    await new Promise((r) => setTimeout(r, 2500));
+    router.refresh();
   };
+
+  // ── Regenerating state: show generating spinner ──
+  if (regenerating) {
+    return (
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="flex items-center gap-3 py-6">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          <div>
+            <p className="font-medium text-blue-900">Re-analyzing your estimate...</p>
+            <p className="text-sm text-blue-700">
+              Our AI is reviewing the adjuster&apos;s scope and identifying missing items.
+              This usually takes 1-2 minutes. The page will update automatically.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Determine if this is a "0 items" error vs a real pipeline failure
+  const isZeroItems = error.includes("0 missing items") || error.includes("0 items");
 
   return (
     <Card className="border-red-200 bg-red-50">
@@ -53,32 +73,21 @@ export function PipelineErrorCard({ supplementId, error }: PipelineErrorCardProp
           />
         </svg>
         <div className="flex-1">
-          <p className="font-medium text-red-900">Analysis failed</p>
+          <p className="font-medium text-red-900">
+            {isZeroItems ? "No items found — retrying may help" : "Analysis failed"}
+          </p>
           <p className="text-sm text-red-700 mt-1">
-            The AI pipeline encountered an error while analyzing your estimate: {error}
+            {isZeroItems
+              ? "The AI could not identify missing items on this attempt. This can happen if the PDF is hard to read or the AI was too conservative. Try again — results often improve on retry."
+              : `The AI pipeline encountered an error: ${error}`}
           </p>
           <Button
             variant="outline"
             size="sm"
             className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
             onClick={handleRetry}
-            disabled={retrying}
           >
-            {retrying ? (
-              <>
-                <svg
-                  className="mr-2 h-3.5 w-3.5 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Retrying...
-              </>
-            ) : (
-              "Retry Analysis"
-            )}
+            Retry Analysis
           </Button>
         </div>
       </CardContent>

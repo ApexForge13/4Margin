@@ -341,6 +341,7 @@ export async function runSupplementPipeline(
           summary: analysisResult.summary,
           item_count: analysisResult.items.length,
           photo_analyses: Object.fromEntries(photoAnalyses),
+          debug_raw: analysisResult.debugRawResponse || null,
         },
         // Weather verification data
         weather_data: weatherData,
