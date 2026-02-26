@@ -152,49 +152,55 @@ export async function runSupplementPipeline(
 
     const analysisResult = await detectMissingItems(analysisInput);
 
-    // ── 5. Analyze photos in parallel ──
-    const { data: photos } = await supabase
-      .from("photos")
-      .select("id, storage_path, mime_type")
-      .eq("claim_id", claimId);
-
+    // ── 5. Analyze photos (best-effort, non-blocking) ──
+    // Photo analysis is supplementary — don't let it block or timeout the pipeline
     let photoAnalyses = new Map<string, PhotoAnalysisResult>();
 
-    if (photos && photos.length > 0) {
-      const photoData: Array<{ id: string; base64: string; mimeType: string }> = [];
+    try {
+      const { data: photos } = await supabase
+        .from("photos")
+        .select("id, storage_path, mime_type")
+        .eq("claim_id", claimId);
 
-      for (const photo of photos) {
-        try {
-          const { data: photoBlob } = await supabase.storage
-            .from("photos")
-            .download(photo.storage_path);
-          if (photoBlob) {
-            const buffer = await photoBlob.arrayBuffer();
-            photoData.push({
-              id: photo.id,
-              base64: Buffer.from(buffer).toString("base64"),
-              mimeType: photo.mime_type || "image/jpeg",
-            });
+      if (photos && photos.length > 0) {
+        const photoData: Array<{ id: string; base64: string; mimeType: string }> = [];
+
+        for (const photo of photos) {
+          try {
+            const { data: photoBlob } = await supabase.storage
+              .from("photos")
+              .download(photo.storage_path);
+            if (photoBlob) {
+              const buffer = await photoBlob.arrayBuffer();
+              photoData.push({
+                id: photo.id,
+                base64: Buffer.from(buffer).toString("base64"),
+                mimeType: photo.mime_type || "image/jpeg",
+              });
+            }
+          } catch {
+            // Skip photos that fail to download
           }
-        } catch {
-          // Skip photos that fail to download
+        }
+
+        if (photoData.length > 0) {
+          photoAnalyses = await analyzePhotos(photoData);
+        }
+
+        // Update photos with vision analysis results
+        for (const [photoId, analysis] of photoAnalyses) {
+          await supabase
+            .from("photos")
+            .update({
+              vision_analysis: analysis,
+              tags: analysis.damage_types,
+            })
+            .eq("id", photoId);
         }
       }
-
-      if (photoData.length > 0) {
-        photoAnalyses = await analyzePhotos(photoData);
-      }
-
-      // Update photos with vision analysis results
-      for (const [photoId, analysis] of photoAnalyses) {
-        await supabase
-          .from("photos")
-          .update({
-            vision_analysis: analysis,
-            tags: analysis.damage_types,
-          })
-          .eq("id", photoId);
-      }
+    } catch (photoErr) {
+      console.error("[pipeline] Photo analysis failed (non-blocking):", photoErr);
+      // Continue — photo analysis never blocks the pipeline
     }
 
     // ── 6. Insert supplement_items ──

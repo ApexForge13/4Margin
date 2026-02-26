@@ -1,14 +1,17 @@
 /**
  * Retry utility for Claude API calls.
  * Handles transient errors (rate limits, network issues) with exponential backoff.
- * Rate limit errors use a longer base delay (30s) to wait out per-minute windows.
+ *
+ * Rate limit strategy: wait 15s then retry once. Longer waits risk Vercel
+ * function timeouts (60s Hobby / 120s Pro). Better to fail fast and let
+ * the user retry via the UI than to hang silently.
  */
 
 export async function withRetry<T>(
   fn: () => Promise<T>,
   options: { maxRetries?: number; baseDelayMs?: number; label?: string } = {}
 ): Promise<T> {
-  const { maxRetries = 3, baseDelayMs = 1000, label = "API call" } = options;
+  const { maxRetries = 2, baseDelayMs = 2000, label = "API call" } = options;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -21,12 +24,14 @@ export async function withRetry<T>(
         throw err;
       }
 
-      // Use longer delay for rate limit errors (need to wait out the per-minute window)
+      // Rate limits: single 15s wait (fits within Vercel timeout)
+      // Other errors: short exponential backoff
       const rateLimit = isRateLimitError(err);
-      const effectiveBase = rateLimit ? Math.max(baseDelayMs, 30000) : baseDelayMs;
-      const delay = effectiveBase * Math.pow(2, attempt) + Math.random() * 2000;
+      const delay = rateLimit
+        ? 15000 + Math.random() * 3000 // 15-18s for rate limits
+        : baseDelayMs * Math.pow(2, attempt) + Math.random() * 1000;
       console.warn(
-        `[retry] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1})${rateLimit ? " [RATE LIMITED — waiting longer]" : ""}, retrying in ${Math.round(delay / 1000)}s:`,
+        `[retry] ${label} attempt ${attempt + 1}/${maxRetries + 1} failed${rateLimit ? " [RATE LIMITED]" : ""}, retrying in ${Math.round(delay / 1000)}s:`,
         err instanceof Error ? err.message : err
       );
       await sleep(delay);

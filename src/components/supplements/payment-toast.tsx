@@ -48,13 +48,17 @@ export function PaymentToast() {
             } else {
               console.log("[payment-toast] Pipeline triggered successfully");
             }
+            // Refresh page after triggering — generate sets status to "generating"
+            // so the server component will show the progress card instead of "pay to unlock"
+            router.refresh();
           })
           .catch((err) => {
             console.error("[payment-toast] Pipeline trigger error:", err);
+            router.refresh();
           });
       }
 
-      // Clean URL params
+      // Clean URL params immediately (don't wait for generate response)
       const url = new URL(window.location.href);
       url.searchParams.delete("payment");
       url.searchParams.delete("free");
