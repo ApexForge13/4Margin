@@ -22,6 +22,7 @@ import { PipelineErrorCard } from "@/components/supplements/pipeline-error-card"
 import { DraftPaymentCard } from "@/components/supplements/draft-payment-card";
 import { DownloadButton } from "@/components/supplements/download-button";
 import { PolicyAnalysisCard } from "@/components/supplements/policy-analysis-card";
+import { NoItemsCard } from "@/components/supplements/no-items-card";
 
 export default async function SupplementDetailPage({
   params,
@@ -227,29 +228,7 @@ export default async function SupplementDetailPage({
           supplementTotal={supplement.supplement_total ?? null}
         />
       ) : !pipelineError && status !== "generating" && status !== "draft" && (
-        <Card className="border-amber-200 bg-amber-50">
-          <CardContent className="flex items-center gap-3 py-6">
-            <svg
-              className="h-5 w-5 text-amber-600 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="font-medium text-amber-900">No line items detected</p>
-              <p className="text-sm text-amber-700">
-                The AI analysis did not find missing items for this claim. This may happen if the adjuster&apos;s estimate already covers all applicable line items.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <NoItemsCard supplementId={id} />
       )}
 
       {/* Policy Analysis — from Policy Decoder */}
