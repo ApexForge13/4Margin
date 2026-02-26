@@ -5,6 +5,10 @@
  * Computes derived fields (max gusts, hail detection, storm window, verdict)
  * to support roofing insurance supplement claims.
  *
+ * Also fetches NWS alerts for the area to cross-reference station data with
+ * official National Weather Service warnings (storm cells can produce severe
+ * conditions that nearby stations don't capture).
+ *
  * API docs: https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/
  */
 
@@ -35,6 +39,16 @@ export interface WeatherEvent {
   description: string;
   size?: number; // hail size in inches
   speed?: number; // wind speed in mph
+}
+
+/** NWS alert parsed from Visual Crossing or NWS API */
+export interface NwsAlert {
+  event: string; // e.g. "Severe Thunderstorm Warning"
+  headline: string;
+  description: string;
+  onset: string;
+  ends: string;
+  severity: string; // "Severe", "Moderate", etc.
 }
 
 export type WeatherVerdict =
@@ -75,6 +89,9 @@ export interface WeatherData {
   // Storm events (hail, tornado, wind damage)
   events: WeatherEvent[];
 
+  // NWS alerts for the area (if available)
+  nwsAlerts: NwsAlert[];
+
   // ── Computed fields (added by our code) ──
   maxWindGust: number;
   hailDetected: boolean;
@@ -82,6 +99,8 @@ export interface WeatherData {
   stormWindow: HourlyWeather[]; // hours with severe risk > 30 or gusts > 40
   verdict: WeatherVerdict;
   verdictText: string;
+  /** Whether NWS alerts contributed to the verdict */
+  nwsAlertUsed: boolean;
   fetchedAt: string; // ISO timestamp
 }
 
@@ -111,6 +130,7 @@ const ELEMENTS = [
 
 /**
  * Fetch historical weather data from Visual Crossing for a given address + date.
+ * Also queries the NWS API for historical alerts at the resolved coordinates.
  *
  * @param address - Full property address (e.g. "123 Main St, Plano, TX 75024")
  * @param dateOfLoss - Date in YYYY-MM-DD format
@@ -129,7 +149,8 @@ export async function fetchWeatherData(
   }
 
   const encodedAddress = encodeURIComponent(address);
-  const url = `${API_BASE}/${encodedAddress}/${dateOfLoss}?key=${apiKey}&include=hours,events&elements=${ELEMENTS}&unitGroup=us`;
+  // Include alerts alongside hours and events
+  const url = `${API_BASE}/${encodedAddress}/${dateOfLoss}?key=${apiKey}&include=hours,events,alerts&elements=${ELEMENTS}&unitGroup=us`;
 
   const response = await withRetry(
     async () => {
@@ -153,7 +174,105 @@ export async function fetchWeatherData(
     { maxRetries: 2, baseDelayMs: 1000, label: "Visual Crossing Weather API" }
   );
 
-  return parseWeatherResponse(response, dateOfLoss);
+  // Parse Visual Crossing response (includes alerts if available)
+  const weatherData = parseWeatherResponse(response, dateOfLoss);
+
+  // Cross-reference with NWS API for historical alerts at the resolved location.
+  // NWS provides alerts that Visual Crossing may not capture for historical dates.
+  try {
+    const nwsAlerts = await fetchNwsAlerts(
+      weatherData.latitude,
+      weatherData.longitude,
+      dateOfLoss
+    );
+
+    if (nwsAlerts.length > 0) {
+      weatherData.nwsAlerts = [...weatherData.nwsAlerts, ...nwsAlerts];
+      // Recompute verdict with NWS alert data
+      const updatedVerdict = computeVerdict({
+        hailDetected: weatherData.hailDetected,
+        hailSizeMax: weatherData.hailSizeMax,
+        maxWindGust: weatherData.maxWindGust,
+        severerisk: weatherData.severerisk,
+        conditions: weatherData.conditions,
+        dateOfLoss,
+        nwsAlerts: weatherData.nwsAlerts,
+      });
+      weatherData.verdict = updatedVerdict.verdict;
+      weatherData.verdictText = updatedVerdict.verdictText;
+      weatherData.nwsAlertUsed = updatedVerdict.nwsAlertUsed;
+    }
+  } catch (nwsErr) {
+    console.warn("[weather] NWS alert fetch failed (non-blocking):", nwsErr);
+    // Continue — NWS data is supplementary
+  }
+
+  return weatherData;
+}
+
+/* ─────── NWS Alert Fetch ─────── */
+
+/**
+ * Query NWS API for historical alerts near the given coordinates.
+ * Uses the /alerts endpoint with area parameter (state) and date range.
+ * NWS API is free, no key required.
+ */
+async function fetchNwsAlerts(
+  lat: number,
+  lon: number,
+  dateOfLoss: string
+): Promise<NwsAlert[]> {
+  if (!lat || !lon) return [];
+
+  // NWS /alerts endpoint supports filtering by point (zone)
+  // First get the NWS zone for the coordinates
+  try {
+    const pointRes = await fetch(
+      `https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`,
+      {
+        headers: { "User-Agent": "4Margin-SupplementEngine/1.0 (support@4margin.com)" },
+      }
+    );
+    if (!pointRes.ok) return [];
+
+    const pointData = await pointRes.json();
+    const county = pointData.properties?.county; // URL like https://api.weather.gov/zones/county/MDC005
+    const forecastZone = pointData.properties?.forecastZone;
+
+    if (!county && !forecastZone) return [];
+
+    // Extract zone ID from URL
+    const zoneId = (county || forecastZone)?.split("/").pop();
+    if (!zoneId) return [];
+
+    // Query alerts for this zone around the date of loss
+    // NWS keeps alerts for about 1 year
+    const startDate = `${dateOfLoss}T00:00:00Z`;
+    const endDate = `${dateOfLoss}T23:59:59Z`;
+
+    const alertRes = await fetch(
+      `https://api.weather.gov/alerts?zone=${zoneId}&start=${startDate}&end=${endDate}`,
+      {
+        headers: { "User-Agent": "4Margin-SupplementEngine/1.0 (support@4margin.com)" },
+      }
+    );
+    if (!alertRes.ok) return [];
+
+    const alertData = await alertRes.json();
+    const features = alertData.features || [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return features.map((f: any) => ({
+      event: f.properties?.event || "",
+      headline: f.properties?.headline || "",
+      description: f.properties?.description || "",
+      onset: f.properties?.onset || "",
+      ends: f.properties?.ends || "",
+      severity: f.properties?.severity || "",
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /* ─────── Response Parsing ─────── */
@@ -185,7 +304,7 @@ function parseWeatherResponse(raw: any, dateOfLoss: string): WeatherData {
     })
   );
 
-  // Parse events
+  // Parse events (storm reports from Visual Crossing)
   const events: WeatherEvent[] = (day.events || []).map(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (e: any) => ({
@@ -195,6 +314,19 @@ function parseWeatherResponse(raw: any, dateOfLoss: string): WeatherData {
       description: e.description || "",
       size: e.size ?? undefined,
       speed: e.speed ?? undefined,
+    })
+  );
+
+  // Parse alerts from Visual Crossing response (if available)
+  const vcAlerts: NwsAlert[] = (raw.alerts || []).map(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any) => ({
+      event: a.event || "",
+      headline: a.headline || "",
+      description: a.description || "",
+      onset: a.onset || "",
+      ends: a.ends || "",
+      severity: a.severity || "",
     })
   );
 
@@ -232,14 +364,15 @@ function parseWeatherResponse(raw: any, dateOfLoss: string): WeatherData {
       (h.preciptype?.includes("hail") ?? false)
   );
 
-  // Verdict
-  const { verdict, verdictText } = computeVerdict({
+  // Verdict — includes NWS alerts from Visual Crossing
+  const { verdict, verdictText, nwsAlertUsed } = computeVerdict({
     hailDetected,
     hailSizeMax,
     maxWindGust,
     severerisk: day.severerisk ?? 0,
     conditions: day.conditions || "",
     dateOfLoss,
+    nwsAlerts: vcAlerts,
   });
 
   return {
@@ -265,12 +398,14 @@ function parseWeatherResponse(raw: any, dateOfLoss: string): WeatherData {
     severerisk: day.severerisk ?? 0,
     hours,
     events,
+    nwsAlerts: vcAlerts,
     maxWindGust,
     hailDetected,
     hailSizeMax,
     stormWindow,
     verdict,
     verdictText,
+    nwsAlertUsed,
     fetchedAt: new Date().toISOString(),
   };
 }
@@ -284,31 +419,93 @@ function computeVerdict(input: {
   severerisk: number;
   conditions: string;
   dateOfLoss: string;
-}): { verdict: WeatherVerdict; verdictText: string } {
-  const { hailDetected, hailSizeMax, maxWindGust, severerisk } = input;
+  nwsAlerts: NwsAlert[];
+}): { verdict: WeatherVerdict; verdictText: string; nwsAlertUsed: boolean } {
+  const { hailDetected, hailSizeMax, maxWindGust, severerisk, nwsAlerts } = input;
 
-  // SEVERE: hail detected, or wind gusts ≥ 58 mph (NWS severe threshold), or severe risk > 50
-  if (hailDetected || maxWindGust >= 58 || severerisk > 50) {
+  // ── Check NWS alerts for severe weather warnings ──
+  const severeAlerts = nwsAlerts.filter((a) => {
+    const event = a.event.toLowerCase();
+    return (
+      event.includes("severe thunderstorm") ||
+      event.includes("tornado") ||
+      event.includes("hurricane") ||
+      event.includes("tropical storm")
+    );
+  });
+
+  const hailAlerts = nwsAlerts.filter((a) => {
+    const desc = (a.description || "").toLowerCase();
+    const event = a.event.toLowerCase();
+    return event.includes("hail") || desc.includes("hail");
+  });
+
+  const windAlerts = nwsAlerts.filter((a) => {
+    const desc = (a.description || "").toLowerCase();
+    // Look for wind speed mentions in NWS alerts
+    const windMatch = desc.match(/(\d+)\s*mph\s*wind/i) || desc.match(/wind\s*(?:gusts?\s*(?:of|up to|to))?\s*(\d+)\s*mph/i);
+    if (windMatch) {
+      const speed = parseInt(windMatch[1]);
+      return speed >= 58;
+    }
+    return false;
+  });
+
+  // Extract wind speeds from NWS alert descriptions
+  let nwsMaxWind = 0;
+  for (const alert of nwsAlerts) {
+    const desc = (alert.description || "").toLowerCase();
+    const matches = desc.matchAll(/(\d+)\s*mph/gi);
+    for (const match of matches) {
+      const speed = parseInt(match[1]);
+      if (speed > nwsMaxWind && speed < 300) { // sanity check
+        nwsMaxWind = speed;
+      }
+    }
+  }
+
+  // Use NWS data if station data is weak but NWS issued severe warnings
+  const hasNwsSevere = severeAlerts.length > 0;
+  const hasNwsHail = hailAlerts.length > 0;
+  const hasNwsWind = windAlerts.length > 0 || nwsMaxWind >= 58;
+  const effectiveHail = hailDetected || hasNwsHail;
+  const effectiveMaxGust = Math.max(maxWindGust, nwsMaxWind);
+  const nwsAlertUsed = hasNwsSevere || hasNwsHail || hasNwsWind;
+
+  // SEVERE: hail detected, or wind gusts >= 58 mph, or severe risk > 50, or NWS severe alert
+  if (effectiveHail || effectiveMaxGust >= 58 || severerisk > 50 || hasNwsSevere) {
     const parts: string[] = [];
 
-    if (hailDetected) {
+    if (effectiveHail) {
       parts.push(
         hailSizeMax
           ? `hail up to ${hailSizeMax}" in diameter`
           : "hail activity"
       );
     }
-    if (maxWindGust >= 58) {
-      parts.push(`wind gusts of ${Math.round(maxWindGust)} mph`);
+    if (effectiveMaxGust >= 58) {
+      if (nwsMaxWind >= 58 && maxWindGust < 58) {
+        parts.push(`wind gusts of ${Math.round(nwsMaxWind)} mph (per NWS warning)`);
+      } else {
+        parts.push(`wind gusts of ${Math.round(effectiveMaxGust)} mph`);
+      }
     }
-    if (severerisk > 50 && !hailDetected && maxWindGust < 58) {
+    if (hasNwsSevere && !effectiveHail && effectiveMaxGust < 58) {
+      const alertNames = severeAlerts.map((a) => a.event).join(", ");
+      parts.push(`NWS issued: ${alertNames}`);
+    }
+    if (severerisk > 50 && !effectiveHail && effectiveMaxGust < 58 && !hasNwsSevere) {
       parts.push(`elevated severe weather risk index (${Math.round(severerisk)}/100)`);
     }
 
-    return {
-      verdict: "severe_confirmed",
-      verdictText: `SEVERE WEATHER CONFIRMED — Historical weather records show ${parts.join(" and ")} at this location on the date of loss (${input.dateOfLoss}). These conditions are consistent with the reported property damage.`,
-    };
+    let text = `SEVERE WEATHER CONFIRMED — Historical weather records show ${parts.join(" and ")} at this location on the date of loss (${input.dateOfLoss}). These conditions are consistent with the reported property damage.`;
+
+    // Add NWS alert details
+    if (nwsAlertUsed && severeAlerts.length > 0) {
+      text += ` NWS Alert: ${severeAlerts[0].headline || severeAlerts[0].event}.`;
+    }
+
+    return { verdict: "severe_confirmed", verdictText: text, nwsAlertUsed };
   }
 
   // MODERATE: wind gusts 40-58 mph, or severe risk 30-50
@@ -324,12 +521,19 @@ function computeVerdict(input: {
     return {
       verdict: "moderate_weather",
       verdictText: `MODERATE WEATHER DETECTED — Weather records indicate ${parts.join(" and ")} at this location on the date of loss (${input.dateOfLoss}). These conditions may have contributed to property damage.`,
+      nwsAlertUsed: false,
     };
   }
 
   // NO SIGNIFICANT WEATHER
+  let noWeatherText = `No significant severe weather events were recorded at this location on the date of loss (${input.dateOfLoss}). Wind gusts reached ${Math.round(maxWindGust)} mph with a severe risk index of ${Math.round(severerisk)}/100.`;
+
+  // Add station data disclaimer
+  noWeatherText += " Note: Weather station data may not capture localized storm events. If NWS warnings or storm reports exist for this area and date, please reference them separately.";
+
   return {
     verdict: "no_significant_weather",
-    verdictText: `No significant severe weather events were recorded at this location on the date of loss (${input.dateOfLoss}). Wind gusts reached ${Math.round(maxWindGust)} mph with a severe risk index of ${Math.round(severerisk)}/100.`,
+    verdictText: noWeatherText,
+    nwsAlertUsed: false,
   };
 }

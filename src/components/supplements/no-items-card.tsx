@@ -14,36 +14,55 @@ interface NoItemsCardProps {
 
 export function NoItemsCard({ supplementId }: NoItemsCardProps) {
   const router = useRouter();
-  const [retrying, setRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  /** Show generating state locally while the pipeline runs in background */
+  const [regenerating, setRegenerating] = useState(false);
 
   const handleRetry = async () => {
     if (retryCount >= MAX_RETRIES) return;
 
-    setRetrying(true);
-    try {
-      const res = await fetch(`/api/supplements/${supplementId}/generate`, {
-        method: "POST",
-      });
+    setRetryCount((c) => c + 1);
+    setRegenerating(true);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to retry");
-      }
+    // Fire the generate request but DON'T await the full response.
+    // The generate API sets status="generating" via DB update immediately,
+    // then runs the 1-2 minute pipeline. We show a local spinner and refresh
+    // the page after a short delay so the server component picks up the
+    // "generating" status and renders the full generating card + AutoRefresh.
+    fetch(`/api/supplements/${supplementId}/generate`, {
+      method: "POST",
+    }).catch((err) => {
+      console.error("[NoItemsCard] Generate request failed:", err);
+    });
 
-      setRetryCount((c) => c + 1);
-      toast.success("Re-analyzing your estimate. This may take 1-2 minutes.");
-      router.refresh();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to retry analysis"
-      );
-    } finally {
-      setRetrying(false);
-    }
+    toast.success("Re-analyzing your estimate. This usually takes 1-2 minutes.");
+
+    // Wait for the DB status update to propagate, then refresh.
+    // The server component will render the full generating spinner
+    // and AutoRefresh will poll until complete.
+    await new Promise((r) => setTimeout(r, 2500));
+    router.refresh();
   };
 
   const retriesLeft = MAX_RETRIES - retryCount;
+
+  // ── Regenerating state: show a proper spinner like the generating card ──
+  if (regenerating) {
+    return (
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="flex items-center gap-3 py-6">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          <div>
+            <p className="font-medium text-blue-900">Re-analyzing your estimate...</p>
+            <p className="text-sm text-blue-700">
+              Our AI is reviewing the adjuster&apos;s scope and identifying missing items.
+              This usually takes 1-2 minutes. The page will update automatically.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-amber-200 bg-amber-50">
@@ -73,39 +92,11 @@ export function NoItemsCard({ supplementId }: NoItemsCardProps) {
               size="sm"
               className="mt-3 border-amber-300 text-amber-700 hover:bg-amber-100"
               onClick={handleRetry}
-              disabled={retrying}
             >
-              {retrying ? (
-                <>
-                  <svg
-                    className="mr-2 h-3.5 w-3.5 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Re-analyzing...
-                </>
-              ) : (
-                <>
-                  Retry Analysis
-                  <span className="ml-1.5 text-xs opacity-60">
-                    ({retriesLeft} left)
-                  </span>
-                </>
-              )}
+              Retry Analysis
+              <span className="ml-1.5 text-xs opacity-60">
+                ({retriesLeft} left)
+              </span>
             </Button>
           ) : (
             <p className="text-xs text-amber-600 mt-3">

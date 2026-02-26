@@ -91,6 +91,8 @@ function makeWeatherData(overrides: Partial<WeatherData> = {}): WeatherData {
     verdict: "severe_confirmed",
     verdictText:
       'SEVERE WEATHER CONFIRMED — Historical weather records show hail up to 1.75" in diameter and wind gusts of 65 mph at this location on the date of loss.',
+    nwsAlerts: [],
+    nwsAlertUsed: false,
     fetchedAt: new Date().toISOString(),
     ...overrides,
   };

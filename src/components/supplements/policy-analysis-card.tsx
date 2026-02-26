@@ -22,6 +22,7 @@ import {
   DollarSign,
   Ban,
   ScrollText,
+  Info,
 } from "lucide-react";
 import { PolicyDisclaimer } from "./policy-disclaimer";
 
@@ -205,6 +206,47 @@ export function PolicyAnalysisCard({
             </div>
           </div>
         )}
+
+        {/* Interactions — when landmines and favorable provisions relate to each other */}
+        {(() => {
+          const interactions = findPolicyInteractions(
+            analysis.landmines,
+            analysis.favorableProvisions,
+            analysis.coverages
+          );
+          if (interactions.length === 0) return null;
+          return (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                <Info className="h-4 w-4 text-blue-500" />
+                What This Means Together
+              </h4>
+              <div className="space-y-2">
+                {interactions.map((interaction, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm"
+                  >
+                    <p className="font-medium text-blue-900">
+                      {interaction.title}
+                    </p>
+                    <p className="text-xs text-blue-700 mt-1">
+                      {interaction.explanation}
+                    </p>
+                    {interaction.limit && (
+                      <p className="text-xs font-medium text-blue-800 mt-1.5">
+                        Coverage Limit: {interaction.limit}
+                      </p>
+                    )}
+                    <p className="text-xs text-blue-600 mt-1.5 italic">
+                      {interaction.bottomLine}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Favorable provisions — always visible */}
         {analysis.favorableProvisions.length > 0 && (
@@ -557,4 +599,160 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-right truncate">{value}</span>
     </div>
   );
+}
+
+/* ─── Policy Interaction Detection ─── */
+
+interface PolicyInteraction {
+  title: string;
+  explanation: string;
+  limit: string | null;
+  bottomLine: string;
+}
+
+/**
+ * Detects when landmines and favorable provisions relate to the same coverage
+ * area and generates plain-English explanations of how they interact.
+ *
+ * Example: "Ordinance or Law Exclusion" (landmine) + "Building Code Credit"
+ * (favorable) = the base policy excludes code upgrade costs, but an endorsement
+ * adds limited coverage back — with a specific dollar or percentage limit.
+ */
+function findPolicyInteractions(
+  landmines: DetectedLandmine[],
+  favorables: DetectedFavorable[],
+  coverages: PolicyCoverage[]
+): PolicyInteraction[] {
+  const interactions: PolicyInteraction[] = [];
+
+  // ── Ordinance/Law Exclusion + Building Code Coverage ──
+  const olLandmine = landmines.find((l) => {
+    const n = l.name.toLowerCase();
+    return n.includes("ordinance") || n.includes("law") || n.includes("code");
+  });
+  const codeFavorable = favorables.find((f) => {
+    const n = f.name.toLowerCase();
+    return (
+      n.includes("building code") ||
+      n.includes("code coverage") ||
+      n.includes("ordinance") ||
+      n.includes("law coverage")
+    );
+  });
+
+  if (olLandmine && codeFavorable) {
+    // Look for a coverage limit related to ordinance/law or building code
+    const codeLimit = coverages.find((c) => {
+      const label = c.label.toLowerCase();
+      return (
+        label.includes("ordinance") ||
+        label.includes("law") ||
+        label.includes("code") ||
+        label.includes("increased cost")
+      );
+    });
+
+    interactions.push({
+      title: "Ordinance/Law Exclusion vs. Building Code Credit",
+      explanation:
+        "The base policy excludes costs related to building code upgrades " +
+        "(the \"Ordinance or Law\" exclusion). However, this policy also includes " +
+        "a Building Code endorsement that adds limited coverage back for code-required " +
+        "upgrades. The exclusion and the endorsement are NOT contradictory — the exclusion " +
+        "sets the default (no code coverage), and the endorsement carves out an exception " +
+        "with a specific limit.",
+      limit: codeLimit?.limit || null,
+      bottomLine: codeLimit?.limit
+        ? `Code upgrade costs are covered up to ${codeLimit.limit}. Any costs beyond that limit are excluded.`
+        : "Code upgrade costs may be partially covered — check the endorsement for the specific dollar or percentage limit.",
+    });
+  }
+
+  // ── ACV/Depreciation concern + RCV endorsement ──
+  const depLandmine = landmines.find((l) => {
+    const n = l.name.toLowerCase();
+    return (
+      n.includes("depreci") ||
+      n.includes("actual cash value") ||
+      n.includes("acv")
+    );
+  });
+  const rcvFavorable = favorables.find((f) => {
+    const n = f.name.toLowerCase();
+    return (
+      n.includes("replacement cost") ||
+      n.includes("rcv") ||
+      n.includes("full replacement")
+    );
+  });
+
+  if (depLandmine && rcvFavorable) {
+    interactions.push({
+      title: "Depreciation Concern vs. Replacement Cost Coverage",
+      explanation:
+        "While a depreciation-related concern was flagged, this policy also includes " +
+        "replacement cost value (RCV) coverage. This means the carrier will pay the full " +
+        "replacement cost, though depreciation may be withheld initially until repairs are " +
+        "completed (recoverable depreciation).",
+      limit: null,
+      bottomLine:
+        "Depreciation should be recoverable — the carrier pays ACV upfront, " +
+        "then releases the held depreciation once repairs are completed and documented.",
+    });
+  }
+
+  // ── Cosmetic damage exclusion + favorable cosmetic provision ──
+  const cosmeticLandmine = landmines.find((l) => {
+    const n = l.name.toLowerCase();
+    return n.includes("cosmetic") || n.includes("matching");
+  });
+  const cosmeticFavorable = favorables.find((f) => {
+    const n = f.name.toLowerCase();
+    return n.includes("cosmetic") || n.includes("matching");
+  });
+
+  if (cosmeticLandmine && cosmeticFavorable) {
+    interactions.push({
+      title: "Cosmetic Exclusion vs. Matching Requirement",
+      explanation:
+        "The policy has language that may limit cosmetic damage coverage, " +
+        "but also includes a provision supporting matching or uniformity requirements. " +
+        "The matching provision may require replacement of undamaged materials to maintain " +
+        "a uniform appearance, even if the cosmetic exclusion applies to surface-level damage.",
+      limit: null,
+      bottomLine:
+        "Cosmetic-only damage may be excluded, but if the damaged area cannot " +
+        "reasonably match the undamaged area, the matching provision may require broader replacement.",
+    });
+  }
+
+  // ── Wind/Hail deductible warning + wind/hail coverage ──
+  const windHailLandmine = landmines.find((l) => {
+    const n = l.name.toLowerCase();
+    return (
+      (n.includes("wind") || n.includes("hail") || n.includes("storm")) &&
+      (n.includes("deductible") || n.includes("exclusion") || n.includes("sublimit"))
+    );
+  });
+  const windHailFavorable = favorables.find((f) => {
+    const n = f.name.toLowerCase();
+    return n.includes("wind") || n.includes("hail") || n.includes("storm");
+  });
+
+  if (windHailLandmine && windHailFavorable) {
+    interactions.push({
+      title: "Wind/Hail Deductible vs. Wind/Hail Coverage",
+      explanation:
+        "This policy has a separate wind/hail deductible (often higher than the " +
+        "standard deductible — typically 1-5% of Coverage A). While wind/hail damage " +
+        "IS covered, the out-of-pocket deductible amount may be significantly higher " +
+        "than what the homeowner expects.",
+      limit: null,
+      bottomLine:
+        "Wind/hail damage is covered, but check the deductible amount carefully — " +
+        "a percentage-based deductible on a $400K dwelling could mean a $4,000-$20,000 out-of-pocket cost.",
+    });
+  }
+
+  return interactions;
 }

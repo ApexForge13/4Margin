@@ -159,7 +159,7 @@ export async function detectMissingItems(
           },
         ],
       }),
-    { maxRetries: 3, label: "detectMissingItems" }
+    { maxRetries: 1, label: "detectMissingItems" }
   );
 
   console.log(`[detectMissingItems] Claude response: stop_reason=${response.stop_reason}, usage=${JSON.stringify(response.usage)}`);

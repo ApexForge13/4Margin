@@ -551,6 +551,8 @@ function WeatherCard({ weather: w, weatherPdfUrl }: { weather: Record<string, un
   const precip = w.precip as number;
   const tempmax = w.tempmax as number;
   const tempmin = w.tempmin as number;
+  const nwsAlerts = (w.nwsAlerts as Array<{ event: string; headline: string; description: string }>) || [];
+  const nwsAlertUsed = w.nwsAlertUsed as boolean;
 
   const verdictConfig = {
     severe_confirmed: {
@@ -594,6 +596,11 @@ function WeatherCard({ weather: w, weatherPdfUrl }: { weather: Record<string, un
             <Badge className={verdictConfig.badgeClass}>
               {verdictConfig.label}
             </Badge>
+            {nwsAlertUsed && (
+              <Badge className="bg-blue-600 text-white hover:bg-blue-600 text-[10px]">
+                NWS VERIFIED
+              </Badge>
+            )}
             {weatherPdfUrl && (
               <a
                 href={weatherPdfUrl}
@@ -611,6 +618,25 @@ function WeatherCard({ weather: w, weatherPdfUrl }: { weather: Record<string, un
         </div>
       </CardHeader>
       <CardContent>
+        {/* NWS Alerts banner — show when NWS issued warnings for the area */}
+        {nwsAlerts.length > 0 && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-xs font-semibold text-red-800 uppercase tracking-wide mb-1.5">
+              NWS Alerts for this Area &amp; Date
+            </p>
+            <div className="space-y-2">
+              {nwsAlerts.map((alert, i) => (
+                <div key={i} className="text-sm">
+                  <p className="font-medium text-red-900">{alert.event}</p>
+                  {alert.headline && (
+                    <p className="text-xs text-red-700 mt-0.5">{alert.headline}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
           <WeatherStat
             label="Max Wind Gust"
@@ -656,8 +682,15 @@ function WeatherCard({ weather: w, weatherPdfUrl }: { weather: Record<string, un
         <Separator className="my-4" />
         <p className="text-sm text-muted-foreground">{verdictText}</p>
         <p className="text-xs text-muted-foreground mt-2">
-          Source: Visual Crossing Historical Weather Data
+          Sources: Visual Crossing Historical Weather Data{nwsAlertUsed ? ", National Weather Service Alerts" : ""}
         </p>
+        {verdict === "no_significant_weather" && (
+          <p className="text-xs text-amber-600 mt-1">
+            Weather station data reflects conditions at the nearest recording station and may not capture
+            localized storm cells. Cross-reference with NWS storm reports or Interactive Hail Maps for
+            additional evidence.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
