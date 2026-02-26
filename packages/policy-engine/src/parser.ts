@@ -21,7 +21,7 @@ import {
   getClaimTypeFocusPrompt,
   type LandmineRule,
   type FavorableProvision,
-} from "@/data/policy-knowledge";
+} from "./knowledge";
 
 const getClient = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
