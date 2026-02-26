@@ -12,6 +12,7 @@ import {
   buildCodeContextForPrompt,
   enrichIrcReference,
 } from "@/data/building-codes";
+import { withRetry } from "./retry";
 
 const getClient = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -133,28 +134,32 @@ export async function detectMissingItems(
 
   console.log(`[detectMissingItems] Sending estimate URL to Claude: ${input.estimatePdfUrl.substring(0, 80)}...`);
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 8192,
-    messages: [
-      {
-        role: "user",
-        content: [
+  const response = await withRetry(
+    () =>
+      client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 8192,
+        messages: [
           {
-            type: "document",
-            source: {
-              type: "url",
-              url: input.estimatePdfUrl,
-            },
-          },
-          {
-            type: "text",
-            text: prompt,
+            role: "user",
+            content: [
+              {
+                type: "document",
+                source: {
+                  type: "url",
+                  url: input.estimatePdfUrl,
+                },
+              },
+              {
+                type: "text",
+                text: prompt,
+              },
+            ],
           },
         ],
-      },
-    ],
-  });
+      }),
+    { maxRetries: 3, label: "detectMissingItems" }
+  );
 
   console.log(`[detectMissingItems] Claude response: stop_reason=${response.stop_reason}, usage=${JSON.stringify(response.usage)}`);
 

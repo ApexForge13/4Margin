@@ -9,6 +9,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import { withRetry } from "./retry";
 
 const getClient = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -52,29 +53,33 @@ export async function analyzePhoto(
     ? (mimeType as ImageMediaType)
     : "image/jpeg";
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 512,
-    messages: [
-      {
-        role: "user",
-        content: [
+  const response = await withRetry(
+    () =>
+      client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 512,
+        messages: [
           {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: mediaType,
-              data: imageBase64,
-            },
-          },
-          {
-            type: "text",
-            text: PHOTO_ANALYSIS_PROMPT,
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: imageBase64,
+                },
+              },
+              {
+                type: "text",
+                text: PHOTO_ANALYSIS_PROMPT,
+              },
+            ],
           },
         ],
-      },
-    ],
-  });
+      }),
+    { maxRetries: 3, label: "analyzePhoto" }
+  );
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
