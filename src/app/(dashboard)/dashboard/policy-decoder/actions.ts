@@ -131,7 +131,9 @@ export async function createPolicyDecoding(
 export async function uploadPolicyFile(
   decodingId: string,
   storagePath: string,
-  originalFilename: string
+  originalFilename: string,
+  claimType?: string,
+  claimDescription?: string
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const {
@@ -172,13 +174,17 @@ export async function uploadPolicyFile(
     return { error: "This policy has already been decoded." };
   }
 
+  const updateData: Record<string, unknown> = {
+    policy_pdf_url: storagePath,
+    original_filename: originalFilename,
+    updated_at: new Date().toISOString(),
+  };
+  if (claimType) updateData.claim_type = claimType;
+  if (claimDescription) updateData.claim_description = claimDescription;
+
   const { error: updateError } = await supabase
     .from("policy_decodings")
-    .update({
-      policy_pdf_url: storagePath,
-      original_filename: originalFilename,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", decodingId);
 
   if (updateError) {

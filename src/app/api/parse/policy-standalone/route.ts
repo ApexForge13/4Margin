@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // ── Verify decoding exists, is paid, and belongs to company ─
     const { data: decoding, error: decodingErr } = await admin
       .from("policy_decodings")
-      .select("id, status, paid_at, policy_pdf_url")
+      .select("id, status, paid_at, policy_pdf_url, claim_type, claim_description")
       .eq("id", policyDecodingId)
       .eq("company_id", userProfile.company_id)
       .single();
@@ -108,7 +108,11 @@ export async function POST(request: NextRequest) {
     );
 
     try {
-      const analysis = await parsePolicyPdfV2(base64);
+      const analysis = await parsePolicyPdfV2(
+        base64,
+        decoding.claim_type || undefined,
+        decoding.claim_description || undefined
+      );
 
       // Store results
       await admin

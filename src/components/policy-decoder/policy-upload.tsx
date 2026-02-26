@@ -11,9 +11,19 @@ interface PolicyUploadProps {
   decodingId: string;
 }
 
+const CLAIM_TYPES = [
+  { value: "", label: "Any / General" },
+  { value: "hail", label: "Hail" },
+  { value: "wind", label: "Wind" },
+  { value: "water", label: "Water / Flood" },
+  { value: "fire", label: "Fire" },
+  { value: "other", label: "Other" },
+] as const;
+
 /**
  * Drag-and-drop PDF upload for a paid policy decoding.
- * After upload, triggers the parse API and auto-refreshes.
+ * Includes optional claim context fields so the decoder
+ * can focus on damage-specific coverages and exclusions.
  */
 export function PolicyUpload({ decodingId }: PolicyUploadProps) {
   const router = useRouter();
@@ -23,6 +33,10 @@ export function PolicyUpload({ decodingId }: PolicyUploadProps) {
     "idle" | "uploading" | "processing" | "done" | "error"
   >("idle");
   const [fileName, setFileName] = useState<string | null>(null);
+
+  // Claim context fields
+  const [claimType, setClaimType] = useState("");
+  const [claimDescription, setClaimDescription] = useState("");
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -53,11 +67,13 @@ export function PolicyUpload({ decodingId }: PolicyUploadProps) {
           throw new Error(storageError.message);
         }
 
-        // 2. Update the decoding row with file path
+        // 2. Update the decoding row with file path + claim context
         const { error: updateError } = await uploadPolicyFile(
           decodingId,
           storagePath,
-          file.name
+          file.name,
+          claimType || undefined,
+          claimDescription || undefined
         );
 
         if (updateError) {
@@ -90,7 +106,7 @@ export function PolicyUpload({ decodingId }: PolicyUploadProps) {
         setUploading(false);
       }
     },
-    [decodingId, router]
+    [decodingId, router, claimType, claimDescription]
   );
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -238,56 +254,103 @@ export function PolicyUpload({ decodingId }: PolicyUploadProps) {
   }
 
   return (
-    <div
-      className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
-        isDragging
-          ? "border-primary bg-primary/5"
-          : "border-gray-300 hover:border-gray-400"
-      }`}
-      onDragEnter={handleDragIn}
-      onDragLeave={handleDragOut}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
-    >
-      <div className="mx-auto flex flex-col items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <svg
-            className="h-6 w-6 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-        </div>
+    <div className="space-y-4">
+      {/* Claim context fields — optional */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
         <div>
-          <h3 className="text-lg font-semibold">
-            Upload your insurance policy
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Drag & drop a PDF, or click Browse. Max 25 MB.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            For best results, upload the <span className="font-medium">full policy</span> — not just the declarations page.
+          <h4 className="text-sm font-medium mb-1">Claim Context <span className="text-muted-foreground font-normal">(optional)</span></h4>
+          <p className="text-xs text-muted-foreground">
+            Help the decoder focus on coverages and exclusions most relevant to your claim.
           </p>
         </div>
-        <label>
-          <Button variant="outline" asChild disabled={uploading}>
-            <span>{uploading ? "Uploading..." : "Browse Files"}</span>
-          </Button>
-          <input
-            type="file"
-            className="sr-only"
-            accept=".pdf,application/pdf"
-            onChange={handleFileInput}
-            disabled={uploading}
-          />
-        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="claim-type" className="text-xs font-medium text-muted-foreground block mb-1">
+              Damage Type
+            </label>
+            <select
+              id="claim-type"
+              value={claimType}
+              onChange={(e) => setClaimType(e.target.value)}
+              disabled={uploading}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {CLAIM_TYPES.map((ct) => (
+                <option key={ct.value} value={ct.value}>
+                  {ct.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="claim-desc" className="text-xs font-medium text-muted-foreground block mb-1">
+              Claim Description
+            </label>
+            <input
+              id="claim-desc"
+              type="text"
+              value={claimDescription}
+              onChange={(e) => setClaimDescription(e.target.value)}
+              disabled={uploading}
+              placeholder="e.g., Hail damage to roof, siding, and gutters"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* File drop zone */}
+      <div
+        className={`relative rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+          isDragging
+            ? "border-primary bg-primary/5"
+            : "border-gray-300 hover:border-gray-400"
+        }`}
+        onDragEnter={handleDragIn}
+        onDragLeave={handleDragOut}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+      >
+        <div className="mx-auto flex flex-col items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <svg
+              className="h-6 w-6 text-primary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold">
+              Upload your insurance policy
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Drag & drop a PDF, or click Browse. Max 25 MB.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              For best results, upload the <span className="font-medium">full policy</span> — not just the declarations page.
+            </p>
+          </div>
+          <label>
+            <Button variant="outline" asChild disabled={uploading}>
+              <span>{uploading ? "Uploading..." : "Browse Files"}</span>
+            </Button>
+            <input
+              type="file"
+              className="sr-only"
+              accept=".pdf,application/pdf"
+              onChange={handleFileInput}
+              disabled={uploading}
+            />
+          </label>
+        </div>
       </div>
     </div>
   );

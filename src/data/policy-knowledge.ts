@@ -360,6 +360,98 @@ export const LANDMINE_RULES: LandmineRule[] = [
   },
 ];
 
+// ── Claim-Type Filtered Helpers ──────────────────────────────────────────────
+
+/**
+ * Get landmine rules most relevant to a specific claim/damage type.
+ * Falls back to all rules if claimType is unknown or empty.
+ */
+export function getLandminesForClaimType(claimType?: string): LandmineRule[] {
+  if (!claimType) return LANDMINE_RULES;
+
+  const normalized = claimType.toLowerCase().replace(/[\s/]+/g, "_");
+
+  // Map UI claim types to internal affectedClaimTypes values
+  const typeMap: Record<string, string[]> = {
+    hail: ["hail", "wind_hail", "impact"],
+    wind: ["wind", "wind_hail"],
+    water: ["water", "flood"],
+    fire: ["fire"],
+    other: [], // return all
+  };
+
+  const matchTypes = typeMap[normalized];
+  if (!matchTypes || matchTypes.length === 0) return LANDMINE_RULES;
+
+  const filtered = LANDMINE_RULES.filter((rule) =>
+    rule.affectedClaimTypes.some((ct) => matchTypes.includes(ct))
+  );
+
+  // Always return at least the full list if nothing matched
+  return filtered.length > 0 ? filtered : LANDMINE_RULES;
+}
+
+/**
+ * Build claim-specific focus instructions for the AI prompt.
+ */
+export function getClaimTypeFocusPrompt(
+  claimType?: string,
+  claimDescription?: string
+): string {
+  if (!claimType && !claimDescription) return "";
+
+  const parts: string[] = ["\n### CLAIM CONTEXT — FOCUS YOUR ANALYSIS"];
+
+  if (claimType) {
+    const focusMap: Record<string, string> = {
+      hail: `This is a **HAIL damage** claim. PRIORITIZE:
+- Cosmetic damage exclusions (CRITICAL — these deny most hail claims)
+- Anti-matching / limited matching endorsements
+- Wind/hail deductible (separate from all-perils deductible)
+- Roof age / payment schedules (affects depreciation on older roofs)
+- Impact damage thresholds or definitions
+- Any exclusion for damage to roof, siding, or gutters from hail`,
+
+      wind: `This is a **WIND damage** claim. PRIORITIZE:
+- Named storm / hurricane deductibles (separate, often higher)
+- Wind deductible endorsements (percentage-based vs flat)
+- Roof age / payment schedules
+- Anti-matching limitations
+- Code upgrade coverage (wind damage often triggers code requirements)
+- Tree / falling object coverage provisions`,
+
+      water: `This is a **WATER / FLOOD damage** claim. PRIORITIZE:
+- Flood exclusion (standard in HO-3 — is there separate flood coverage?)
+- Water backup / sump pump coverage endorsement
+- Mold / fungus exclusion or limitation
+- Hidden water damage provisions
+- Gradual vs sudden water damage distinction
+- Interior damage from roof leak provisions`,
+
+      fire: `This is a **FIRE damage** claim. PRIORITIZE:
+- Dwelling coverage limit and extended replacement cost
+- Additional Living Expenses (ALE) / Loss of Use coverage
+- Code upgrade / Law & Ordinance coverage (rebuilding to code)
+- Debris removal coverage limits
+- Personal property coverage
+- Replacement cost vs ACV settlement method`,
+
+      other: `Analyze ALL provisions with equal weight — no specific claim type filter.`,
+    };
+
+    const normalized = claimType.toLowerCase().replace(/[\s/]+/g, "_");
+    parts.push(focusMap[normalized] || focusMap["other"]!);
+  }
+
+  if (claimDescription) {
+    parts.push(
+      `\n**Claim Description:** "${claimDescription}"\nUse this description to identify the most relevant provisions, exclusions, and potential coverage gaps.`
+    );
+  }
+
+  return parts.join("\n");
+}
+
 // ── Commonly Missed Policy Provisions (Favorable to Homeowner) ───────────────
 
 export interface FavorableProvision {

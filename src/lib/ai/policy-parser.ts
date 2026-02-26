@@ -17,6 +17,8 @@ import {
   FAVORABLE_PROVISIONS,
   BASE_FORM_EXCLUSIONS,
   CARRIER_ENDORSEMENT_FORMS,
+  getLandminesForClaimType,
+  getClaimTypeFocusPrompt,
   type LandmineRule,
   type FavorableProvision,
 } from "@/data/policy-knowledge";
@@ -410,11 +412,14 @@ Return ONLY the JSON object, no explanation.`;
 async function fullExtraction(
   pdfBase64: string,
   claimType: string | undefined,
-  docMeta: DocumentMeta
+  docMeta: DocumentMeta,
+  claimDescription?: string
 ): Promise<PolicyAnalysis> {
   const client = getClient();
 
-  const landmineSearchTerms = LANDMINE_RULES.map(
+  // Use claim-filtered landmines when a claim type is specified
+  const relevantLandmines = getLandminesForClaimType(claimType);
+  const landmineSearchTerms = relevantLandmines.map(
     (r: LandmineRule) =>
       `- ${r.name} (ID: ${r.id}): Look for: ${r.typicalLanguage.join(", ")}`
   ).join("\n");
@@ -543,7 +548,7 @@ ${favorableSearchTerms}
 
 For each found, quote the relevant language.
 
-${claimType ? `### 9. Claim Type Context\nThis is a ${claimType} damage claim. Prioritize provisions most relevant to ${claimType} damage.` : ""}
+${getClaimTypeFocusPrompt(claimType, claimDescription)}
 
 ### 10. Per-Section Confidence
 Rate your confidence for each section from 0.0 to 1.0:
@@ -704,7 +709,9 @@ RULES:
 
 async function verifyExtraction(
   pdfBase64: string,
-  extraction: PolicyAnalysis
+  extraction: PolicyAnalysis,
+  claimType?: string,
+  claimDescription?: string
 ): Promise<PolicyAnalysis> {
   const client = getClient();
 
@@ -777,6 +784,20 @@ Check the FULL document again and answer:
    - Check for roof-specific payment schedules that convert to ACV
    - Check if any endorsement modifies the base depreciation method
 
+${claimType ? `5. **CLAIM-SPECIFIC CHECK** (${claimType} claim):${claimType === "hail" ? `
+   - Is there a cosmetic damage exclusion? (CRITICAL — this is the #1 denial reason for hail claims)
+   - Is there an anti-matching or limited matching endorsement?
+   - Is the wind/hail deductible correctly captured (flat vs percentage)?` : ""}${claimType === "wind" ? `
+   - Is there a named storm or hurricane deductible?
+   - Is the wind deductible correctly identified (flat vs percentage)?
+   - Are there any wind-specific exclusions?` : ""}${claimType === "water" ? `
+   - Is flood excluded (standard HO-3)? Is there a separate flood policy?
+   - Is water backup coverage included?
+   - Are mold/fungus limitations captured?` : ""}${claimType === "fire" ? `
+   - Is Code/L&O coverage included (critical for rebuild to code)?
+   - Are ALE/Loss of Use limits correct?
+   - Is debris removal coverage captured?` : ""}${claimDescription ? `\n   - Context: "${claimDescription}"` : ""}
+` : ""}
 ## OUTPUT FORMAT
 Return a JSON object with ONLY the corrections/additions:
 {
@@ -1147,9 +1168,14 @@ function createDegradedResult(
 
 export async function parsePolicyPdfV2(
   pdfBase64: string,
-  claimType?: string
+  claimType?: string,
+  claimDescription?: string
 ): Promise<PolicyAnalysis> {
   try {
+    if (claimType) {
+      console.log(`[policy-parser] Claim context: type=${claimType}${claimDescription ? `, desc="${claimDescription}"` : ""}`);
+    }
+
     // Pass 1: Document Intelligence (uses Haiku — fast + cheap)
     console.log("[policy-parser] Starting Pass 1 — Document Intelligence...");
     const docMeta = await analyzeDocumentType(pdfBase64);
@@ -1158,9 +1184,9 @@ export async function parsePolicyPdfV2(
     console.log("[policy-parser] Pass 1 complete. Waiting before Pass 2...");
     await new Promise((r) => setTimeout(r, 3000));
 
-    // Pass 2: Full Extraction (Sonnet)
+    // Pass 2: Full Extraction (Sonnet) — with claim context for focused analysis
     console.log("[policy-parser] Starting Pass 2 — Full Extraction...");
-    let extraction = await fullExtraction(pdfBase64, claimType, docMeta);
+    let extraction = await fullExtraction(pdfBase64, claimType, docMeta, claimDescription);
 
     // Enrich with carrier form database
     extraction = enrichWithCarrierForms(extraction, docMeta);
@@ -1169,9 +1195,9 @@ export async function parsePolicyPdfV2(
     console.log("[policy-parser] Pass 2 complete. Waiting before Pass 3...");
     await new Promise((r) => setTimeout(r, 10000));
 
-    // Pass 3: Verification (Sonnet)
+    // Pass 3: Verification (Sonnet) — with claim context for targeted checks
     console.log("[policy-parser] Starting Pass 3 — Verification...");
-    let verified = await verifyExtraction(pdfBase64, extraction);
+    let verified = await verifyExtraction(pdfBase64, extraction, claimType, claimDescription);
 
     // Post-processing: calculate percentage deductibles
     verified = calculatePercentageDeductibles(verified);
@@ -1202,8 +1228,9 @@ export async function parsePolicyPdfV2(
 
 export async function parsePolicyPdf(
   pdfBase64: string,
-  claimType?: string
+  claimType?: string,
+  claimDescription?: string
 ): Promise<PolicyAnalysis> {
   // V1 now delegates to V2
-  return parsePolicyPdfV2(pdfBase64, claimType);
+  return parsePolicyPdfV2(pdfBase64, claimType, claimDescription);
 }

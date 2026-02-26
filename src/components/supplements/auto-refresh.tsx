@@ -25,7 +25,7 @@ export function AutoRefresh({ status, paid, intervalMs = 5000 }: AutoRefreshProp
     // Poll during generating (pipeline running)
     // Also poll during draft if paid (waiting for pipeline to start after payment)
     const shouldPoll =
-      status === "generating" || (status === "draft" && paid);
+      status === "generating" || status === "processing" || (status === "draft" && paid);
 
     if (!shouldPoll) return;
 

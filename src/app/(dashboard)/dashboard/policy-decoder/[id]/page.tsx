@@ -83,7 +83,7 @@ export default async function PolicyDecodingDetailPage({
   return (
     <div className="space-y-6">
       {/* Auto-refresh while processing */}
-      {isProcessing && <AutoRefresh status="generating" />}
+      {isProcessing && <AutoRefresh status="processing" />}
 
       {/* Back button + header */}
       <div>
