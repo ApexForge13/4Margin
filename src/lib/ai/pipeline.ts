@@ -57,9 +57,11 @@ export async function runSupplementPipeline(
     }
 
     // ── 2. Fetch supplement to get estimate URL + policy analysis ──
+    // Select all columns — avoids "column not found" error if migration 019
+    // (policy_analysis) hasn't been applied yet. The column is optional.
     const { data: supplement } = await supabase
       .from("supplements")
-      .select("adjuster_estimate_url, policy_analysis")
+      .select("*")
       .eq("id", supplementId)
       .single();
 

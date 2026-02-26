@@ -182,16 +182,22 @@ export async function createClaimAndSupplement(
   }
 
   // Create supplement
+  // Build insert data — only include policy_analysis when it has actual data
+  // to avoid errors if the column hasn't been added to the DB yet (migration 019)
+  const supplementInsert: Record<string, unknown> = {
+    company_id: companyId,
+    claim_id: claim.id,
+    status: "draft",
+    adjuster_estimate_url: input.estimateStoragePath,
+    created_by: user.id,
+  };
+  if (input.policyAnalysis) {
+    supplementInsert.policy_analysis = input.policyAnalysis;
+  }
+
   const { data: supplement, error: supplementError } = await supabase
     .from("supplements")
-    .insert({
-      company_id: companyId,
-      claim_id: claim.id,
-      status: "draft",
-      adjuster_estimate_url: input.estimateStoragePath,
-      policy_analysis: input.policyAnalysis ?? null,
-      created_by: user.id,
-    })
+    .insert(supplementInsert)
     .select("id")
     .single();
 
