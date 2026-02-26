@@ -17,6 +17,7 @@ export interface PolicyDecodingRow {
   policy_pdf_url: string | null;
   original_filename: string | null;
   paid_at: string | null;
+  stripe_checkout_session_id: string | null;
   amount_cents: number;
   policy_analysis: Record<string, unknown> | null;
   document_meta: Record<string, unknown> | null;
@@ -217,7 +218,7 @@ export async function getPolicyDecodings(): Promise<{
   const { data, error } = await supabase
     .from("policy_decodings")
     .select(
-      "id, status, policy_pdf_url, original_filename, paid_at, amount_cents, policy_analysis, document_meta, notes, created_at"
+      "id, status, policy_pdf_url, original_filename, paid_at, stripe_checkout_session_id, amount_cents, policy_analysis, document_meta, notes, created_at"
     )
     .eq("company_id", profile.company_id)
     .order("created_at", { ascending: false })
@@ -258,7 +259,7 @@ export async function getPolicyDecoding(id: string): Promise<{
   const { data, error } = await supabase
     .from("policy_decodings")
     .select(
-      "id, status, policy_pdf_url, original_filename, paid_at, amount_cents, policy_analysis, document_meta, notes, created_at"
+      "id, status, policy_pdf_url, original_filename, paid_at, stripe_checkout_session_id, amount_cents, policy_analysis, document_meta, notes, created_at"
     )
     .eq("id", id)
     .eq("company_id", profile.company_id)

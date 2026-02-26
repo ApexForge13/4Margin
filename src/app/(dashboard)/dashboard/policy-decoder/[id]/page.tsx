@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe";
 import { getPolicyDecoding } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,22 +35,35 @@ export default async function PolicyDecodingDetailPage({
     notFound();
   }
 
-  // ── Handle Stripe webhook race condition ──────────────────────────────
-  // After checkout, Stripe redirects here with ?payment=success immediately,
-  // but the webhook that sets paid_at may not have fired yet. If we see
-  // payment=success but paid_at is still null, set it now so the upload
-  // box appears without requiring a page refresh.
-  if (payment === "success" && !decoding.paid_at) {
-    const admin = createAdminClient();
-    await admin
-      .from("policy_decodings")
-      .update({ paid_at: new Date().toISOString() })
-      .eq("id", decoding.id);
+  // ── Handle Stripe webhook race / failure ────────────────────────────
+  // The webhook that sets paid_at may not have fired yet (race condition)
+  // or may have failed entirely. If paid_at is null but a checkout session
+  // exists, verify with Stripe directly and set paid_at if payment succeeded.
+  if (!decoding.paid_at && decoding.stripe_checkout_session_id) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(
+        decoding.stripe_checkout_session_id
+      );
 
-    // Re-fetch so the rest of the page renders correctly
-    const refreshed = await getPolicyDecoding(id);
-    if (refreshed.decoding) {
-      decoding = refreshed.decoding;
+      if (session.payment_status === "paid") {
+        const admin = createAdminClient();
+        await admin
+          .from("policy_decodings")
+          .update({
+            paid_at: new Date().toISOString(),
+            stripe_payment_id: (session.payment_intent as string) || null,
+          })
+          .eq("id", decoding.id);
+
+        // Re-fetch so the rest of the page renders correctly
+        const refreshed = await getPolicyDecoding(id);
+        if (refreshed.decoding) {
+          decoding = refreshed.decoding;
+        }
+      }
+    } catch {
+      // Stripe call failed — continue with unpaid state
+      console.error("[policy-decoder] Failed to verify Stripe session");
     }
   }
 
