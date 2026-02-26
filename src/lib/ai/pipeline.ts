@@ -43,6 +43,7 @@ export async function runSupplementPipeline(
   try {
     // Note: status stays as "generating" during pipeline execution
     // The "generating" status triggers AutoRefresh polling on the frontend
+    const pipelineStartMs = Date.now();
     console.log(`[pipeline] Starting pipeline for supplement ${supplementId}`);
 
     // ── 1. Fetch claim data ──
@@ -153,54 +154,60 @@ export async function runSupplementPipeline(
     const analysisResult = await detectMissingItems(analysisInput);
 
     // ── 5. Analyze photos (best-effort, non-blocking) ──
-    // Photo analysis is supplementary — don't let it block or timeout the pipeline
+    // Photo analysis is supplementary — don't let it block or timeout the pipeline.
+    // Skip if we've already used >90s to leave time for weather + DB writes.
     let photoAnalyses = new Map<string, PhotoAnalysisResult>();
+    const elapsedMs = Date.now() - pipelineStartMs;
 
-    try {
-      const { data: photos } = await supabase
-        .from("photos")
-        .select("id, storage_path, mime_type")
-        .eq("claim_id", claimId);
+    if (elapsedMs > 90_000) {
+      console.warn(`[pipeline] Skipping photo analysis — already ${Math.round(elapsedMs / 1000)}s elapsed`);
+    } else {
+      try {
+        const { data: photos } = await supabase
+          .from("photos")
+          .select("id, storage_path, mime_type")
+          .eq("claim_id", claimId);
 
-      if (photos && photos.length > 0) {
-        const photoData: Array<{ id: string; base64: string; mimeType: string }> = [];
+        if (photos && photos.length > 0) {
+          const photoData: Array<{ id: string; base64: string; mimeType: string }> = [];
 
-        for (const photo of photos) {
-          try {
-            const { data: photoBlob } = await supabase.storage
-              .from("photos")
-              .download(photo.storage_path);
-            if (photoBlob) {
-              const buffer = await photoBlob.arrayBuffer();
-              photoData.push({
-                id: photo.id,
-                base64: Buffer.from(buffer).toString("base64"),
-                mimeType: photo.mime_type || "image/jpeg",
-              });
+          for (const photo of photos) {
+            try {
+              const { data: photoBlob } = await supabase.storage
+                .from("photos")
+                .download(photo.storage_path);
+              if (photoBlob) {
+                const buffer = await photoBlob.arrayBuffer();
+                photoData.push({
+                  id: photo.id,
+                  base64: Buffer.from(buffer).toString("base64"),
+                  mimeType: photo.mime_type || "image/jpeg",
+                });
+              }
+            } catch {
+              // Skip photos that fail to download
             }
-          } catch {
-            // Skip photos that fail to download
+          }
+
+          if (photoData.length > 0) {
+            photoAnalyses = await analyzePhotos(photoData);
+          }
+
+          // Update photos with vision analysis results
+          for (const [photoId, analysis] of photoAnalyses) {
+            await supabase
+              .from("photos")
+              .update({
+                vision_analysis: analysis,
+                tags: analysis.damage_types,
+              })
+              .eq("id", photoId);
           }
         }
-
-        if (photoData.length > 0) {
-          photoAnalyses = await analyzePhotos(photoData);
-        }
-
-        // Update photos with vision analysis results
-        for (const [photoId, analysis] of photoAnalyses) {
-          await supabase
-            .from("photos")
-            .update({
-              vision_analysis: analysis,
-              tags: analysis.damage_types,
-            })
-            .eq("id", photoId);
-        }
+      } catch (photoErr) {
+        console.error("[pipeline] Photo analysis failed (non-blocking):", photoErr);
+        // Continue — photo analysis never blocks the pipeline
       }
-    } catch (photoErr) {
-      console.error("[pipeline] Photo analysis failed (non-blocking):", photoErr);
-      // Continue — photo analysis never blocks the pipeline
     }
 
     // ── 6. Insert supplement_items ──

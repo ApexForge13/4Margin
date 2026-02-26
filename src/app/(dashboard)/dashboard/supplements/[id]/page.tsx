@@ -23,6 +23,7 @@ import { DraftPaymentCard } from "@/components/supplements/draft-payment-card";
 import { DownloadButton } from "@/components/supplements/download-button";
 import { PolicyAnalysisCard } from "@/components/supplements/policy-analysis-card";
 import { NoItemsCard } from "@/components/supplements/no-items-card";
+import { GenerationTimeoutCard } from "@/components/supplements/generation-timeout-card";
 
 export default async function SupplementDetailPage({
   params,
@@ -105,6 +106,14 @@ export default async function SupplementDetailPage({
   const policyAnalysis = supplement.policy_analysis as Record<string, unknown> | null;
 
   const status = supplement.status as SupplementStatus;
+
+  // Detect stuck "generating" — if the Vercel function timed out, status stays
+  // as "generating" forever with no error written. Use generation_started_at to detect.
+  const generationStartedAt = parsedData?.generation_started_at as string | undefined;
+  const isStuckGenerating =
+    status === "generating" &&
+    generationStartedAt &&
+    Date.now() - new Date(generationStartedAt).getTime() > 3 * 60 * 1000; // 3 minutes
 
   const statusInfo = STATUS_LABELS[status] || {
     label: status,
@@ -192,17 +201,21 @@ export default async function SupplementDetailPage({
         </Card>
       )}
 
-      {/* Generating indicator */}
+      {/* Generating indicator — or timeout warning if stuck */}
       {status === ("generating" as SupplementStatus) && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="flex items-center gap-3 py-6">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-            <div>
-              <p className="font-medium text-blue-900">Analyzing your estimate...</p>
-              <p className="text-sm text-blue-700">Our AI is reviewing the adjuster&apos;s scope, identifying missing items, and generating your supplement. This usually takes 1-2 minutes.</p>
-            </div>
-          </CardContent>
-        </Card>
+        isStuckGenerating ? (
+          <GenerationTimeoutCard supplementId={id} />
+        ) : (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="flex items-center gap-3 py-6">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              <div>
+                <p className="font-medium text-blue-900">Analyzing your estimate...</p>
+                <p className="text-sm text-blue-700">Our AI is reviewing the adjuster&apos;s scope, identifying missing items, and generating your supplement. This usually takes 1-2 minutes.</p>
+              </div>
+            </CardContent>
+          </Card>
+        )
       )}
 
       {/* ── GENERATED CONTENT ───────────────────────────────────── */}

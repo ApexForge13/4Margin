@@ -15,9 +15,10 @@ import { runSupplementPipeline } from "@/lib/ai/pipeline";
 import { enqueuePipelineJob, isQueueEnabled } from "@/lib/queue/client";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
-// Pipeline includes multiple Claude API calls — needs extended timeout
-// Vercel Hobby: max 60s, Pro: max 300s
-export const maxDuration = 120;
+// Pipeline includes multiple Claude API calls — needs extended timeout.
+// With Fluid Compute (default on Vercel), Hobby supports up to 300s.
+// Without Fluid Compute, Hobby caps at 60s.
+export const maxDuration = 300;
 
 export async function POST(
   _request: NextRequest,
@@ -75,7 +76,12 @@ export async function POST(
       paid_at: new Date().toISOString(),
       supplement_total: null,
       adjuster_total: null,
-      adjuster_estimate_parsed: null,
+      // Store generation_started_at so the UI can detect timeouts.
+      // If the Vercel function gets killed, this timestamp lets the
+      // frontend show a "generation may have failed" message.
+      adjuster_estimate_parsed: {
+        generation_started_at: new Date().toISOString(),
+      },
       generated_pdf_url: null,
       weather_data: null,
       weather_pdf_url: null,
