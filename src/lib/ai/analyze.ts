@@ -100,22 +100,21 @@ export async function detectMissingItems(
 ): Promise<AnalysisResult> {
   const supabase = createAdminClient();
 
-  // Fetch all Xactimate codes from DB (prioritize commonly missed)
+  // Fetch commonly missed Xactimate codes only — keeps prompt under token limits
+  // Claude uses its own knowledge for codes not in this list
   const { data: xactCodes } = await supabase
     .from("xactimate_codes")
-    .select("code, category, description, unit, default_justification, irc_reference, commonly_missed")
-    .order("commonly_missed", { ascending: false });
+    .select("code, category, description, unit, commonly_missed")
+    .eq("commonly_missed", true)
+    .order("category", { ascending: true });
 
   const codesContext = (xactCodes || [])
-    .map(
-      (c) =>
-        `${c.code} | ${c.category} | ${c.description} | ${c.unit}${c.commonly_missed ? " | COMMONLY MISSED" : ""}`
-    )
+    .map((c) => `${c.code} | ${c.category} | ${c.description} | ${c.unit}`)
     .join("\n");
 
   const measurementsContext = buildMeasurementsContext(input.measurements);
 
-  // Build jurisdiction-specific building code context if we have the state
+  // Build jurisdiction-specific building code context — top 10 codes only to save tokens
   const buildingCodeContext = input.propertyState
     ? buildCodeContextForPrompt(input.propertyState)
     : "";
@@ -200,6 +199,13 @@ export async function detectMissingItems(
 
   if (!result.missing_items || result.missing_items.length === 0) {
     console.warn(`[detectMissingItems] WARNING: Claude returned 0 missing items. Summary: ${result.summary}`);
+    // If contractor flagged items as missing, 0 results means something went wrong
+    if (input.itemsBelievedMissing && input.itemsBelievedMissing.trim().length > 0) {
+      throw new Error(
+        `AI returned 0 items despite contractor notes: "${input.itemsBelievedMissing.substring(0, 100)}". ` +
+        `Claude summary: "${result.summary || "none"}". Please retry.`
+      );
+    }
   }
 
   // Map to DetectedItem format + enrich IRC references with verified data
@@ -306,101 +312,61 @@ function buildAnalysisPrompt(ctx: {
   policyContext: string | null;
   buildingCodeContext: string;
 }): string {
-  return `You are a senior roofing insurance supplement specialist with 20+ years of experience. Your job is to review the adjuster's Xactimate estimate (the PDF above) and identify MISSING or UNDERPAID line items that should be included in a supplement.
+  // Build contractor notes section with emphasis if they exist
+  const contractorSection = ctx.itemsBelievedMissing
+    ? `\n## ⚠️ CONTRACTOR-FLAGGED MISSING ITEMS (MANDATORY)
+The contractor has identified these specific items as MISSING from the adjuster's estimate. You MUST create a line item for EACH of these — do NOT skip any:
+${ctx.itemsBelievedMissing}
+`
+    : "";
 
-## CONTEXT
+  return `You are a senior roofing supplement specialist. Review the adjuster's Xactimate estimate PDF and identify MISSING or UNDERPAID line items.
 
-**Claim Description:** ${ctx.claimDescription || "Not provided"}
-
-**Adjuster's Scope Notes:** ${ctx.adjusterScopeNotes || "Not provided"}
-
-**Contractor's Notes (items believed missing):** ${ctx.itemsBelievedMissing || "Not provided"}
-
-**Damage Types:** ${ctx.damageTypes.length > 0 ? ctx.damageTypes.join(", ") : "Not specified"}
-
-**Roof Measurements:**
+## CLAIM CONTEXT
+- **Description:** ${ctx.claimDescription || "Not provided"}
+- **Adjuster included:** ${ctx.adjusterScopeNotes || "Not provided"}
+- **Damage types:** ${ctx.damageTypes.length > 0 ? ctx.damageTypes.join(", ") : "Not specified"}
+${contractorSection}
+## MEASUREMENTS
 ${ctx.measurementsContext}
-${ctx.policyContext ? `\n## POLICY ANALYSIS\nThe homeowner's policy has been analyzed. Use this information to strengthen justifications and be aware of potential issues:\n${ctx.policyContext}` : ""}
+${ctx.policyContext ? `\n## POLICY CONTEXT\n${ctx.policyContext}` : ""}
 ${ctx.buildingCodeContext ? `\n${ctx.buildingCodeContext}` : ""}
-
-## XACTIMATE CODES DATABASE
-These are valid Xactimate codes you can reference. Use these codes when possible:
+## COMMONLY MISSED XACTIMATE CODES
 ${ctx.codesContext}
+Note: You may also use valid Xactimate codes from your training knowledge if applicable.
 
-## INSTRUCTIONS
+## WHAT TO DO
+1. Read the PDF estimate — identify what IS already included
+2. Extract the adjuster's total RCV and waste % if visible
+3. Compare against measurements + industry standards to find MISSING items:
+   - D&R for every accessory (solar panels, HVAC, satellite, skylights, pipe boots)
+   - Starter strip, drip edge, ice & water shield, ridge/hip cap
+   - Step flashing, underlayment, steep pitch charges, high roof charges
+   - Waste % adjustment, permit fees, haul away
+   - O&P (10%+10%) if 3+ trades involved
+4. For solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician)
 
-1. Carefully read the adjuster's estimate PDF to understand what line items are ALREADY included
-2. Extract the adjuster's total RCV amount from the estimate
-3. Note the waste percentage the adjuster used (if visible)
-4. Compare what's included against what SHOULD be there based on:
-   - The roof measurements (every linear foot of ridge needs ridge cap, every valley needs ice & water, etc.)
-   - The damage type (hail damage requires different items than wind)
-   - Industry standard practices for a complete roofing scope
-   - The contractor's notes about what they believe is missing
-5. For each missing item, provide:
-   - The Xactimate code (from the database above, or your knowledge)
-   - Quantity based on actual measurements
-   - Realistic unit price (current market rates)
-   - A professional justification that cites building codes or manufacturer specs
-   - The specific IRC reference (use VERIFIED codes from the JURISDICTION-VERIFIED BUILDING CODES section when available — these are confirmed applicable in this jurisdiction)
-   - Your confidence level (0.0 to 1.0)
+## CRITICAL RULES
+- NEVER return an empty missing_items array if contractor flagged items above
+- For each contractor-flagged item, create a line item even at lower confidence
+- Use measurements for quantities (ridge LF for ridge cap, valley LF for ice & water, etc.)
+- Cite IRC codes or manufacturer specs in justifications
 
-## COMMON MISSING ITEMS TO CHECK FOR
-- Starter strip (along eaves and rakes)
-- Drip edge (eaves and rakes)
-- Ice & water shield (valleys, eaves in cold climates)
-- Ridge cap (along all ridges)
-- Hip cap (along all hips)
-- Step flashing (at walls/chimneys)
-- Pipe boot/jack flashing — check quantity against accessories list
-- Underlayment (synthetic vs felt)
-- Steep pitch charges (7/12 and above)
-- High roof charges (2+ stories)
-- Permit and code upgrade
-- Haul away / dump fees
-- Ridge vent
-- Satellite dish detach & reset (D&R) — if listed in accessories
-- Solar panel detach & reset (D&R) — often $200-500+ per panel, requires licensed electrician
-- HVAC unit protection / detach & reset — if listed in accessories
-- Skylight detach & reset or re-flash — if listed in accessories
-- Overhead & Profit (O&P) — typically 10% overhead + 10% profit on complex multi-trade jobs involving 3+ trades
-
-## ACCESSORIES CHECK — CRITICAL
-The roof accessories are listed in the measurements. For EVERY accessory listed (skylights, pipe jacks/boots, HVAC units, satellite dishes, solar panels, etc.), you MUST check:
-1. Does the adjuster's estimate include a Detach & Reset (D&R) line item for it?
-2. If not, it is MISSING and should be added as a supplement item.
-3. Use the correct Xactimate code for each D&R type.
-4. For solar panels — each panel requires individual D&R. 15 panels = 15x D&R charges.
-5. For satellite dishes — include removal, re-mounting, and cable re-routing.
-
-## OVERHEAD & PROFIT (O&P)
-If the job involves 3 or more trades (roofing, gutters, siding, electrical for solar, etc.), O&P should be included. O&P is typically calculated as:
-- 10% Overhead on total job cost
-- 10% Profit on total job cost
-This is industry standard and supported by Xactimate pricing methodology. Check if the adjuster included O&P. If not, add it as a missing item.
-
-## IMPORTANT RULES
-- ALWAYS find at least the items the contractor flagged as missing in "Contractor's Notes"
-- Even if the adjuster's estimate looks comprehensive, the contractor's notes indicate specific omissions — trust their field expertise
-- For each item flagged by the contractor, create a line item even if you're not 100% sure it's missing — set confidence accordingly
-- Do NOT return an empty missing_items array if the contractor has flagged items as missing
-
-Return ONLY a JSON object — no markdown, no code fences:
-
+Return ONLY JSON — no markdown, no code fences:
 {
-  "adjuster_total": <number or null if not found>,
-  "waste_percent_adjuster": <number or null if not found>,
-  "summary": "<2-3 sentence summary of what's missing and estimated recovery>",
+  "adjuster_total": <number or null>,
+  "waste_percent_adjuster": <number or null>,
+  "summary": "<2-3 sentence summary of missing items and estimated recovery>",
   "missing_items": [
     {
       "xactimate_code": "<code>",
-      "description": "<what this item is>",
-      "category": "<trade category e.g. Roofing, Gutters, Interior>",
+      "description": "<item description>",
+      "category": "<Roofing|Gutters|Interior|Solar|HVAC|etc>",
       "quantity": <number>,
-      "unit": "<SQ, LF, EA, etc.>",
-      "unit_price": <dollar amount per unit>,
-      "justification": "<why this should be included — cite IRC codes, manufacturer specs, or industry standard>",
-      "irc_reference": "<specific code reference e.g. IRC R905.2.8.2>",
+      "unit": "<SQ|LF|EA|etc>",
+      "unit_price": <dollar amount>,
+      "justification": "<why this should be included>",
+      "irc_reference": "<IRC code ref or N/A>",
       "confidence": <0.0 to 1.0>
     }
   ]
