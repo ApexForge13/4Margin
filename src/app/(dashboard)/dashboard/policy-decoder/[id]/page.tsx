@@ -43,7 +43,8 @@ export default async function PolicyDecodingDetailPage({
   const isComplete = decoding.status === "complete";
   const isProcessing = decoding.status === "processing";
   const isFailed = decoding.status === "failed";
-  const needsUpload = isPaid && !hasFile && !isComplete && !isProcessing;
+  // Show upload when: paid + no file yet, OR paid + failed (allow retry)
+  const needsUpload = isPaid && (!hasFile || isFailed) && !isComplete && !isProcessing;
 
   return (
     <div className="space-y-6">
@@ -144,7 +145,33 @@ export default async function PolicyDecodingDetailPage({
         </div>
       )}
 
-      {/* Upload area — shown when paid but no file yet */}
+      {/* Failed banner — shown above upload so user can retry */}
+      {isFailed && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-2">
+          <svg
+            className="h-5 w-5 shrink-0 mt-0.5 text-red-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+          <div>
+            <p className="font-medium">Decoding failed</p>
+            <p className="text-xs mt-0.5">
+              There was an issue processing your policy. Try uploading again
+              below — sometimes a clearer scan helps.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Upload area — shown when paid + no file, or paid + failed (retry) */}
       {needsUpload && <PolicyUpload decodingId={decoding.id} />}
 
       {/* Processing state */}
@@ -176,34 +203,6 @@ export default async function PolicyDecodingDetailPage({
             <p className="text-sm text-blue-700">
               Our AI is analyzing coverages, deductibles, endorsements, and
               exclusions. This typically takes 30-60 seconds.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Failed state */}
-      {isFailed && (
-        <div className="rounded-lg border-2 border-red-200 bg-red-50 p-8 text-center">
-          <div className="mx-auto flex flex-col items-center gap-3">
-            <svg
-              className="h-8 w-8 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-            <h3 className="text-lg font-semibold text-red-900">
-              Decoding failed
-            </h3>
-            <p className="text-sm text-red-700">
-              There was an issue processing your policy. Please try uploading
-              again or contact support.
             </p>
           </div>
         </div>

@@ -113,6 +113,7 @@ export async function runSupplementPipeline(
       itemsBelievedMissing: claim.items_believed_missing || "",
       damageTypes: claim.damage_types || [],
       policyContext,
+      propertyState: claim.property_state || null,
       measurements: {
         measuredSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
         wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,
@@ -202,6 +203,8 @@ export async function runSupplementPipeline(
         total_price: item.total_price,
         justification: item.justification,
         irc_reference: item.irc_reference,
+        irc_verified: item.irc_verified || false,
+        irc_source_ref: item.irc_source_ref || null,
         confidence: item.confidence,
         detection_source: item.detection_source,
         status: "detected",

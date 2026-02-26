@@ -8,6 +8,10 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  buildCodeContextForPrompt,
+  enrichIrcReference,
+} from "@/data/building-codes";
 
 const getClient = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -31,6 +35,7 @@ export interface AnalysisInput {
   itemsBelievedMissing: string;
   damageTypes: string[];
   policyContext?: string | null; // From policy decoder
+  propertyState?: string | null; // For jurisdiction-specific building codes (e.g., "MD", "PA")
   measurements: {
     measuredSquares: number | null;
     wastePercent: number | null;
@@ -70,6 +75,10 @@ export interface DetectedItem {
   total_price: number;
   justification: string;
   irc_reference: string;
+  /** Whether the IRC reference was verified against our jurisdiction database */
+  irc_verified?: boolean;
+  /** Source document reference for the verified code (e.g., "COMAR 09.12.01; 2018 IRC R905.2.8.5") */
+  irc_source_ref?: string | null;
   confidence: number;
   detection_source: string;
 }
@@ -104,6 +113,11 @@ export async function detectMissingItems(
 
   const measurementsContext = buildMeasurementsContext(input.measurements);
 
+  // Build jurisdiction-specific building code context if we have the state
+  const buildingCodeContext = input.propertyState
+    ? buildCodeContextForPrompt(input.propertyState)
+    : "";
+
   const prompt = buildAnalysisPrompt({
     codesContext,
     measurementsContext,
@@ -112,6 +126,7 @@ export async function detectMissingItems(
     itemsBelievedMissing: input.itemsBelievedMissing,
     damageTypes: input.damageTypes,
     policyContext: input.policyContext || null,
+    buildingCodeContext,
   });
 
   const client = getClient();
@@ -168,20 +183,36 @@ export async function detectMissingItems(
     }>;
   };
 
-  // Map to DetectedItem format
-  const items: DetectedItem[] = result.missing_items.map((item) => ({
-    xactimate_code: item.xactimate_code,
-    description: item.description,
-    category: item.category,
-    quantity: item.quantity,
-    unit: item.unit,
-    unit_price: item.unit_price,
-    total_price: Math.round(item.quantity * item.unit_price * 100) / 100,
-    justification: item.justification,
-    irc_reference: item.irc_reference || "",
-    confidence: item.confidence,
-    detection_source: "ai_claude",
-  }));
+  // Map to DetectedItem format + enrich IRC references with verified data
+  const items: DetectedItem[] = result.missing_items.map((item) => {
+    // Enrich IRC reference with jurisdiction-verified data when state is available
+    let ircReference = item.irc_reference || "";
+    let ircVerified = false;
+    let ircSourceRef: string | null = null;
+
+    if (input.propertyState && ircReference) {
+      const enriched = enrichIrcReference(ircReference, input.propertyState);
+      ircReference = enriched.reference;
+      ircVerified = enriched.verified;
+      ircSourceRef = enriched.sourceRef;
+    }
+
+    return {
+      xactimate_code: item.xactimate_code,
+      description: item.description,
+      category: item.category,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.unit_price,
+      total_price: Math.round(item.quantity * item.unit_price * 100) / 100,
+      justification: item.justification,
+      irc_reference: ircReference,
+      irc_verified: ircVerified,
+      irc_source_ref: ircSourceRef,
+      confidence: item.confidence,
+      detection_source: "ai_claude",
+    };
+  });
 
   const supplement_total = items.reduce((sum, i) => sum + i.total_price, 0);
 
@@ -254,6 +285,7 @@ function buildAnalysisPrompt(ctx: {
   itemsBelievedMissing: string;
   damageTypes: string[];
   policyContext: string | null;
+  buildingCodeContext: string;
 }): string {
   return `You are a senior roofing insurance supplement specialist with 20+ years of experience. Your job is to review the adjuster's Xactimate estimate (the PDF above) and identify MISSING or UNDERPAID line items that should be included in a supplement.
 
@@ -270,6 +302,7 @@ function buildAnalysisPrompt(ctx: {
 **Roof Measurements:**
 ${ctx.measurementsContext}
 ${ctx.policyContext ? `\n## POLICY ANALYSIS\nThe homeowner's policy has been analyzed. Use this information to strengthen justifications and be aware of potential issues:\n${ctx.policyContext}` : ""}
+${ctx.buildingCodeContext ? `\n${ctx.buildingCodeContext}` : ""}
 
 ## XACTIMATE CODES DATABASE
 These are valid Xactimate codes you can reference. Use these codes when possible:
@@ -290,6 +323,7 @@ ${ctx.codesContext}
    - Quantity based on actual measurements
    - Realistic unit price (current market rates)
    - A professional justification that cites building codes or manufacturer specs
+   - The specific IRC reference (use VERIFIED codes from the JURISDICTION-VERIFIED BUILDING CODES section when available — these are confirmed applicable in this jurisdiction)
    - Your confidence level (0.0 to 1.0)
 
 ## COMMON MISSING ITEMS TO CHECK FOR

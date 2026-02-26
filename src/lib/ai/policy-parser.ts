@@ -350,7 +350,7 @@ Return ONLY the JSON object, no explanation.`;
     const response = await withRetry(
       () =>
         client.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-3-5-haiku-20241022",
           max_tokens: 1000,
           messages: [
             {
@@ -369,7 +369,7 @@ Return ONLY the JSON object, no explanation.`;
             },
           ],
         }),
-      { maxRetries: 2, baseDelayMs: 1500, label: "document-intelligence" }
+      { maxRetries: 3, baseDelayMs: 5000, label: "document-intelligence" }
     );
 
     const raw = extractTextFromResponse(response);
@@ -627,7 +627,7 @@ RULES:
           },
         ],
       }),
-    { maxRetries: 2, baseDelayMs: 2000, label: "full-extraction" }
+    { maxRetries: 3, baseDelayMs: 5000, label: "full-extraction" }
   );
 
   const raw = extractTextFromResponse(response);
@@ -833,7 +833,7 @@ If nothing needs correction, return empty arrays and null corrections. Return ON
             },
           ],
         }),
-      { maxRetries: 2, baseDelayMs: 2000, label: "verification" }
+      { maxRetries: 3, baseDelayMs: 5000, label: "verification" }
     );
 
     const raw = extractTextFromResponse(response);
@@ -1150,18 +1150,26 @@ export async function parsePolicyPdfV2(
   claimType?: string
 ): Promise<PolicyAnalysis> {
   try {
-    // Pass 1: Document Intelligence
+    // Pass 1: Document Intelligence (uses Haiku — fast + cheap)
     console.log("[policy-parser] Starting Pass 1 — Document Intelligence...");
     const docMeta = await analyzeDocumentType(pdfBase64);
 
-    // Pass 2: Full Extraction
+    // Brief pause between passes to avoid rate limit (30K tokens/min on Sonnet)
+    console.log("[policy-parser] Pass 1 complete. Waiting before Pass 2...");
+    await new Promise((r) => setTimeout(r, 3000));
+
+    // Pass 2: Full Extraction (Sonnet)
     console.log("[policy-parser] Starting Pass 2 — Full Extraction...");
     let extraction = await fullExtraction(pdfBase64, claimType, docMeta);
 
     // Enrich with carrier form database
     extraction = enrichWithCarrierForms(extraction, docMeta);
 
-    // Pass 3: Verification
+    // Pause between Pass 2 and 3 to avoid rate limit
+    console.log("[policy-parser] Pass 2 complete. Waiting before Pass 3...");
+    await new Promise((r) => setTimeout(r, 10000));
+
+    // Pass 3: Verification (Sonnet)
     console.log("[policy-parser] Starting Pass 3 — Verification...");
     let verified = await verifyExtraction(pdfBase64, extraction);
 

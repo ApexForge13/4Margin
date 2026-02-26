@@ -1,6 +1,7 @@
 /**
  * Retry utility for Claude API calls.
  * Handles transient errors (rate limits, network issues) with exponential backoff.
+ * Rate limit errors use a longer base delay (30s) to wait out per-minute windows.
  */
 
 export async function withRetry<T>(
@@ -20,9 +21,12 @@ export async function withRetry<T>(
         throw err;
       }
 
-      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      // Use longer delay for rate limit errors (need to wait out the per-minute window)
+      const rateLimit = isRateLimitError(err);
+      const effectiveBase = rateLimit ? Math.max(baseDelayMs, 30000) : baseDelayMs;
+      const delay = effectiveBase * Math.pow(2, attempt) + Math.random() * 2000;
       console.warn(
-        `[retry] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms:`,
+        `[retry] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1})${rateLimit ? " [RATE LIMITED — waiting longer]" : ""}, retrying in ${Math.round(delay / 1000)}s:`,
         err instanceof Error ? err.message : err
       );
       await sleep(delay);
@@ -33,11 +37,19 @@ export async function withRetry<T>(
   throw new Error("Retry exhausted");
 }
 
+function isRateLimitError(err: unknown): boolean {
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    return msg.includes("rate_limit") || msg.includes("429") || msg.includes("too many requests");
+  }
+  return false;
+}
+
 function isRetryableError(err: unknown): boolean {
   if (err instanceof Error) {
     const msg = err.message.toLowerCase();
     // Rate limit errors
-    if (msg.includes("rate_limit") || msg.includes("429") || msg.includes("too many requests")) {
+    if (isRateLimitError(err)) {
       return true;
     }
     // Overloaded
