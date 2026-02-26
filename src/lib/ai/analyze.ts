@@ -17,7 +17,8 @@ import { withRetry } from "./retry";
 const getClient = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not configured");
-  return new Anthropic({ apiKey });
+  // 3-minute timeout on API calls — leaves buffer within Vercel's 300s maxDuration
+  return new Anthropic({ apiKey, timeout: 180_000 });
 };
 
 /* ─────── Types ─────── */
@@ -134,7 +135,9 @@ export async function detectMissingItems(
 
   const client = getClient();
 
-  console.log(`[detectMissingItems] Sending estimate PDF (${Math.round(input.estimatePdfBase64.length / 1024)}KB base64) to Claude`);
+  const pdfSizeKB = Math.round(input.estimatePdfBase64.length / 1024);
+  console.log(`[detectMissingItems] Sending estimate PDF (${pdfSizeKB}KB base64) to Claude`);
+  const claudeStartMs = Date.now();
 
   const response = await withRetry(
     () =>
@@ -165,7 +168,8 @@ export async function detectMissingItems(
     { maxRetries: 1, label: "detectMissingItems" }
   );
 
-  console.log(`[detectMissingItems] Claude response: stop_reason=${response.stop_reason}, usage=${JSON.stringify(response.usage)}`);
+  const claudeElapsedSec = ((Date.now() - claudeStartMs) / 1000).toFixed(1);
+  console.log(`[detectMissingItems] Claude responded in ${claudeElapsedSec}s: stop_reason=${response.stop_reason}, usage=${JSON.stringify(response.usage)}`);
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
@@ -180,8 +184,8 @@ export async function detectMissingItems(
     jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
   }
 
-  // Parse Claude's JSON response
-  const result = JSON.parse(jsonText) as {
+  // Parse Claude's JSON response — capture failures with context
+  type ClaudeResult = {
     adjuster_total: number | null;
     waste_percent_adjuster: number | null;
     summary: string;
@@ -197,6 +201,18 @@ export async function detectMissingItems(
       confidence: number;
     }>;
   };
+
+  let result: ClaudeResult;
+
+  try {
+    result = JSON.parse(jsonText) as ClaudeResult;
+  } catch {
+    console.error(`[detectMissingItems] JSON parse failed. Raw text (first 500): ${textBlock.text.substring(0, 500)}`);
+    throw new Error(
+      `Claude returned invalid JSON. This usually means the PDF was too complex or Claude's response was cut off. ` +
+      `Raw start: "${textBlock.text.substring(0, 200).replace(/\n/g, " ")}..."`
+    );
+  }
 
   console.log(`[detectMissingItems] Parsed: adjuster_total=${result.adjuster_total}, missing_items=${result.missing_items?.length ?? 0}, summary=${result.summary?.substring(0, 200)}`);
 

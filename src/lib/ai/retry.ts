@@ -3,7 +3,7 @@
  * Handles transient errors (rate limits, network issues) with exponential backoff.
  *
  * Rate limit strategy: wait 15s then retry once. Longer waits risk Vercel
- * function timeouts (60s Hobby / 120s Pro). Better to fail fast and let
+ * function timeouts (300s with Fluid Compute). Better to fail fast and let
  * the user retry via the UI than to hang silently.
  */
 
