@@ -69,16 +69,21 @@ export async function runSupplementPipeline(
       throw new Error("No estimate PDF found for this supplement");
     }
 
-    // ── 3. Generate signed URL for estimate PDF ──
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    // ── 3. Download estimate PDF as base64 ──
+    // We send the PDF inline (base64) to Claude instead of a signed URL
+    // because Claude's servers may not be able to reach Supabase storage URLs.
+    const { data: estimateBlob, error: estimateDownloadError } = await supabase.storage
       .from("estimates")
-      .createSignedUrl(supplement.adjuster_estimate_url, 600); // 10 min expiry
+      .download(supplement.adjuster_estimate_url);
 
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      throw new Error(`Failed to generate signed URL for estimate: ${signedUrlError?.message}`);
+    if (estimateDownloadError || !estimateBlob) {
+      throw new Error(`Failed to download estimate PDF: ${estimateDownloadError?.message}`);
     }
 
-    console.log(`[pipeline] Estimate signed URL generated for: ${supplement.adjuster_estimate_url}`);
+    const estimateBuffer = await estimateBlob.arrayBuffer();
+    const estimatePdfBase64 = Buffer.from(estimateBuffer).toString("base64");
+
+    console.log(`[pipeline] Estimate PDF downloaded: ${supplement.adjuster_estimate_url} (${Math.round(estimateBuffer.byteLength / 1024)}KB)`);
 
     // ── 4. Run missing item detection ──
     // Build policy context string for the AI if policy analysis exists
@@ -109,7 +114,7 @@ export async function runSupplementPipeline(
 
     const analysisInput: AnalysisInput = {
       supplementId,
-      estimatePdfUrl: signedUrlData.signedUrl,
+      estimatePdfBase64: estimatePdfBase64,
       claimDescription: claim.description || "",
       adjusterScopeNotes: claim.adjuster_scope_notes || "",
       itemsBelievedMissing: claim.items_believed_missing || "",

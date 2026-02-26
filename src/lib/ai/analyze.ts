@@ -30,7 +30,8 @@ export interface PitchBreakdownInput {
 
 export interface AnalysisInput {
   supplementId: string;
-  estimatePdfUrl: string;
+  /** Base64-encoded PDF of the adjuster's estimate */
+  estimatePdfBase64: string;
   claimDescription: string;
   adjusterScopeNotes: string;
   itemsBelievedMissing: string;
@@ -132,7 +133,7 @@ export async function detectMissingItems(
 
   const client = getClient();
 
-  console.log(`[detectMissingItems] Sending estimate URL to Claude: ${input.estimatePdfUrl.substring(0, 80)}...`);
+  console.log(`[detectMissingItems] Sending estimate PDF (${Math.round(input.estimatePdfBase64.length / 1024)}KB base64) to Claude`);
 
   const response = await withRetry(
     () =>
@@ -146,8 +147,9 @@ export async function detectMissingItems(
               {
                 type: "document",
                 source: {
-                  type: "url",
-                  url: input.estimatePdfUrl,
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: input.estimatePdfBase64,
                 },
               },
               {
@@ -170,8 +172,14 @@ export async function detectMissingItems(
 
   console.log(`[detectMissingItems] Raw text (first 500 chars): ${textBlock.text.substring(0, 500)}`);
 
+  // Strip markdown code fences if Claude wrapped the JSON
+  let jsonText = textBlock.text.trim();
+  if (jsonText.startsWith("```")) {
+    jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+  }
+
   // Parse Claude's JSON response
-  const result = JSON.parse(textBlock.text) as {
+  const result = JSON.parse(jsonText) as {
     adjuster_total: number | null;
     waste_percent_adjuster: number | null;
     summary: string;
@@ -188,8 +196,14 @@ export async function detectMissingItems(
     }>;
   };
 
+  console.log(`[detectMissingItems] Parsed: adjuster_total=${result.adjuster_total}, missing_items=${result.missing_items?.length ?? 0}, summary=${result.summary?.substring(0, 200)}`);
+
+  if (!result.missing_items || result.missing_items.length === 0) {
+    console.warn(`[detectMissingItems] WARNING: Claude returned 0 missing items. Summary: ${result.summary}`);
+  }
+
   // Map to DetectedItem format + enrich IRC references with verified data
-  const items: DetectedItem[] = result.missing_items.map((item) => {
+  const items: DetectedItem[] = (result.missing_items || []).map((item) => {
     // Enrich IRC reference with jurisdiction-verified data when state is available
     let ircReference = item.irc_reference || "";
     let ircVerified = false;
