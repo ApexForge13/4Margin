@@ -229,7 +229,7 @@ export const createClaimInputSchema = z.object({
   measurementData: measurementDataSchema,
   photoMeta: z.array(photoMetaSchema),
   estimateStoragePath: z.string().min(1, "Estimate file is required"),
-  policyAnalysis: z.record(z.unknown()).nullable().optional(),
+  policyPdfUrl: z.string().nullable().optional(),
 });
 
 // ── Dashboard — Claim update ────────────────────────────────

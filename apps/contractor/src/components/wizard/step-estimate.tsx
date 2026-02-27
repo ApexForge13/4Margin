@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useWizard } from "./wizard-context";
-import { parseEstimatePdf, parsePolicyPdf } from "@/lib/parsers/stub";
+import { parseEstimatePdf } from "@/lib/parsers/stub";
 import { FileDropzone } from "@/components/upload/file-dropzone";
 import { FileList, type UploadedFile } from "@/components/upload/file-list";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Loader2,
-  ShieldCheck,
-  ShieldAlert,
-} from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 export function StepEstimate() {
   const { state, dispatch, nextStep, canProceed } = useWizard();
-  const { claimDetails, estimateParsingStatus, policyParsingStatus, policyAnalysis } = state;
+  const { claimDetails, estimateParsingStatus } = state;
 
   const handleEstimateFiles = useCallback(
     async (files: File[]) => {
@@ -48,27 +42,15 @@ export function StepEstimate() {
   );
 
   const handlePolicyFiles = useCallback(
-    async (files: File[]) => {
+    (files: File[]) => {
       const newFiles: UploadedFile[] = files.map((file) => ({
         file,
         progress: 0,
         status: "pending" as const,
       }));
       dispatch({ type: "ADD_POLICY_FILES", files: newFiles });
-
-      // Trigger policy parsing on the first PDF
-      const file = files[0];
-      if (file) {
-        dispatch({ type: "SET_POLICY_PARSING", status: "parsing" });
-        try {
-          const analysis = await parsePolicyPdf(file);
-          dispatch({ type: "SET_POLICY_ANALYSIS", analysis });
-          dispatch({ type: "SET_POLICY_PARSING", status: "done" });
-        } catch (err) {
-          console.error("[StepEstimate] Policy parse failed:", err);
-          dispatch({ type: "SET_POLICY_PARSING", status: "error" });
-        }
-      }
+      // Policy PDF is stored and analyzed during pipeline generation
+      // with full claim context for better accuracy
     },
     [dispatch]
   );
@@ -168,23 +150,15 @@ export function StepEstimate() {
           onRemove={(i) => dispatch({ type: "REMOVE_POLICY_FILE", index: i })}
         />
 
-        {/* Policy parsing status indicator */}
-        {policyParsingStatus === "parsing" && (
-          <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Analyzing policy for coverage, exclusions, and landmines…</span>
+        {/* Policy upload confirmation */}
+        {state.policyFiles.length > 0 && (
+          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            <span>
+              Policy uploaded — will be analyzed during supplement generation
+              with your full claim details for better accuracy.
+            </span>
           </div>
-        )}
-
-        {policyParsingStatus === "error" && (
-          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            <AlertTriangle className="h-4 w-4" />
-            <span>Policy analysis failed — you can still proceed without it.</span>
-          </div>
-        )}
-
-        {policyParsingStatus === "done" && policyAnalysis && (
-          <PolicyQuickSummary analysis={policyAnalysis} />
         )}
       </div>
 
@@ -421,129 +395,6 @@ export function StepEstimate() {
           Next: Photos &amp; Notes
         </Button>
       </div>
-    </div>
-  );
-}
-
-/* ─── Policy Quick Summary (shown inline after parsing) ─── */
-
-import type { PolicyAnalysis } from "@/lib/ai/policy-parser";
-
-function PolicyQuickSummary({ analysis }: { analysis: PolicyAnalysis }) {
-  const criticalLandmines = analysis.landmines.filter(
-    (l) => l.severity === "critical"
-  );
-  const warningLandmines = analysis.landmines.filter(
-    (l) => l.severity === "warning"
-  );
-  const hasDanger = criticalLandmines.length > 0;
-
-  return (
-    <div
-      className={`rounded-lg border p-4 text-sm space-y-3 ${
-        hasDanger
-          ? "border-red-200 bg-red-50"
-          : "border-green-200 bg-green-50"
-      }`}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-2 font-semibold">
-        {hasDanger ? (
-          <>
-            <ShieldAlert className="h-4 w-4 text-red-600" />
-            <span className="text-red-800">
-              Policy Analysis — {criticalLandmines.length} Landmine
-              {criticalLandmines.length !== 1 ? "s" : ""} Detected
-            </span>
-          </>
-        ) : (
-          <>
-            <ShieldCheck className="h-4 w-4 text-green-600" />
-            <span className="text-green-800">Policy Analysis — Low Risk</span>
-          </>
-        )}
-      </div>
-
-      {/* Quick info row */}
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
-        <span>
-          <strong>Type:</strong> {analysis.policyType || "—"}
-        </span>
-        <span>
-          <strong>Carrier:</strong> {analysis.carrier || "—"}
-        </span>
-        <span>
-          <strong>Depreciation:</strong> {analysis.depreciationMethod || "—"}
-        </span>
-        {analysis.deductibles[0] && (
-          <span>
-            <strong>Deductible:</strong> {analysis.deductibles[0].amount}
-          </span>
-        )}
-      </div>
-
-      {/* Critical landmines */}
-      {criticalLandmines.length > 0 && (
-        <div className="space-y-1">
-          {criticalLandmines.map((l, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 text-xs text-red-800"
-            >
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-              <span>
-                <strong>{l.name}:</strong> {l.impact}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Warning landmines */}
-      {warningLandmines.length > 0 && (
-        <div className="space-y-1">
-          {warningLandmines.map((l, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 text-xs text-amber-800"
-            >
-              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-              <span>
-                <strong>{l.name}:</strong> {l.impact}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Favorable provisions */}
-      {analysis.favorableProvisions.length > 0 && (
-        <div className="space-y-1">
-          {analysis.favorableProvisions.map((p, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-2 text-xs text-green-800"
-            >
-              <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
-              <span>
-                <strong>{p.name}:</strong> {p.impact}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Contractor summary */}
-      {analysis.summaryForContractor && (
-        <p className="text-xs text-muted-foreground italic border-t pt-2">
-          {analysis.summaryForContractor}
-        </p>
-      )}
-
-      <p className="text-[10px] text-muted-foreground/60">
-        Educational summary only — not insurance or legal advice. Full analysis
-        available after supplement generation.
-      </p>
     </div>
   );
 }

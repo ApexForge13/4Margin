@@ -16,6 +16,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectMissingItems, type AnalysisInput } from "./analyze";
 import { analyzePhotos, type PhotoAnalysisResult } from "./photos";
+import { parsePolicyPdfV2 } from "@/lib/ai/policy-parser";
 import { generateWeatherReportPdf } from "@/lib/pdf/generate-weather-report";
 import { fetchWeatherData, type WeatherData } from "@/lib/weather/fetch-weather";
 import { sendSupplementReadyEmail, sendPipelineErrorEmail } from "@/lib/email/send";
@@ -86,31 +87,49 @@ export async function runSupplementPipeline(
 
     console.log(`[pipeline] Estimate PDF downloaded: ${supplement.adjuster_estimate_url} (${Math.round(estimateBuffer.byteLength / 1024)}KB)`);
 
-    // ── 4. Run missing item detection ──
-    // Build policy context string for the AI if policy analysis exists
-    const policyAnalysisData = supplement.policy_analysis as Record<string, unknown> | null;
+    // ── 4. Parse policy PDF with full claim context (deferred from wizard) ──
+    // Policy PDF is stored during wizard upload but parsed HERE so the AI
+    // has access to claim description, damage types, etc. for better analysis.
     let policyContext: string | null = null;
-    if (policyAnalysisData) {
-      const pa = policyAnalysisData;
-      const parts: string[] = [];
-      parts.push(`Policy Type: ${pa.policyType || "Unknown"}`);
-      parts.push(`Depreciation: ${pa.depreciationMethod || "Unknown"}`);
-      if (Array.isArray(pa.deductibles) && pa.deductibles.length > 0) {
-        parts.push(`Deductibles: ${(pa.deductibles as Array<{amount: string; appliesTo: string}>).map(d => `${d.amount} (${d.appliesTo})`).join("; ")}`);
+    const policyPdfUrl = (supplement as Record<string, unknown>).policy_pdf_url as string | null;
+    const existingPolicyAnalysis = supplement.policy_analysis as Record<string, unknown> | null;
+
+    if (policyPdfUrl && !existingPolicyAnalysis) {
+      // New flow: download PDF and parse with claim context
+      try {
+        console.log(`[pipeline] Downloading policy PDF: ${policyPdfUrl}`);
+        const { data: policyBlob, error: policyDownloadError } = await supabase.storage
+          .from("policies")
+          .download(policyPdfUrl);
+
+        if (policyDownloadError || !policyBlob) {
+          console.error(`[pipeline] Failed to download policy PDF: ${policyDownloadError?.message}`);
+        } else {
+          const policyBuffer = await policyBlob.arrayBuffer();
+          const policyPdfBase64 = Buffer.from(policyBuffer).toString("base64");
+          console.log(`[pipeline] Policy PDF downloaded (${Math.round(policyBuffer.byteLength / 1024)}KB). Parsing with claim context...`);
+
+          const claimType = (claim.damage_types as string[] | null)?.[0] || undefined;
+          const claimDesc = (claim.description as string) || undefined;
+
+          const policyAnalysis = await parsePolicyPdfV2(policyPdfBase64, claimType, claimDesc);
+          console.log(`[pipeline] Policy analysis complete. Risk: ${policyAnalysis.riskLevel}, Landmines: ${policyAnalysis.landmines.length}`);
+
+          // Save to supplement so it shows on detail page + won't re-parse on retry
+          await supabase
+            .from("supplements")
+            .update({ policy_analysis: policyAnalysis })
+            .eq("id", supplementId);
+
+          policyContext = buildPolicyContextString(policyAnalysis as unknown as Record<string, unknown>);
+        }
+      } catch (policyErr) {
+        console.error("[pipeline] Policy parse failed (non-blocking):", policyErr);
+        // Continue — policy analysis never blocks the pipeline
       }
-      if (Array.isArray(pa.landmines) && pa.landmines.length > 0) {
-        parts.push(`\nWARNING — Policy Landmines (dangerous provisions that may limit coverage):`);
-        (pa.landmines as Array<{name: string; impact: string; actionItem: string}>).forEach(l => {
-          parts.push(`- ${l.name}: ${l.impact}. Action: ${l.actionItem}`);
-        });
-      }
-      if (Array.isArray(pa.favorableProvisions) && pa.favorableProvisions.length > 0) {
-        parts.push(`\nFAVORABLE — Provisions that support the supplement:`);
-        (pa.favorableProvisions as Array<{name: string; impact: string; supplementRelevance: string}>).forEach(f => {
-          parts.push(`- ${f.name}: ${f.impact}. Relevance: ${f.supplementRelevance}`);
-        });
-      }
-      policyContext = parts.join("\n");
+    } else if (existingPolicyAnalysis) {
+      // Backward compatibility: use pre-existing policy_analysis (old supplements or retry)
+      policyContext = buildPolicyContextString(existingPolicyAnalysis);
     }
 
     const analysisInput: AnalysisInput = {
@@ -396,4 +415,28 @@ export async function runSupplementPipeline(
       error: err instanceof Error ? err.message : "Pipeline failed",
     };
   }
+}
+
+/* ─── Helper: build policy context string for the AI prompt ─── */
+
+function buildPolicyContextString(pa: Record<string, unknown>): string {
+  const parts: string[] = [];
+  parts.push(`Policy Type: ${pa.policyType || "Unknown"}`);
+  parts.push(`Depreciation: ${pa.depreciationMethod || "Unknown"}`);
+  if (Array.isArray(pa.deductibles) && pa.deductibles.length > 0) {
+    parts.push(`Deductibles: ${(pa.deductibles as Array<{amount: string; appliesTo: string}>).map(d => `${d.amount} (${d.appliesTo})`).join("; ")}`);
+  }
+  if (Array.isArray(pa.landmines) && pa.landmines.length > 0) {
+    parts.push(`\nWARNING — Policy Landmines (dangerous provisions that may limit coverage):`);
+    (pa.landmines as Array<{name: string; impact: string; actionItem: string}>).forEach(l => {
+      parts.push(`- ${l.name}: ${l.impact}. Action: ${l.actionItem}`);
+    });
+  }
+  if (Array.isArray(pa.favorableProvisions) && pa.favorableProvisions.length > 0) {
+    parts.push(`\nFAVORABLE — Provisions that support the supplement:`);
+    (pa.favorableProvisions as Array<{name: string; impact: string; supplementRelevance: string}>).forEach(f => {
+      parts.push(`- ${f.name}: ${f.impact}. Relevance: ${f.supplementRelevance}`);
+    });
+  }
+  return parts.join("\n");
 }

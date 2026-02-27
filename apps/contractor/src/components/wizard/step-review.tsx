@@ -85,7 +85,8 @@ export function StepReview() {
         dispatch({ type: "SET_UPLOAD_PROGRESS", current: uploaded, total: totalFiles });
       }
 
-      // Upload policies
+      // Upload policies — capture first file's storage path for pipeline analysis
+      let policyPdfUrl: string | null = null;
       for (const f of state.policyFiles) {
         const path = `${companyId}/policies/${ts}_${f.file.name}`;
         const result = await uploadFile("policies", path, f.file);
@@ -94,6 +95,7 @@ export function StepReview() {
           dispatch({ type: "SET_SUBMITTING", isSubmitting: false });
           return;
         }
+        if (!policyPdfUrl) policyPdfUrl = result.path;
         uploaded++;
         dispatch({ type: "SET_UPLOAD_PROGRESS", current: uploaded, total: totalFiles });
       }
@@ -146,7 +148,7 @@ export function StepReview() {
         measurementData: state.measurementData,
         photoMeta,
         estimateStoragePath,
-        policyAnalysis: state.policyAnalysis ?? null,
+        policyPdfUrl,
       });
 
       if (result.error) {

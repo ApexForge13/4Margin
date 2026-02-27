@@ -182,8 +182,8 @@ export async function createClaimAndSupplement(
   }
 
   // Create supplement
-  // Build insert data — only include policy_analysis when it has actual data
-  // to avoid errors if the column hasn't been added to the DB yet (migration 019)
+  // Policy PDF URL is stored here — the pipeline will download and parse it
+  // with full claim context during generation for better analysis accuracy.
   const supplementInsert: Record<string, unknown> = {
     company_id: companyId,
     claim_id: claim.id,
@@ -191,8 +191,8 @@ export async function createClaimAndSupplement(
     adjuster_estimate_url: input.estimateStoragePath,
     created_by: user.id,
   };
-  if (input.policyAnalysis) {
-    supplementInsert.policy_analysis = input.policyAnalysis;
+  if (input.policyPdfUrl) {
+    supplementInsert.policy_pdf_url = input.policyPdfUrl;
   }
 
   const { data: supplement, error: supplementError } = await supabase

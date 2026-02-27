@@ -1,5 +1,4 @@
 import type { UploadedFile } from "@/components/upload/file-list";
-import type { PolicyAnalysis } from "@/lib/ai/policy-parser";
 
 // --- Parsing status for auto-fill from PDFs ---
 export type ParsingStatus = "idle" | "parsing" | "done" | "error";
@@ -94,8 +93,6 @@ export interface WizardState {
   policyFiles: UploadedFile[];
   claimDetails: ClaimDetails;
   estimateParsingStatus: ParsingStatus;
-  policyParsingStatus: ParsingStatus;
-  policyAnalysis: PolicyAnalysis | null;
 
   // Step 2
   photos: PhotoFile[];
@@ -124,9 +121,6 @@ export type WizardAction =
   // Step 1 — claim details
   | { type: "UPDATE_CLAIM_DETAILS"; details: Partial<ClaimDetails> }
   | { type: "SET_ESTIMATE_PARSING"; status: ParsingStatus }
-  // Step 1 — policy analysis
-  | { type: "SET_POLICY_PARSING"; status: ParsingStatus }
-  | { type: "SET_POLICY_ANALYSIS"; analysis: PolicyAnalysis }
   // Step 2 — photos
   | { type: "ADD_PHOTOS"; photos: PhotoFile[] }
   | { type: "REMOVE_PHOTO"; index: number }
