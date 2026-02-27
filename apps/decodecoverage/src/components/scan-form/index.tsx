@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, CheckCircle, ArrowRight, Lock } from "lucide-react";
+import { Upload, CheckCircle, ArrowRight, Lock, Shield } from "lucide-react";
 
 const CARRIERS = [
   "State Farm",
@@ -299,7 +299,40 @@ export function ScanForm() {
           </div>
         </div>
 
-        {/* Consent */}
+        {/* Professional Review Opt-In */}
+        <div className="pro-review-block">
+          <div className="pro-review-header">
+            <Shield size={20} />
+            <span>Optional: Free Expert Review</span>
+          </div>
+          <label className="pro-review-option" htmlFor="consentContact">
+            <input
+              type="checkbox"
+              id="consentContact"
+              checked={consentContact}
+              onChange={(e) => setConsentContact(e.target.checked)}
+            />
+            <div className="pro-review-label">
+              <span className="pro-review-text">
+                Yes, I&apos;d like a licensed insurance professional to review my
+                scan results and show me if I can get better coverage or a lower
+                rate — at no cost or obligation.
+              </span>
+              <span className="pro-review-meta">
+                You can opt out anytime. Not required for your scan results.
+              </span>
+            </div>
+          </label>
+          <div className="pro-review-proof">
+            <CheckCircle size={14} />
+            <span>
+              87% of users who get a professional review save an average of{" "}
+              <strong>$487/year</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Terms */}
         <div className="consent-block">
           <div className="consent-item">
             <input
@@ -309,26 +342,9 @@ export function ScanForm() {
               onChange={(e) => setConsentTerms(e.target.checked)}
             />
             <label htmlFor="consentTerms">
-              <span className="consent-required">Required.</span> I agree to the{" "}
+              I agree to the{" "}
               <a href="/terms">Terms of Service</a> and{" "}
-              <a href="/privacy">Privacy Policy</a>, and I understand my policy
-              information will be analyzed by AI to provide my scan results.
-            </label>
-          </div>
-          <div className="consent-item">
-            <input
-              type="checkbox"
-              id="consentContact"
-              checked={consentContact}
-              onChange={(e) => setConsentContact(e.target.checked)}
-            />
-            <label htmlFor="consentContact">
-              I consent to be contacted by licensed insurance professionals who
-              may offer coverage options based on my scan results. I may receive
-              calls, emails, or text messages at the number and email provided. I
-              can opt out anytime by emailing{" "}
-              <strong>optout@decodecoverage.com</strong> or replying STOP.{" "}
-              <em>This is not required to receive your scan results.</em>
+              <a href="/privacy">Privacy Policy</a>.
             </label>
           </div>
         </div>

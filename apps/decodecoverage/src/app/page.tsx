@@ -40,7 +40,8 @@ export default function LandingPage() {
         </h1>
         <p className="fade-up delay-2">
           Upload your homeowners insurance policy and our AI instantly decodes
-          your coverage, finds gaps, and uncovers savings. Completely free.
+          your coverage, finds gaps, and uncovers savings. Get your free AI scan
+          plus an optional expert review from a licensed professional.
         </p>
         <div className="fade-up delay-3">
           <a
@@ -124,8 +125,8 @@ export default function LandingPage() {
             <div className="step-num">03</div>
             <h3>Get your results</h3>
             <p>
-              Receive your Policy Health Score with clear recommendations you can
-              act on immediately.
+              Receive your full policy breakdown with clear recommendations —
+              plus the option for a free expert review from a licensed professional.
             </p>
           </div>
         </div>
