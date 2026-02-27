@@ -19,6 +19,17 @@ export async function POST(request: NextRequest) {
     const consentTerms = formData.get("consentTerms") === "true";
     const consentContact = formData.get("consentContact") === "true";
     const consentTimestamp = formData.get("consentTimestamp") as string;
+    const consentPageUrl = formData.get("consentPageUrl") as string;
+    const consentTermsText = formData.get("consentTermsText") as string;
+    const consentContactText = formData.get("consentContactText") as string;
+
+    // Capture IP for consent certificate
+    const ipAddress =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+    const userAgent = request.headers.get("user-agent") || "unknown";
+
     const utmSource = formData.get("utmSource") as string;
     const utmMedium = formData.get("utmMedium") as string;
     const utmCampaign = formData.get("utmCampaign") as string;
@@ -45,6 +56,22 @@ export async function POST(request: NextRequest) {
         consent_terms: consentTerms,
         consent_contact: consentContact,
         consent_timestamp: consentTimestamp || new Date().toISOString(),
+        consent_certificate: {
+          terms: {
+            granted: consentTerms,
+            text: consentTermsText || "I agree to the Terms of Service and Privacy Policy.",
+            timestamp: consentTimestamp || new Date().toISOString(),
+          },
+          contact: {
+            granted: consentContact,
+            text: consentContactText || "",
+            timestamp: consentContact ? (consentTimestamp || new Date().toISOString()) : null,
+          },
+          ip_address: ipAddress,
+          user_agent: userAgent,
+          page_url: consentPageUrl || "unknown",
+          collected_at: new Date().toISOString(),
+        },
         utm_source: utmSource || null,
         utm_medium: utmMedium || null,
         utm_campaign: utmCampaign || null,

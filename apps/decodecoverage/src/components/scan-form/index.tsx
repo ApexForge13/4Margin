@@ -85,6 +85,17 @@ export function ScanForm() {
       formData.append("consentTerms", String(consentTerms));
       formData.append("consentContact", String(consentContact));
       formData.append("consentTimestamp", new Date().toISOString());
+      formData.append("consentPageUrl", window.location.href);
+      formData.append(
+        "consentTermsText",
+        "I agree to the Terms of Service and Privacy Policy."
+      );
+      formData.append(
+        "consentContactText",
+        consentContact
+          ? "Yes, I'd like a licensed insurance professional to review my scan results and show me if I can get better coverage or a lower rate — at no cost or obligation."
+          : ""
+      );
 
       // UTM params
       const params = new URLSearchParams(window.location.search);
