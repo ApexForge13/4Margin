@@ -235,7 +235,7 @@ export async function runSupplementPipeline(
         .insert(itemRows);
 
       if (itemsError) {
-        console.error("Failed to insert supplement items:", itemsError);
+        throw new Error(`Failed to insert ${itemRows.length} supplement items: ${itemsError.message}`);
       }
     }
 
