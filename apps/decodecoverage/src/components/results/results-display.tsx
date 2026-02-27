@@ -124,10 +124,23 @@ export function ResultsDisplay({
 
   const depLabel =
     analysis.depreciationMethod === "RCV"
-      ? "Your policy pays full replacement cost"
+      ? "Replacement Cost Value (RCV)"
       : analysis.depreciationMethod === "ACV"
-        ? "Your policy deducts for wear & tear"
+        ? "Actual Cash Value (ACV)"
         : analysis.depreciationMethod || "Unknown";
+
+  const depExplanation =
+    analysis.depreciationMethod === "RCV"
+      ? "Your policy pays the full cost to replace damaged items with new ones of similar kind and quality — no deduction for age or wear."
+      : analysis.depreciationMethod === "ACV"
+        ? "Your policy deducts for depreciation (wear and tear), meaning your payout will be less than the cost of a brand-new replacement."
+        : null;
+
+  // Build a risk explanation from landmines
+  const highSeverityLandmines = analysis.landmines?.filter(
+    (l) => l.severity === "high" || l.severity === "critical"
+  ) || [];
+  const riskExplanation = buildRiskExplanation(analysis, highSeverityLandmines);
 
   return (
     <>
@@ -140,54 +153,157 @@ export function ResultsDisplay({
       </nav>
 
       <div className="results-page">
-        {/* Header */}
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 1: OVERVIEW                        */}
+        {/* ═══════════════════════════════════════════ */}
+
         <div className="results-header">
           <h1>
-            {firstName ? `${firstName}'s` : "Your"} Policy Analysis
+            {firstName ? `${firstName}'s` : "Your"} Policy Overview
           </h1>
           <p>
             {analysis.carrier} &middot; {analysis.policyType || "Homeowners"}
-            {analysis.policyNumber ? ` &middot; #${analysis.policyNumber}` : ""}
+            {analysis.policyNumber ? ` · #${analysis.policyNumber}` : ""}
           </p>
         </div>
 
-        {/* Risk Badge + Quick Stats */}
-        <div style={{ marginBottom: 24 }}>
+        {/* Risk Badge */}
+        <div style={{ marginBottom: 16 }}>
           <span className={`risk-badge ${riskClass}`}>
             {riskIcon}
             {analysis.riskLevel?.toUpperCase()} RISK
           </span>
         </div>
 
-        <div className="quick-stats">
-          <div className="quick-stat">
-            <div className="stat-label">Policy Type</div>
-            <div className="stat-value">{analysis.policyType || "—"}</div>
-          </div>
-          <div className="quick-stat">
-            <div className="stat-label">Carrier</div>
-            <div className="stat-value">{analysis.carrier || "—"}</div>
-          </div>
-          <div className="quick-stat">
-            <div className="stat-label">Depreciation</div>
-            <div
-              className="stat-value"
-              style={{
-                color:
-                  analysis.depreciationMethod === "RCV"
-                    ? "var(--accent)"
-                    : analysis.depreciationMethod === "ACV"
-                      ? "#DC2626"
-                      : undefined,
-              }}
-            >
-              {analysis.depreciationMethod || "Unknown"}
+        {/* Overview summary text */}
+        <div className="result-card">
+          <h2>
+            <FileText size={22} />
+            Overview
+          </h2>
+
+          {/* General summary */}
+          {analysis.summaryForContractor && (
+            <div className="result-item">
+              <p style={{ fontSize: 15, lineHeight: 1.7 }}>
+                {analysis.summaryForContractor}
+              </p>
+            </div>
+          )}
+
+          {/* Risk explanation with key concerns */}
+          {riskExplanation && (
+            <div className="result-item">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <AlertTriangle size={16} style={{ color: analysis.riskLevel === "low" ? "var(--accent)" : "#DC2626" }} />
+                Why this risk level?
+              </h3>
+              <p style={{ lineHeight: 1.7 }}>{riskExplanation}</p>
+              {highSeverityLandmines.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 8 }}>
+                    Key concerns:
+                  </p>
+                  {highSeverityLandmines.map((l, i) => (
+                    <div key={i} style={{ padding: "8px 12px", background: "rgba(220, 38, 38, 0.05)", borderRadius: 8, marginBottom: 6, borderLeft: "3px solid #DC2626" }}>
+                      <strong>{l.name}</strong>
+                      <span className={`severity-badge severity-${l.severity}`} style={{ marginLeft: 8 }}>{l.severity}</span>
+                      <p style={{ margin: "4px 0 0", fontSize: 13 }}>{l.impact}</p>
+                      {l.actionItem && (
+                        <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
+                          What you can do: {l.actionItem}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Deductibles */}
+          {analysis.deductibles?.length > 0 && (
+            <div className="result-item">
+              <h3>
+                <DollarSign size={16} />
+                Your Deductibles
+              </h3>
+              <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                {analysis.deductibles.map((d, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "var(--surface)", borderRadius: 8 }}>
+                    <div>
+                      <strong>{d.type}</strong>
+                      <span style={{ color: "var(--text-muted)", fontSize: 13, marginLeft: 8 }}>
+                        applies to {d.appliesTo}
+                      </span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: "var(--heading)" }}>
+                      {d.amount}
+                      {d.dollarAmount && d.amount.includes("%") && (
+                        <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 13 }}>
+                          {" "}(${d.dollarAmount.toLocaleString()})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Depreciation */}
+          <div className="result-item">
+            <h3>
+              <Info size={16} />
+              Depreciation Model
+            </h3>
+            <div style={{ padding: "12px 16px", background: "var(--surface)", borderRadius: 8, marginTop: 8 }}>
+              <div style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: analysis.depreciationMethod === "RCV" ? "var(--accent)" : analysis.depreciationMethod === "ACV" ? "#DC2626" : undefined,
+              }}>
+                {depLabel}
+              </div>
+              {depExplanation && (
+                <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.6, color: "var(--text-muted)" }}>
+                  {depExplanation}
+                </p>
+              )}
+              {analysis.depreciationNotes && (
+                <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.6 }}>
+                  {analysis.depreciationNotes}
+                </p>
+              )}
             </div>
           </div>
-          <div className="quick-stat">
-            <div className="stat-label">Confidence</div>
-            <div className="stat-value">
-              {Math.round(analysis.confidence * 100)}%
+
+          {/* Policy Details */}
+          <div className="result-item">
+            <h3>
+              <ScrollText size={16} />
+              Policy Details
+            </h3>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+              {[
+                ["Policy #", analysis.policyNumber],
+                ["Named Insured", analysis.namedInsured],
+                ["Property", analysis.propertyAddress],
+                ["Policy Type", analysis.policyType],
+                ["Effective", analysis.effectiveDate],
+                ["Expiration", analysis.expirationDate],
+              ]
+                .filter(([, v]) => v)
+                .map(([label, value], i) => (
+                  <div key={i} style={{ padding: "8px 12px", background: "var(--surface)", borderRadius: 8 }}>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>
+                      {label}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>
+                      {value}
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
@@ -226,35 +342,36 @@ export function ResultsDisplay({
           </button>
         </div>
 
-        {/* Things to Watch Out For (Landmines) */}
-        {analysis.landmines?.length > 0 && (
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 2: YOUR COVERAGE                   */}
+        {/* ═══════════════════════════════════════════ */}
+
+        {analysis.coverages?.length > 0 && (
           <div className="result-card">
             <h2>
-              <AlertTriangle size={22} style={{ color: "#DC2626" }} />
-              Things to Watch Out For ({analysis.landmines.length})
+              <Shield size={22} style={{ color: "var(--accent)" }} />
+              Your Coverage
             </h2>
-            {analysis.landmines.map((l, i) => (
+            {analysis.coverages.map((c, i) => (
               <div className="result-item" key={i}>
                 <h3>
-                  {l.name}
-                  <span
-                    className={`severity-badge severity-${l.severity}`}
-                  >
-                    {l.severity}
-                  </span>
+                  {c.label}
+                  {c.limit && (
+                    <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: 14 }}>
+                      {c.limit}
+                    </span>
+                  )}
                 </h3>
-                <p>{l.impact}</p>
-                {l.actionItem && (
-                  <p style={{ marginTop: 8, fontWeight: 600 }}>
-                    What you can do: {l.actionItem}
-                  </p>
-                )}
+                <p>{c.description}</p>
               </div>
             ))}
           </div>
         )}
 
-        {/* Coverage Strengths (Favorable Provisions) */}
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 3: COVERAGE STRENGTHS              */}
+        {/* ═══════════════════════════════════════════ */}
+
         {analysis.favorableProvisions?.length > 0 && (
           <div className="result-card">
             <h2>
@@ -273,116 +390,10 @@ export function ResultsDisplay({
           </div>
         )}
 
-        {/* Your Coverage */}
-        {analysis.coverages?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <Shield size={22} style={{ color: "var(--accent)" }} />
-              Your Coverage
-            </h2>
-            {analysis.coverages.map((c, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  {c.label}
-                  {c.limit && (
-                    <span
-                      style={{
-                        color: "var(--accent)",
-                        fontWeight: 700,
-                        fontSize: 14,
-                      }}
-                    >
-                      {c.limit}
-                    </span>
-                  )}
-                </h3>
-                <p>{c.description}</p>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 4: POLICY ADD-ONS                  */}
+        {/* ═══════════════════════════════════════════ */}
 
-        {/* Deductibles */}
-        {analysis.deductibles?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <DollarSign size={22} />
-              Your Deductibles
-            </h2>
-            {analysis.deductibles.map((d, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  {d.amount}
-                  {d.dollarAmount && d.amount.includes("%") && (
-                    <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 14 }}>
-                      {" "}
-                      (${d.dollarAmount.toLocaleString()})
-                    </span>
-                  )}
-                </h3>
-                <p>
-                  <strong>{d.type}</strong> — applies to {d.appliesTo}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Depreciation Method */}
-        <div className="result-card">
-          <h2>
-            <Info size={22} />
-            Depreciation Method
-          </h2>
-          <div className="result-item">
-            <h3
-              style={{
-                color:
-                  analysis.depreciationMethod === "RCV"
-                    ? "var(--accent)"
-                    : analysis.depreciationMethod === "ACV"
-                      ? "#DC2626"
-                      : undefined,
-                fontSize: 18,
-              }}
-            >
-              {depLabel}
-            </h3>
-            {analysis.depreciationNotes && (
-              <p style={{ marginTop: 8 }}>{analysis.depreciationNotes}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Exclusions */}
-        {analysis.exclusions?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <Ban size={22} style={{ color: "#DC2626" }} />
-              What&apos;s NOT Covered ({analysis.exclusions.length})
-            </h2>
-            {analysis.exclusions.map((ex, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  {ex.name}
-                  <span
-                    className={`severity-badge severity-${ex.severity}`}
-                  >
-                    {ex.severity}
-                  </span>
-                </h3>
-                <p>{ex.description}</p>
-                {ex.impact && (
-                  <p style={{ marginTop: 6, color: "#DC2626", fontWeight: 500, fontSize: 13 }}>
-                    Impact: {ex.impact}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Endorsements */}
         {analysis.endorsements?.length > 0 && (
           <div className="result-card">
             <h2>
@@ -395,13 +406,10 @@ export function ResultsDisplay({
                   {en.name}
                   {en.number && (
                     <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 13 }}>
-                      {" "}
-                      ({en.number})
+                      {" "}({en.number})
                     </span>
                   )}
-                  <span
-                    className={`severity-badge severity-${en.severity}`}
-                  >
+                  <span className={`severity-badge severity-${en.severity}`}>
                     {en.severity}
                   </span>
                 </h3>
@@ -416,49 +424,34 @@ export function ResultsDisplay({
           </div>
         )}
 
-        {/* Policy Details */}
-        <div className="result-card">
-          <h2>
-            <FileText size={22} />
-            Policy Details
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 16,
-            }}
-          >
-            {[
-              ["Policy #", analysis.policyNumber],
-              ["Named Insured", analysis.namedInsured],
-              ["Property", analysis.propertyAddress],
-              ["Effective", analysis.effectiveDate],
-              ["Expiration", analysis.expirationDate],
-              ["Document Type", documentMeta?.documentType?.replace(/_/g, " ")],
-              ["Scan Quality", documentMeta?.scanQuality],
-            ]
-              .filter(([, v]) => v)
-              .map(([label, value], i) => (
-                <div key={i}>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--text-muted)",
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.3,
-                    }}
-                  >
-                    {label}
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, marginTop: 2 }}>
-                    {value}
-                  </div>
-                </div>
-              ))}
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 5: WHAT'S NOT COVERED              */}
+        {/* ═══════════════════════════════════════════ */}
+
+        {analysis.exclusions?.length > 0 && (
+          <div className="result-card">
+            <h2>
+              <Ban size={22} style={{ color: "#DC2626" }} />
+              What&apos;s NOT Covered ({analysis.exclusions.length})
+            </h2>
+            {analysis.exclusions.map((ex, i) => (
+              <div className="result-item" key={i}>
+                <h3>
+                  {ex.name}
+                  <span className={`severity-badge severity-${ex.severity}`}>
+                    {ex.severity}
+                  </span>
+                </h3>
+                <p>{ex.description}</p>
+                {ex.impact && (
+                  <p style={{ marginTop: 6, color: "#DC2626", fontWeight: 500, fontSize: 13 }}>
+                    Impact: {ex.impact}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
         {/* Disclaimer */}
         <div className="disclaimer-box">
@@ -482,4 +475,40 @@ export function ResultsDisplay({
       </div>
     </>
   );
+}
+
+/** Build a plain-English risk explanation based on analysis data */
+function buildRiskExplanation(
+  analysis: PolicyAnalysis,
+  highSeverityLandmines: PolicyAnalysis["landmines"]
+): string | null {
+  const parts: string[] = [];
+
+  if (analysis.riskLevel === "high") {
+    parts.push("Your policy has significant concerns that could leave you underprotected.");
+  } else if (analysis.riskLevel === "medium") {
+    parts.push("Your policy provides reasonable coverage but has some areas worth reviewing.");
+  } else {
+    parts.push("Your policy provides solid coverage with minimal concerns.");
+  }
+
+  if (highSeverityLandmines.length > 0) {
+    parts.push(
+      `We found ${highSeverityLandmines.length} high-priority issue${highSeverityLandmines.length > 1 ? "s" : ""} that could significantly impact your coverage in a claim.`
+    );
+  }
+
+  if (analysis.depreciationMethod === "ACV") {
+    parts.push(
+      "Your policy uses Actual Cash Value depreciation, which means payouts will be reduced based on the age and condition of damaged items."
+    );
+  }
+
+  if (analysis.exclusions?.length > 3) {
+    parts.push(
+      `There are ${analysis.exclusions.length} exclusions in your policy — these are situations where your coverage does not apply.`
+    );
+  }
+
+  return parts.length > 0 ? parts.join(" ") : null;
 }
