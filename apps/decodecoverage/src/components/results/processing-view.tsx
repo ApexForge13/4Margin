@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-export function ProcessingView({ id }: { id: string }) {
+export function ProcessingView({ id, checkMode }: { id: string; checkMode?: boolean }) {
   const router = useRouter();
 
   useEffect(() => {

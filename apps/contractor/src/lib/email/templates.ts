@@ -203,6 +203,93 @@ export function teamInviteEmail(data: {
   };
 }
 
+// ─── Policy Check Invite (to homeowner) ─────────────────────
+
+export function policyCheckInviteEmail(data: {
+  companyName: string;
+  homeownerName: string;
+  claimType?: string;
+  checkUrl: string;
+}) {
+  const greeting = data.homeownerName
+    ? `Hi ${data.homeownerName},`
+    : "Hi there,";
+  const claimNote = data.claimType
+    ? ` regarding a potential <strong>${data.claimType}</strong> claim`
+    : "";
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#0f172a;">Policy review requested</h2>
+    <p style="margin:0 0 24px;color:#52525b;font-size:14px;">${greeting}</p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      <strong>${data.companyName}</strong> is working with you${claimNote} and would like to review your homeowners insurance policy.
+    </p>
+    <p style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      This free analysis will help both you and your contractor understand your coverage before moving forward. It only takes a minute.
+    </p>
+    <a href="${data.checkUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+      Upload Your Policy
+    </a>
+    <p style="margin:16px 0 0;font-size:12px;color:#71717a;">
+      This link expires in 30 days. If you didn&rsquo;t expect this, you can safely ignore it.
+    </p>
+  `;
+
+  return {
+    subject: `${data.companyName} needs your insurance policy`,
+    html: layout(body),
+  };
+}
+
+// ─── Policy Check Complete (to contractor) ──────────────────
+
+export function policyCheckCompleteEmail(data: {
+  userName: string;
+  homeownerName: string;
+  carrier: string;
+  scoreGrade: string;
+  checkUrl: string;
+}) {
+  const gradeColors: Record<string, string> = {
+    A: "#16a34a",
+    B: "#2563eb",
+    C: "#ca8a04",
+    D: "#ea580c",
+    F: "#dc2626",
+  };
+  const gradeColor = gradeColors[data.scoreGrade] || "#71717a";
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#0f172a;">Policy check complete</h2>
+    <p style="margin:0 0 24px;color:#52525b;font-size:14px;">Hi ${data.userName},</p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      <strong>${data.homeownerName}</strong> has uploaded their policy and the analysis is complete.
+    </p>
+    <table style="width:100%;margin:0 0 24px;border:1px solid #e4e4e7;border-radius:6px;border-collapse:collapse;">
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#71717a;border-bottom:1px solid #e4e4e7;">Homeowner</td>
+        <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#0f172a;border-bottom:1px solid #e4e4e7;">${data.homeownerName}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#71717a;border-bottom:1px solid #e4e4e7;">Carrier</td>
+        <td style="padding:12px 16px;font-size:13px;font-weight:600;color:#0f172a;border-bottom:1px solid #e4e4e7;">${data.carrier || "N/A"}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#71717a;">Policy Grade</td>
+        <td style="padding:12px 16px;font-size:13px;font-weight:700;color:${gradeColor};">${data.scoreGrade}</td>
+      </tr>
+    </table>
+    <a href="${data.checkUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+      View Full Analysis
+    </a>
+  `;
+
+  return {
+    subject: `Policy check complete — ${data.homeownerName}`,
+    html: layout(body),
+  };
+}
+
 // ─── Pipeline Error ─────────────────────────────────────────
 
 export function pipelineErrorEmail(data: {

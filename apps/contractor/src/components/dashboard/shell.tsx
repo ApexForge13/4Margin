@@ -22,6 +22,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/dashboard/supplements": "Supplements",
   "/dashboard/upload": "New Supplement",
+  "/dashboard/policy-checks": "Policy Checks",
   "/dashboard/policy-decoder": "Policy Decoder",
   "/dashboard/settings": "Settings",
   "/dashboard/admin": "Admin",
@@ -30,6 +31,7 @@ const pageTitles: Record<string, string> = {
 function resolvePageTitle(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname];
   if (pathname.startsWith("/dashboard/supplements/")) return "Supplement Detail";
+  if (pathname.startsWith("/dashboard/policy-checks/")) return "Policy Check Detail";
   if (pathname.startsWith("/dashboard/policy-decoder/")) return "Policy Decode";
   return "Dashboard";
 }
@@ -86,6 +88,15 @@ export function DashboardShell({
       icon: (
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      ),
+    },
+    {
+      label: "Policy Checks",
+      href: "/dashboard/policy-checks",
+      icon: (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
     },

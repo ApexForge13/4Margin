@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendPaymentConfirmationEmail } from "@/lib/email/send";
+import {
+  sendPaymentConfirmationEmail,
+  sendPolicyCheckInviteEmail,
+} from "@/lib/email/send";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -33,8 +36,38 @@ export async function POST(request: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
     const admin = createAdminClient();
 
-    // Check if this is a policy decoder payment
-    if (session.metadata?.type === "policy_decoder") {
+    // ── Policy Check payment ──────────────────────────────────
+    if (session.metadata?.type === "policy_check") {
+      const policyCheckId = session.metadata?.policyCheckId;
+      if (!policyCheckId) {
+        console.error("No policyCheckId in session metadata");
+        return NextResponse.json({ received: true });
+      }
+
+      const { error } = await admin
+        .from("policy_checks")
+        .update({
+          payment_status: "paid",
+          stripe_payment_id: session.payment_intent as string,
+        })
+        .eq("id", policyCheckId);
+
+      if (error) {
+        console.error("Failed to update policy check payment:", error);
+        return NextResponse.json(
+          { error: "Database update failed" },
+          { status: 500 }
+        );
+      }
+
+      console.log(`Payment recorded for policy check ${policyCheckId}`);
+
+      // Send invite email to homeowner (fire-and-forget)
+      sendPolicyCheckInviteEmail(policyCheckId).catch(() => {});
+    }
+
+    // ── Policy Decoder payment ────────────────────────────────
+    else if (session.metadata?.type === "policy_decoder") {
       const policyDecodingId = session.metadata?.policyDecodingId;
       if (!policyDecodingId) {
         console.error("No policyDecodingId in session metadata");

@@ -82,6 +82,9 @@ interface ResultsDisplayProps {
     scanQuality: string;
   } | null;
   consentContact: boolean;
+  context?: "organic" | "contractor-check";
+  companyName?: string;
+  downloadUrl?: string;
 }
 
 export function ResultsDisplay({
@@ -90,6 +93,9 @@ export function ResultsDisplay({
   analysis,
   documentMeta,
   consentContact,
+  context = "organic",
+  companyName,
+  downloadUrl,
 }: ResultsDisplayProps) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -113,7 +119,8 @@ export function ResultsDisplay({
     );
 
   const handleDownload = () => {
-    window.open(`/api/report/${id}/download`, "_blank");
+    const url = downloadUrl || `/api/report/${id}/download`;
+    window.open(url, "_blank");
   };
 
   const handleEmail = async () => {
@@ -321,9 +328,25 @@ export function ResultsDisplay({
         {/* ═══════════════════════════════════════════ */}
         <PolicyScoreCard score={policyScore} />
 
-        {/* Switch CTA — only if score is poor AND user hasn't already opted in */}
-        {policyScore.shouldSwitch && !consentContact && (
+        {/* Switch CTA — only for organic flow, if score is poor AND user hasn't already opted in */}
+        {context === "organic" && policyScore.shouldSwitch && !consentContact && (
           <SwitchCta leadId={id} score={policyScore} />
+        )}
+
+        {/* Contractor check banner */}
+        {context === "contractor-check" && companyName && (
+          <div style={{
+            textAlign: "center",
+            padding: "12px 20px",
+            background: "var(--bg)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            marginBottom: 16,
+            fontSize: 14,
+            color: "var(--text-secondary)",
+          }}>
+            This analysis was requested by <strong>{companyName}</strong>
+          </div>
         )}
 
         {/* Action Buttons */}
@@ -332,32 +355,34 @@ export function ResultsDisplay({
             <Download size={16} />
             Download PDF Report
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={handleEmail}
-            disabled={emailSending || emailSent}
-            style={{
-              background: emailSent ? "var(--accent-light)" : undefined,
-              color: emailSent ? "var(--accent)" : undefined,
-            }}
-          >
-            {emailSent ? (
-              <>
-                <CheckCircle2 size={16} />
-                Sent!
-              </>
-            ) : emailSending ? (
-              <>
-                <span className="spinner" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Mail size={16} />
-                Email Me This Report
-              </>
-            )}
-          </button>
+          {context === "organic" && (
+            <button
+              className="btn btn-primary"
+              onClick={handleEmail}
+              disabled={emailSending || emailSent}
+              style={{
+                background: emailSent ? "var(--accent-light)" : undefined,
+                color: emailSent ? "var(--accent)" : undefined,
+              }}
+            >
+              {emailSent ? (
+                <>
+                  <CheckCircle2 size={16} />
+                  Sent!
+                </>
+              ) : emailSending ? (
+                <>
+                  <span className="spinner" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail size={16} />
+                  Email Me This Report
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════════ */}
