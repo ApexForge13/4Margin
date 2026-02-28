@@ -24,10 +24,12 @@ export async function GET(
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const analysis = check.policy_analysis as any;
+
   const pdfBuffer = await generateDecoderPdf({
-    firstName: check.homeowner_first_name || "",
-    lastName: check.homeowner_last_name || "",
-    analysis: check.policy_analysis,
+    ...analysis,
+    generatedDate: new Date().toISOString(),
   });
 
   const filename = `DecodeCoverage-${check.homeowner_first_name || "Policy"}-${check.homeowner_last_name || "Report"}.pdf`;

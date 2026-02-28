@@ -18,7 +18,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { calculatePolicyScore, type PolicyScore } from "@/lib/policy-score";
-import { SwitchCta } from "./switch-cta";
+import { getPlainEnglishFinding } from "@/lib/finding-templates";
+import { ConversionForm } from "@/components/conversion-form";
+import { ExitIntent } from "@/components/exit-intent";
 
 interface PolicyAnalysis {
   policyType: string;
@@ -75,13 +77,15 @@ interface PolicyAnalysis {
 
 interface ResultsDisplayProps {
   id: string;
-  firstName: string;
+  firstName: string | null;
   analysis: PolicyAnalysis;
   documentMeta: {
     documentType: string;
     scanQuality: string;
   } | null;
   consentContact: boolean;
+  policyScore?: number | null;
+  policyGrade?: string | null;
   context?: "organic" | "contractor-check";
   companyName?: string;
   downloadUrl?: string;
@@ -93,6 +97,8 @@ export function ResultsDisplay({
   analysis,
   documentMeta,
   consentContact,
+  policyScore: dbScore,
+  policyGrade: dbGrade,
   context = "organic",
   companyName,
   downloadUrl,
@@ -157,6 +163,12 @@ export function ResultsDisplay({
   ) || [];
   const riskExplanation = buildRiskExplanation(analysis, highSeverityLandmines);
 
+  // Build finding context for templates
+  const findingContext = buildFindingContext(analysis);
+
+  // Whether the user has email on file (anonymous leads don't)
+  const hasEmail = !!firstName;
+
   return (
     <>
       <nav>
@@ -197,7 +209,6 @@ export function ResultsDisplay({
             Overview
           </h2>
 
-          {/* General summary */}
           {analysis.summaryForContractor && (
             <div className="result-item">
               <p style={{ fontSize: 15, lineHeight: 1.7 }}>
@@ -206,7 +217,6 @@ export function ResultsDisplay({
             </div>
           )}
 
-          {/* Risk explanation with key concerns */}
           {riskExplanation && (
             <div className="result-item">
               <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -219,18 +229,23 @@ export function ResultsDisplay({
                   <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 8 }}>
                     Key concerns:
                   </p>
-                  {highSeverityLandmines.map((l, i) => (
-                    <div key={i} style={{ padding: "8px 12px", background: "rgba(220, 38, 38, 0.05)", borderRadius: 8, marginBottom: 6, borderLeft: "3px solid #DC2626" }}>
-                      <strong>{l.name}</strong>
-                      <span className={`severity-badge severity-${l.severity}`} style={{ marginLeft: 8 }}>{l.severity}</span>
-                      <p style={{ margin: "4px 0 0", fontSize: 13 }}>{l.impact}</p>
-                      {l.actionItem && (
-                        <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
-                          What you can do: {l.actionItem}
+                  {highSeverityLandmines.map((l, i) => {
+                    const template = getPlainEnglishFinding(l, findingContext);
+                    return (
+                      <div key={i} style={{ padding: "8px 12px", background: "rgba(220, 38, 38, 0.05)", borderRadius: 8, marginBottom: 6, borderLeft: "3px solid #DC2626" }}>
+                        <strong>{template?.title || l.name}</strong>
+                        <span className={`severity-badge severity-${l.severity}`} style={{ marginLeft: 8 }}>{l.severity}</span>
+                        <p style={{ margin: "4px 0 0", fontSize: 13 }}>
+                          {template?.explanation || l.impact}
                         </p>
-                      )}
-                    </div>
-                  ))}
+                        {(template?.actionRec || l.actionItem) && (
+                          <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
+                            What you can do: {template?.actionRec || l.actionItem}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -328,11 +343,6 @@ export function ResultsDisplay({
         {/* ═══════════════════════════════════════════ */}
         <PolicyScoreCard score={policyScore} />
 
-        {/* Switch CTA — only for organic flow, if score is poor AND user hasn't already opted in */}
-        {context === "organic" && policyScore.shouldSwitch && !consentContact && (
-          <SwitchCta leadId={id} score={policyScore} />
-        )}
-
         {/* Contractor check banner */}
         {context === "contractor-check" && companyName && (
           <div style={{
@@ -355,7 +365,7 @@ export function ResultsDisplay({
             <Download size={16} />
             Download PDF Report
           </button>
-          {context === "organic" && (
+          {context === "organic" && hasEmail && (
             <button
               className="btn btn-primary"
               onClick={handleEmail}
@@ -496,6 +506,13 @@ export function ResultsDisplay({
           </div>
         )}
 
+        {/* ═══════════════════════════════════════════ */}
+        {/* CONVERSION FORM (organic only)             */}
+        {/* ═══════════════════════════════════════════ */}
+        {context === "organic" && !consentContact && (
+          <ConversionForm leadId={id} score={policyScore.score} />
+        )}
+
         {/* Disclaimer */}
         <div className="disclaimer-box">
           <h4>Disclaimer</h4>
@@ -516,6 +533,15 @@ export function ResultsDisplay({
           </a>
         </div>
       </div>
+
+      {/* Exit Intent Overlay (organic only) */}
+      {context === "organic" && (
+        <ExitIntent
+          leadId={id}
+          score={policyScore.score}
+          alreadyConverted={consentContact}
+        />
+      )}
     </>
   );
 }
@@ -525,9 +551,8 @@ export function ResultsDisplay({
 function gradeColor(grade: string): string {
   switch (grade) {
     case "A": return "var(--accent)";
-    case "B": return "#2563EB";
-    case "C": return "var(--warning)";
-    case "D": return "#EA580C";
+    case "B": return "#D97706";
+    case "C": return "#EA580C";
     case "F": return "#DC2626";
     default: return "var(--text-primary)";
   }
@@ -536,16 +561,14 @@ function gradeColor(grade: string): string {
 function gradeBg(grade: string): string {
   switch (grade) {
     case "A": return "var(--accent-light)";
-    case "B": return "#EFF6FF";
-    case "C": return "var(--warning-light)";
-    case "D": return "#FFF7ED";
+    case "B": return "#FEF9C3";
+    case "C": return "#FFF7ED";
     case "F": return "#FEE2E2";
     default: return "var(--bg)";
   }
 }
 
 function PolicyScoreCard({ score }: { score: PolicyScore }) {
-  // Show top 3 factors (mix of positive and negative)
   const topFactors = score.factors.slice(0, 5);
 
   return (
@@ -569,7 +592,7 @@ function PolicyScoreCard({ score }: { score: PolicyScore }) {
 
       <h2 style={{ position: "relative" }}>
         <Shield size={22} style={{ color: gradeColor(score.grade) }} />
-        Policy Health Score
+        Your Coverage Health Score: {score.score}%
       </h2>
 
       {/* Grade + score row */}
@@ -691,4 +714,26 @@ function buildRiskExplanation(
   }
 
   return parts.length > 0 ? parts.join(" ") : null;
+}
+
+/** Build context for finding templates from analysis data */
+function buildFindingContext(analysis: PolicyAnalysis) {
+  const windHailDed = analysis.deductibles?.find((d) => {
+    const type = d.type?.toLowerCase() || "";
+    const applies = d.appliesTo?.toLowerCase() || "";
+    return type.includes("wind") || type.includes("hail") || applies.includes("wind") || applies.includes("hail");
+  });
+
+  // Extract state from property address (last 2-char state code pattern)
+  const stateMatch = analysis.propertyAddress?.match(/\b([A-Z]{2})\b\s*\d{5}/);
+  const state = stateMatch ? stateMatch[1] : undefined;
+
+  return {
+    state,
+    windHailDeductibleDollar: windHailDed?.dollarAmount || undefined,
+    windHailDeductiblePct: windHailDed?.amount?.includes("%")
+      ? parseFloat(windHailDed.amount)
+      : undefined,
+    depreciationMethod: analysis.depreciationMethod,
+  };
 }

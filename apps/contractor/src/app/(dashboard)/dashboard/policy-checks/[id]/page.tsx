@@ -159,7 +159,7 @@ export default async function PolicyCheckDetailPage({
 
           {/* Contractor report */}
           <ContractorReport
-            analysis={check.policy_analysis as Parameters<typeof ContractorReport>[0]["analysis"]}
+            analysis={check.policy_analysis as unknown as Parameters<typeof ContractorReport>[0]["analysis"]}
             claimType={check.claim_type}
           />
 

@@ -2,8 +2,9 @@
  * Policy Health Score — calculates a 0-100 score + letter grade
  * from existing PolicyAnalysis data. No API calls needed.
  *
+ * Grades: A (90+), B (70-89), C (50-69), F (<50)
  * Scoring is intentionally aggressive (base 60, high penalties)
- * to maximize lead conversion on the switch CTA.
+ * to maximize lead conversion on the conversion form.
  */
 
 export interface ScoreFactor {
@@ -15,7 +16,7 @@ export interface ScoreFactor {
 
 export interface PolicyScore {
   score: number;
-  grade: "A" | "B" | "C" | "D" | "F";
+  grade: "A" | "B" | "C" | "F";
   factors: ScoreFactor[];
   shouldSwitch: boolean;
   headline: string;
@@ -193,8 +194,9 @@ export function calculatePolicyScore(
   score = Math.max(0, Math.min(100, score));
 
   const grade = scoreToGrade(score);
-  const shouldSwitch = grade !== "A" && grade !== "B";
-  const { headline, recommendation } = buildMessaging(grade, factors);
+  const shouldSwitch = grade === "C" || grade === "F";
+  const negatives = factors.filter((f) => f.severity === "negative");
+  const { headline, recommendation } = buildMessaging(grade, negatives.length, score);
 
   // Sort factors: negatives first (biggest impact), then positives
   factors.sort((a, b) => a.impact - b.impact);
@@ -204,50 +206,40 @@ export function calculatePolicyScore(
 
 function scoreToGrade(score: number): PolicyScore["grade"] {
   if (score >= 90) return "A";
-  if (score >= 75) return "B";
-  if (score >= 60) return "C";
-  if (score >= 40) return "D";
+  if (score >= 70) return "B";
+  if (score >= 50) return "C";
   return "F";
 }
 
 function buildMessaging(
   grade: PolicyScore["grade"],
-  factors: ScoreFactor[]
+  gapCount: number,
+  score: number
 ): { headline: string; recommendation: string } {
-  const negatives = factors.filter((f) => f.severity === "negative");
-
   switch (grade) {
     case "A":
       return {
-        headline: "Your policy provides excellent coverage",
+        headline: "Your policy looks solid",
         recommendation:
-          "Your policy has strong provisions and minimal gaps. Keep it — and review annually to make sure it stays competitive.",
+          "Great news — your policy looks solid. We didn't find any critical gaps. Your dwelling coverage is in line with rebuild costs for your area, and your deductibles are reasonable. Below are a few minor notes worth reviewing with your agent at your next renewal.",
       };
     case "B":
       return {
-        headline: "Your policy is solid with minor gaps",
+        headline: "Your policy has some areas worth attention",
         recommendation:
-          "You have good coverage overall. A quick review with a licensed agent could help close the remaining gaps.",
+          `Your policy has some areas worth attention. We found ${gapCount} potential gap${gapCount !== 1 ? "s" : ""} that could cost you money in a claim. None are urgent emergencies, but addressing them before your next renewal could save you significant out-of-pocket costs. See the details below.`,
       };
     case "C":
       return {
-        headline: "Your policy has notable coverage gaps",
+        headline: "Your policy has meaningful coverage gaps",
         recommendation:
-          negatives.length > 0
-            ? `We found ${negatives.length} issue${negatives.length > 1 ? "s" : ""} that could leave you underprotected. A licensed agent can help you find better options — often at a similar or lower premium.`
-            : "Your policy has room for improvement. Shopping around could get you better coverage at a competitive price.",
-      };
-    case "D":
-      return {
-        headline: "Your policy has significant coverage issues",
-        recommendation:
-          "Multiple provisions in your policy could substantially reduce your claim payout. We strongly recommend getting quotes from other carriers.",
+          `Your policy has meaningful coverage gaps. We found ${gapCount} issue${gapCount !== 1 ? "s" : ""} that could leave you exposed to significant out-of-pocket costs in a claim. We recommend reviewing these findings with an agent before your next renewal — or sooner if storm season is approaching.`,
       };
     case "F":
       return {
-        headline: "Your policy has critical coverage gaps",
+        headline: "Your policy has critical gaps that need attention",
         recommendation:
-          "Your policy has serious issues that could leave you paying thousands out of pocket on a claim. Talk to a licensed agent about better options as soon as possible.",
+          "Based on our analysis, you could be significantly exposed in a covered event. This doesn't mean you need to panic, but it does mean you should talk to someone about adjusting your coverage as soon as possible. We can help.",
       };
   }
 }

@@ -1,15 +1,11 @@
-import { ScanForm } from "@/components/scan-form";
+import { HeroUpload } from "@/components/hero-upload";
+import { FaqAccordion } from "@/components/faq-accordion";
 import {
   Upload,
   Search,
-  CheckCircle,
-  AlertTriangle,
-  DollarSign,
-  Home,
+  BarChart3,
+  ArrowRight,
   Shield,
-  Lock,
-  Clock,
-  Zap,
 } from "lucide-react";
 
 export default function LandingPage() {
@@ -21,80 +17,54 @@ export default function LandingPage() {
           <a href="/" className="logo">
             Decode<span>Coverage</span>
           </a>
-          <a href="#scan" className="nav-cta">
-            Get Free Scan
+          <a href="#upload" className="nav-cta">
+            Upload My Policy
           </a>
         </div>
       </nav>
 
       {/* HERO */}
-      <section className="hero">
-        <div className="fade-up">
-          <div className="hero-badge">
-            <Zap size={14} />
-            AI-Powered &middot; Results in 60 Seconds
-          </div>
-        </div>
-        <h1 className="fade-up delay-1">
-          Is your home <em>actually</em> covered?
+      <section className="hero" id="upload">
+        <h1 className="fade-up">
+          Your Insurance Policy Is<br />
+          Hiding Something.<br />
+          <em>We&apos;ll Show You What.</em>
         </h1>
-        <p className="fade-up delay-2">
-          Upload your homeowners insurance policy and our AI instantly decodes
-          your coverage, finds gaps, and uncovers savings. Get your free AI scan
-          plus an optional expert review from a licensed professional.
+        <p className="fade-up delay-1">
+          Upload your homeowners policy. Our AI decodes every page in 60 seconds
+          and shows you exactly what you&apos;re covered for, what you&apos;re
+          not, and what it could cost you. Free. No calls unless you want them.
         </p>
+
+        <div className="trust-bar-inline fade-up delay-2">
+          <span>&#10003; No phone number required</span>
+          <span>&#10003; No agent calls</span>
+          <span>&#10003; 100% free</span>
+          <span>&#10003; Results in 60 seconds</span>
+        </div>
+
         <div className="fade-up delay-3">
-          <a
-            href="#scan"
-            style={{
-              display: "inline-flex",
-              padding: "16px 40px",
-              borderRadius: 100,
-              background: "var(--accent)",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 700,
-              fontSize: 16,
-              gap: 8,
-              transition: "all 0.2s",
-              alignItems: "center",
-            }}
-          >
-            Scan My Policy Free
-            <svg
-              width={18}
-              height={18}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </a>
+          <HeroUpload />
         </div>
-        <div className="hero-stats fade-up delay-4">
-          <div className="hero-stat">
-            <div className="num">73%</div>
-            <div className="label">Have coverage gaps</div>
-          </div>
-          <div className="hero-stat">
-            <div className="num">$487</div>
-            <div className="label">Avg. annual savings</div>
-          </div>
-          <div className="hero-stat">
-            <div className="num">60s</div>
-            <div className="label">Scan time</div>
-          </div>
-        </div>
+      </section>
+
+      {/* WHY 73% HAVE GAPS */}
+      <section className="why-gaps-section">
+        <div className="section-label">The Problem</div>
+        <h2>Why 73% of Homeowners Have Gaps They Don&apos;t Know About</h2>
+        <p className="why-gaps-body">
+          Home insurance policies are designed to be confusing. Wind/hail
+          deductibles hidden on page 23. Dwelling coverage that hasn&apos;t kept
+          up with construction costs. Exclusions buried in legal jargon. Your
+          insurance company isn&apos;t going to call you and point this out. We
+          will.
+        </p>
       </section>
 
       {/* HOW IT WORKS */}
       <section className="how-it-works">
         <div className="section-label">How It Works</div>
-        <h2>Three steps to clarity</h2>
+        <h2>Four steps to clarity</h2>
         <div className="steps">
           <div className="step">
             <div className="step-icon">
@@ -103,120 +73,79 @@ export default function LandingPage() {
             <div className="step-num">01</div>
             <h3>Upload your policy</h3>
             <p>
-              Drop your declarations page or full policy PDF. Our AI reads it
-              instantly — no waiting, no phone calls.
+              Drop in your PDF or snap a photo of your declarations page. Our AI
+              reads every page instantly. Takes about 60 seconds.
+            </p>
+          </div>
+          <div className="step">
+            <div className="step-icon">
+              <BarChart3 size={20} />
+            </div>
+            <div className="step-num">02</div>
+            <h3>Get your Coverage Health Score</h3>
+            <p>
+              See a clear green/yellow/red rating on your overall protection. No
+              jargon, no legalese, no fine print.
             </p>
           </div>
           <div className="step">
             <div className="step-icon">
               <Search size={20} />
             </div>
-            <div className="step-num">02</div>
-            <h3>AI decodes everything</h3>
+            <div className="step-num">03</div>
+            <h3>See exactly where you stand</h3>
             <p>
-              We translate insurance jargon into plain English and flag what
-              matters — gaps, overpayments, and risks.
+              Get specific findings in plain English: what you&apos;re covered
+              for, what you&apos;re not, and exactly what it would cost you if
+              something happened.
             </p>
           </div>
           <div className="step">
             <div className="step-icon">
-              <CheckCircle size={20} />
+              <ArrowRight size={20} />
             </div>
-            <div className="step-num">03</div>
-            <h3>Get your results</h3>
+            <div className="step-num">04</div>
+            <h3>Take action (or don&apos;t)</h3>
             <p>
-              Receive your full policy breakdown with clear recommendations —
-              plus the option for a free expert review from a licensed professional.
+              Download your free report and take it to your current agent, or let
+              us connect you with someone who can help. Your choice. Zero
+              pressure.
             </p>
           </div>
         </div>
       </section>
 
-      {/* WHAT WE FIND */}
-      <section className="findings">
-        <div className="findings-inner">
-          <div className="section-label">What We Uncover</div>
-          <h2>
-            Most homeowners don&apos;t know what&apos;s hiding in their policy
-          </h2>
-          <div className="findings-grid">
-            <div className="finding-card">
-              <div className="finding-icon gap">
-                <AlertTriangle size={22} />
-              </div>
-              <h3>Coverage Gaps</h3>
-              <p>
-                Water backup, mold, sewer line, foundation — the things that
-                actually happen and aren&apos;t covered by default.
-              </p>
-              <span className="tag gap-tag">Common Risk</span>
-            </div>
-            <div className="finding-card">
-              <div className="finding-icon save">
-                <DollarSign size={22} />
-              </div>
-              <h3>Overpayments</h3>
-              <p>
-                Duplicate coverages, inflated replacement costs, unused riders
-                you&apos;re paying for every month.
-              </p>
-              <span className="tag save-tag">Savings Found</span>
-            </div>
-            <div className="finding-card">
-              <div className="finding-icon gap">
-                <Home size={22} />
-              </div>
-              <h3>Underinsured Dwelling</h3>
-              <p>
-                Rebuilding costs have surged. If your coverage limit hasn&apos;t
-                kept up, you&apos;d be paying out of pocket after a total loss.
-              </p>
-              <span className="tag gap-tag">High Impact</span>
-            </div>
-            <div className="finding-card">
-              <div className="finding-icon save">
-                <Shield size={22} />
-              </div>
-              <h3>Deductible Optimization</h3>
-              <p>
-                Your deductible may be costing you more in premiums than it
-                would ever save in a claim. We&apos;ll show you the math.
-              </p>
-              <span className="tag save-tag">Quick Win</span>
-            </div>
-          </div>
-        </div>
+      {/* FAQ */}
+      <section className="faq-section">
+        <div className="section-label">FAQ</div>
+        <h2>Common questions</h2>
+        <FaqAccordion />
       </section>
 
-      {/* SCAN FORM */}
-      <section className="form-section" id="scan">
-        <div className="form-wrapper">
-          <h2>Get your free scan</h2>
-          <p>Takes 30 seconds. No credit card. No commitment.</p>
-          <ScanForm />
-        </div>
-      </section>
-
-      {/* TRUST BAR */}
-      <section className="trust-bar">
-        <div className="trust-inner">
-          <div className="trust-item">
-            <Lock size={20} />
-            256-bit encryption
-          </div>
-          <div className="trust-item">
-            <Shield size={20} />
-            Data never sold without consent
-          </div>
-          <div className="trust-item">
-            <Clock size={20} />
-            Results in under 60 seconds
-          </div>
-          <div className="trust-item">
-            <CheckCircle size={20} />
-            100% free, no credit card
-          </div>
-        </div>
+      {/* BOTTOM CTA */}
+      <section className="bottom-cta">
+        <Shield size={40} style={{ color: "var(--accent)", marginBottom: 16 }} />
+        <h2>Still not sure?</h2>
+        <p>
+          Take 60 seconds. If we don&apos;t find anything, you&apos;ll sleep
+          better tonight knowing you&apos;re covered. If we do, you just saved
+          yourself thousands.
+        </p>
+        <a href="#upload" className="bottom-cta-btn">
+          Upload My Policy Free
+          <svg
+            width={18}
+            height={18}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
       </section>
 
       {/* FOOTER */}

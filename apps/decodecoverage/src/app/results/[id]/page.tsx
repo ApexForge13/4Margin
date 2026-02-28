@@ -44,7 +44,7 @@ export default async function ResultsPage({
         </div>
         <div style={{ marginTop: 24 }}>
           <a
-            href="/#scan"
+            href="/#upload"
             className="btn btn-primary"
             style={{ display: "inline-flex", width: "auto", padding: "12px 32px" }}
           >
@@ -58,10 +58,12 @@ export default async function ResultsPage({
   return (
     <ResultsDisplay
       id={id}
-      firstName={lead.first_name}
+      firstName={lead.first_name || null}
       analysis={lead.policy_analysis}
       documentMeta={lead.document_meta}
-      consentContact={lead.consent_contact ?? false}
+      consentContact={lead.consent_contact ?? lead.converted_at != null}
+      policyScore={lead.policy_score}
+      policyGrade={lead.policy_grade}
     />
   );
 }
