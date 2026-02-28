@@ -61,6 +61,7 @@ export default async function ResultsPage({
       firstName={lead.first_name}
       analysis={lead.policy_analysis}
       documentMeta={lead.document_meta}
+      consentContact={lead.consent_contact ?? false}
     />
   );
 }

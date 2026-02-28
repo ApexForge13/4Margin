@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -14,7 +14,11 @@ import {
   Download,
   Mail,
   Info,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
+import { calculatePolicyScore, type PolicyScore } from "@/lib/policy-score";
+import { SwitchCta } from "./switch-cta";
 
 interface PolicyAnalysis {
   policyType: string;
@@ -77,6 +81,7 @@ interface ResultsDisplayProps {
     documentType: string;
     scanQuality: string;
   } | null;
+  consentContact: boolean;
 }
 
 export function ResultsDisplay({
@@ -84,9 +89,12 @@ export function ResultsDisplay({
   firstName,
   analysis,
   documentMeta,
+  consentContact,
 }: ResultsDisplayProps) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  const policyScore = useMemo(() => calculatePolicyScore(analysis), [analysis]);
 
   const riskClass =
     analysis.riskLevel === "high"
@@ -308,6 +316,16 @@ export function ResultsDisplay({
           </div>
         </div>
 
+        {/* ═══════════════════════════════════════════ */}
+        {/* POLICY HEALTH SCORE                        */}
+        {/* ═══════════════════════════════════════════ */}
+        <PolicyScoreCard score={policyScore} />
+
+        {/* Switch CTA — only if score is poor AND user hasn't already opted in */}
+        {policyScore.shouldSwitch && !consentContact && (
+          <SwitchCta leadId={id} score={policyScore} />
+        )}
+
         {/* Action Buttons */}
         <div className="results-actions">
           <button className="btn btn-primary" onClick={handleDownload}>
@@ -474,6 +492,143 @@ export function ResultsDisplay({
         </div>
       </div>
     </>
+  );
+}
+
+/* ── Policy Score Card ──────────────────────────────────────────── */
+
+function gradeColor(grade: string): string {
+  switch (grade) {
+    case "A": return "var(--accent)";
+    case "B": return "#2563EB";
+    case "C": return "var(--warning)";
+    case "D": return "#EA580C";
+    case "F": return "#DC2626";
+    default: return "var(--text-primary)";
+  }
+}
+
+function gradeBg(grade: string): string {
+  switch (grade) {
+    case "A": return "var(--accent-light)";
+    case "B": return "#EFF6FF";
+    case "C": return "var(--warning-light)";
+    case "D": return "#FFF7ED";
+    case "F": return "#FEE2E2";
+    default: return "var(--bg)";
+  }
+}
+
+function PolicyScoreCard({ score }: { score: PolicyScore }) {
+  // Show top 3 factors (mix of positive and negative)
+  const topFactors = score.factors.slice(0, 5);
+
+  return (
+    <div className="result-card" style={{ position: "relative", overflow: "hidden" }}>
+      {/* Background grade watermark */}
+      <div style={{
+        position: "absolute",
+        top: -20,
+        right: -10,
+        fontSize: 180,
+        fontFamily: "'Fraunces', serif",
+        fontWeight: 800,
+        color: gradeColor(score.grade),
+        opacity: 0.06,
+        lineHeight: 1,
+        pointerEvents: "none",
+        userSelect: "none",
+      }}>
+        {score.grade}
+      </div>
+
+      <h2 style={{ position: "relative" }}>
+        <Shield size={22} style={{ color: gradeColor(score.grade) }} />
+        Policy Health Score
+      </h2>
+
+      {/* Grade + score row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16, position: "relative" }}>
+        <div style={{
+          width: 72,
+          height: 72,
+          borderRadius: 16,
+          background: gradeBg(score.grade),
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 40,
+          fontFamily: "'Fraunces', serif",
+          fontWeight: 800,
+          color: gradeColor(score.grade),
+          flexShrink: 0,
+        }}>
+          {score.grade}
+        </div>
+        <div>
+          <div style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 600, marginBottom: 2 }}>
+            Score: {score.score}/100
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
+            {score.headline}
+          </div>
+        </div>
+      </div>
+
+      {/* Recommendation */}
+      <p style={{ fontSize: 15, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 20 }}>
+        {score.recommendation}
+      </p>
+
+      {/* Score factors */}
+      {topFactors.length > 0 && (
+        <div style={{ display: "grid", gap: 8 }}>
+          <div style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: "var(--text-muted)",
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+            marginBottom: 4,
+          }}>
+            Key Factors
+          </div>
+          {topFactors.map((f, i) => (
+            <div key={i} style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 10,
+              padding: "10px 14px",
+              background: f.severity === "negative" ? "rgba(220, 38, 38, 0.04)" : "rgba(27, 107, 74, 0.04)",
+              borderRadius: 8,
+              borderLeft: `3px solid ${f.severity === "negative" ? "#DC2626" : "var(--accent)"}`,
+            }}>
+              {f.severity === "negative" ? (
+                <TrendingDown size={14} style={{ color: "#DC2626", marginTop: 2, flexShrink: 0 }} />
+              ) : (
+                <TrendingUp size={14} style={{ color: "var(--accent)", marginTop: 2, flexShrink: 0 }} />
+              )}
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  {f.label}
+                  <span style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: f.severity === "negative" ? "#DC2626" : "var(--accent)",
+                    marginLeft: 8,
+                  }}>
+                    {f.impact > 0 ? "+" : ""}{f.impact}
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, marginTop: 2 }}>
+                  {f.explanation}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
