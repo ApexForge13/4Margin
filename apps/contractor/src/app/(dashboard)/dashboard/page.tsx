@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SupplementsList } from "@/components/dashboard/supplements-list";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
 
 export default async function DashboardPage() {
@@ -20,63 +20,6 @@ export default async function DashboardPage() {
 
   if (!profile) return null;
 
-  // Fetch supplements with full claim data for edit pre-fill
-  const { data: supplements } = await supabase
-    .from("supplements")
-    .select(`
-      id,
-      status,
-      adjuster_total,
-      supplement_total,
-      approved_amount,
-      paid_at,
-      created_at,
-      claims (
-        id,
-        notes,
-        claim_number,
-        policy_number,
-        property_address,
-        property_city,
-        property_state,
-        property_zip,
-        date_of_loss,
-        adjuster_name,
-        adjuster_email,
-        adjuster_phone,
-        archived_at,
-        carrier_id,
-        carriers ( name )
-      )
-    `)
-    .order("created_at", { ascending: false });
-
-  const rows = (supplements ?? []) as unknown as Array<{
-    id: string;
-    status: string;
-    adjuster_total: number | null;
-    supplement_total: number | null;
-    approved_amount: number | null;
-    paid_at: string | null;
-    created_at: string;
-    claims: {
-      id: string;
-      notes: string | null;
-      claim_number: string | null;
-      policy_number: string | null;
-      property_address: string | null;
-      property_city: string | null;
-      property_state: string | null;
-      property_zip: string | null;
-      date_of_loss: string | null;
-      adjuster_name: string | null;
-      adjuster_email: string | null;
-      adjuster_phone: string | null;
-      archived_at: string | null;
-      carriers: { name: string } | null;
-    };
-  }>;
-
   const company = profile.companies as unknown as {
     name: string;
     phone: string | null;
@@ -84,26 +27,31 @@ export default async function DashboardPage() {
   } | null;
 
   const hasCompany = !!(company?.name && (company?.phone || company?.address));
-  const hasSupplements = rows.length > 0;
-  const showChecklist = !hasCompany || !hasSupplements;
 
-  // Stats (exclude archived)
-  const active = rows.filter((s) => !s.claims?.archived_at);
-  const total = active.length;
-  const pending = active.filter((s) =>
-    ["draft", "generating", "complete"].includes(s.status)
-  ).length;
-  // Total Recovered: approved → full supplement_total, partially_approved → approved_amount
-  const totalRecovered = active.reduce((sum, s) => {
-    if (s.status === "approved") return sum + (Number(s.supplement_total) || 0);
-    if (s.status === "partially_approved") return sum + (Number(s.approved_amount) || 0);
-    return sum;
-  }, 0);
-  const resolved = active.filter((s) =>
-    ["approved", "partially_approved"].includes(s.status)
-  ).length;
-  const avgRecovery = resolved > 0 ? totalRecovered / resolved : 0;
-  const isFirstSupplement = active.filter((s) => !!s.paid_at).length === 0;
+  // Fetch policy decodings count
+  const { count: totalDecodings } = await supabase
+    .from("policy_decodings")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", profile.company_id);
+
+  const { count: completedDecodings } = await supabase
+    .from("policy_decodings")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", profile.company_id)
+    .eq("status", "complete");
+
+  const { count: processingDecodings } = await supabase
+    .from("policy_decodings")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", profile.company_id)
+    .in("status", ["pending", "processing"]);
+
+  const total = totalDecodings ?? 0;
+  const completed = completedDecodings ?? 0;
+  const processing = processingDecodings ?? 0;
+
+  const hasDecodings = total > 0;
+  const showChecklist = !hasCompany || !hasDecodings;
 
   return (
     <div className="space-y-6">
@@ -111,26 +59,55 @@ export default async function DashboardPage() {
       {showChecklist && (
         <OnboardingChecklist
           hasCompany={hasCompany}
-          hasSupplements={hasSupplements}
+          hasSupplements={hasDecodings}
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Supplements" value={String(total)} description="All time" />
-        <StatCard title="Pending Review" value={String(pending)} description="Needs action" />
-        <StatCard
-          title="Total Recovered"
-          value={`$${totalRecovered.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-          description="All time"
-        />
-        <StatCard
-          title="Avg Recovery"
-          value={`$${avgRecovery.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-          description="Per supplement"
-        />
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard title="Total Decodes" value={String(total)} description="All time" />
+        <StatCard title="Completed" value={String(completed)} description="Ready to review" />
+        <StatCard title="Processing" value={String(processing)} description="In progress" />
       </div>
 
-      <SupplementsList supplements={rows} isFirstSupplement={isFirstSupplement} />
+      {/* Quick action */}
+      {!hasDecodings ? (
+        <div className="rounded-xl border bg-card p-12 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            <svg className="h-8 w-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold">Decode your first policy</h3>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Upload a homeowner&apos;s insurance policy and get a full breakdown of
+            coverages, deductibles, endorsements, and gaps — in minutes.
+          </p>
+          <Link
+            href="/dashboard/policy-decoder"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Policy Decode
+          </Link>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between rounded-lg border bg-card p-6">
+          <div>
+            <h3 className="font-semibold">Policy Decoder</h3>
+            <p className="text-sm text-muted-foreground">
+              View all your decoded policies or start a new decode.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/policy-decoder"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+          >
+            View Decodings
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

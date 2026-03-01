@@ -2,9 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "4Margin — AI-Powered Insurance Supplements for Roofing Contractors",
+  title: "4Margin — AI-Powered Policy Decoder for Roofing Contractors",
   description:
-    "Recover $3,000–$8,000 more per job. Upload the adjuster's scope, and our AI finds every missing line item in minutes — not hours.",
+    "Upload any homeowner's insurance policy. Our AI decodes coverages, exclusions, deductibles, and hidden gaps — so you know exactly what's covered before you start the job.",
 };
 
 /* ─────── shared tiny components ─────── */
@@ -48,8 +48,8 @@ export default function LandingPage() {
             <a href="#features" className="transition hover:text-white">
               Features
             </a>
-            <a href="#pricing" className="transition hover:text-white">
-              Pricing
+            <a href="#why" className="transition hover:text-white">
+              Why 4Margin
             </a>
           </div>
           <div className="flex items-center gap-3">
@@ -82,19 +82,17 @@ export default function LandingPage() {
           </div>
 
           <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-            Stop leaving{" "}
+            Know exactly what&apos;s covered{" "}
             <span className="bg-gradient-to-r from-[#00BFFF] to-[#39FF9E] bg-clip-text text-transparent">
-              $3,000–$8,000
-            </span>{" "}
-            on every insurance job.
+              before you start the job.
+            </span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-400 sm:text-xl">
-            Upload the adjuster&apos;s Xactimate estimate. Our AI finds every
-            missing line item, calculates correct waste, and generates a
-            professional supplement —{" "}
+            Upload any homeowner&apos;s insurance policy. Our AI decodes
+            coverages, exclusions, deductibles, and hidden gaps —{" "}
             <span className="font-semibold text-white">
-              in 10 minutes instead of 3 hours.
+              in 2 minutes instead of 2 hours.
             </span>
           </p>
 
@@ -103,7 +101,7 @@ export default function LandingPage() {
               href="/signup"
               className="w-full rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#00A8E0] px-8 py-4 text-center text-base font-bold text-white shadow-lg shadow-[#00BFFF]/25 transition hover:shadow-xl hover:shadow-[#00BFFF]/30 sm:w-auto"
             >
-              Start Your First Supplement — Free
+              Decode Your First Policy — Free
             </Link>
             <a
               href="#how-it-works"
@@ -119,9 +117,9 @@ export default function LandingPage() {
           {/* Stats row */}
           <div className="mt-16 grid grid-cols-3 gap-6 border-t border-white/5 pt-10">
             {[
-              { value: "$4,200", label: "Avg. recovery per supplement", color: "text-[#39FF9E]" },
-              { value: "< 10 min", label: "From upload to download", color: "text-[#00BFFF]" },
-              { value: "$149", label: "Per supplement — pay as you go", color: "text-white" },
+              { value: "< 2 min", label: "From upload to full breakdown", color: "text-[#00BFFF]" },
+              { value: "100%", label: "AI-powered, no manual review", color: "text-[#39FF9E]" },
+              { value: "Free", label: "First decode — no credit card", color: "text-white" },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className={`text-2xl font-extrabold sm:text-3xl ${stat.color}`}>
@@ -142,10 +140,10 @@ export default function LandingPage() {
           <div className="text-center">
             <SectionTag>How It Works</SectionTag>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Upload the scope. Get the supplement. Recover the money.
+              Upload the policy. Get the breakdown. Win the job.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-400">
-              Three simple steps. No templates to fill out, no manual line-item hunting, no 3-hour spreadsheets.
+              Three simple steps. No fine-print reading, no guesswork, no surprises mid-job.
             </p>
           </div>
 
@@ -153,8 +151,8 @@ export default function LandingPage() {
             {[
               {
                 step: "01",
-                title: "Upload Adjuster's Estimate",
-                desc: "Drop in the Xactimate PDF and your inspection photos. Our AI reads and parses every line item in seconds.",
+                title: "Upload the Policy PDF",
+                desc: "Drop in the homeowner's insurance policy declaration page. Our AI reads and parses every section in seconds.",
                 color: "#00BFFF",
                 icon: (
                   <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,19 +162,19 @@ export default function LandingPage() {
               },
               {
                 step: "02",
-                title: "AI Finds What's Missing",
-                desc: "Our engine cross-references the scope against Xactimate codes, calculates correct waste, and flags every underpaid or missing item.",
+                title: "AI Decodes the Policy",
+                desc: "Our engine identifies dwelling coverage, deductibles, endorsements, exclusions, and flags hidden gaps that could derail a claim.",
                 color: "#39FF9E",
                 icon: (
                   <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 ),
               },
               {
                 step: "03",
-                title: "Download Your Supplement",
-                desc: "Get a professional PDF supplement with Xactimate codes, justifications, photos, code references, and a weather verification report — ready to send to the carrier.",
+                title: "Review & Share the Report",
+                desc: "Get a clear, professional breakdown you can review with your team or share directly with the homeowner to build trust and close the deal.",
                 color: "#00BFFF",
                 icon: (
                   <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,41 +215,41 @@ export default function LandingPage() {
           <div className="text-center">
             <SectionTag>Features</SectionTag>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Everything you need to supplement smarter.
+              Everything you need to decode any policy.
             </h2>
           </div>
 
           <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {[
               {
-                title: "Xactimate PDF Parsing",
-                desc: "Upload any adjuster estimate. Our AI extracts every line item, code, quantity, and price — across all major carrier formats.",
-                emoji: "📄",
+                title: "Coverage Breakdown",
+                desc: "Instantly see dwelling, other structures, personal property, loss of use, and liability limits — no more digging through page after page.",
+                emoji: "🏠",
               },
               {
-                title: "Missing Item Detection",
-                desc: "Cross-references parsed scope against our database of verified Xactimate codes to flag items the adjuster missed or underpaid.",
+                title: "Deductible Analysis",
+                desc: "Identifies wind/hail deductibles, percentage-based deductibles, and AOP deductibles so you can set accurate expectations with homeowners.",
+                emoji: "💰",
+              },
+              {
+                title: "Gap Detection",
+                desc: "Flags missing or insufficient coverages — like low dwelling limits, ordinance & law exclusions, or mold/water damage restrictions.",
                 emoji: "🔍",
               },
               {
-                title: "Waste Calculation Engine",
-                desc: "Geometry-based waste calculator accounts for valleys, hips, ridges, and dormers. Most adjusters underestimate waste by 5–12%.",
-                emoji: "📐",
-              },
-              {
-                title: "Photo Analysis",
-                desc: "Upload inspection photos. Our AI identifies damage types, visible components, and cross-references them to support supplement items.",
-                emoji: "📷",
-              },
-              {
-                title: "Professional PDF Output",
-                desc: "Download a carrier-ready supplement with Xactimate codes, justifications, embedded photos, and IRC code references.",
+                title: "Endorsement Parsing",
+                desc: "Reads and summarizes every endorsement and rider on the policy. Know exactly what modifications are in play.",
                 emoji: "📋",
               },
               {
-                title: "Weather Verification Report",
-                desc: "Auto-generated weather report pulls historical storm data for the date of loss — wind speeds, hail size, and precipitation — to back up every claim.",
-                emoji: "🌩️",
+                title: "Exclusion Alerts",
+                desc: "Highlights critical exclusions that could leave the homeowner (and you) exposed during a claim — before work begins.",
+                emoji: "⚠️",
+              },
+              {
+                title: "PDF Report Export",
+                desc: "Download a clean, professional report you can share with homeowners, adjusters, or your team to streamline conversations.",
+                emoji: "📄",
               },
             ].map((f) => (
               <div
@@ -269,83 +267,36 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───── ROI / Social Proof ───── */}
-      <section className="border-t border-white/5 bg-[#080D18]">
-        <div className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
-          <div className="rounded-2xl border border-[#39FF9E]/10 bg-gradient-to-br from-[#00BFFF]/5 via-transparent to-[#39FF9E]/5 p-10 sm:p-16">
-            <div className="text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                The math is simple.
-              </h2>
-              <p className="mx-auto mt-4 max-w-lg text-gray-400">
-                One supplement pays for itself 20x over. Stop giving money back to insurance companies.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-8 sm:grid-cols-3">
-              {[
-                {
-                  value: "$149",
-                  label: "Cost per supplement",
-                  sub: "Pay only when you use it",
-                  color: "#00BFFF",
-                },
-                {
-                  value: "$4,200",
-                  label: "Avg. additional recovery",
-                  sub: "Found on every claim analyzed",
-                  color: "#39FF9E",
-                },
-                {
-                  value: "28x",
-                  label: "Return on investment",
-                  sub: "Per supplement generated",
-                  color: "#00BFFF",
-                },
-              ].map((s) => (
-                <div key={s.label} className="text-center">
-                  <div className="text-3xl font-extrabold sm:text-4xl" style={{ color: s.color }}>
-                    {s.value}
-                  </div>
-                  <div className="mt-2 font-semibold text-white">{s.label}</div>
-                  <div className="mt-1 text-sm text-gray-500">{s.sub}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ───── Competitive Edge ───── */}
-      <section className="border-t border-white/5">
+      {/* ───── Why 4Margin ───── */}
+      <section id="why" className="border-t border-white/5 bg-[#080D18]">
         <div className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
           <div className="text-center">
             <SectionTag>Why 4Margin</SectionTag>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Your adjuster uses Xactimate. So do we.
+              Stop guessing. Start knowing.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-400">
-              Except we actually check their work.
+              Most contractors don&apos;t read the policy until there&apos;s a problem. 4Margin puts that knowledge in your hands before the first shingle is removed.
             </p>
           </div>
 
           <div className="mt-14 grid gap-6 sm:grid-cols-2">
             {[
               {
-                title: "Not a template library",
-                desc: "Template tools give you a starting point — you still do the analysis. 4Margin analyzes the actual adjuster scope and tells you exactly what's missing.",
+                title: "Close more jobs with confidence",
+                desc: "Walk the homeowner through their coverage in plain English. When they see you understand their policy better than the adjuster, trust is instant.",
               },
               {
-                title: "Not a $425/supplement service",
-                desc: "Human supplement services charge $300–$500 and take 3–5 days. We deliver in minutes for $149 — and the AI catches things humans miss.",
+                title: "Avoid mid-job surprises",
+                desc: "Uncover percentage deductibles, cosmetic damage exclusions, and coverage caps before you commit crews and materials.",
               },
               {
                 title: "Built by a roofer, not a tech company",
                 desc: "We understand the frustration of underpaid claims because we've lived it. Every feature was designed around how contractors actually work.",
               },
               {
-                title: "Carrier-ready output",
-                desc: "Professional PDF supplements with Xactimate codes, IRC references, photo evidence, and written justifications that adjusters take seriously.",
+                title: "Save hours on every job",
+                desc: "What used to take 1–2 hours of reading fine print now takes 2 minutes. Decode policies at scale and spend your time on the roof, not in the office.",
               },
             ].map((c) => (
               <div
@@ -367,72 +318,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───── Pricing ───── */}
-      <section id="pricing" className="border-t border-white/5 bg-[#080D18]">
-        <div className="mx-auto max-w-3xl px-6 py-24 sm:py-32">
-          <div className="text-center">
-            <SectionTag>Simple Pricing</SectionTag>
-            <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              One supplement. One price.
-            </h2>
-            <p className="mx-auto mt-4 max-w-md text-gray-400">
-              No subscriptions required. Pay per supplement. Average recovery is
-              $4,200 — that&apos;s a 28x return on every $149.
-            </p>
-          </div>
-
-          <div className="mt-12 rounded-2xl border border-[#00BFFF]/20 bg-gradient-to-b from-[#00BFFF]/5 to-transparent p-8 text-center sm:p-12">
-            <div className="text-5xl font-extrabold tracking-tight text-white sm:text-6xl">
-              $149
-            </div>
-            <div className="mt-2 text-gray-400">per supplement</div>
-
-            <ul className="mx-auto mt-8 max-w-sm space-y-3 text-left text-sm">
-              {[
-                "AI-powered scope analysis",
-                "Missing item detection with Xactimate codes",
-                "Geometry-based waste calculation",
-                "Photo analysis & cross-referencing",
-                "Professional PDF supplement download",
-                "Written justifications & IRC code references",
-                "Weather verification report with storm data",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-3">
-                  <svg className="mt-0.5 h-5 w-5 shrink-0 text-[#39FF9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-gray-300">{item}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href="/signup"
-              className="mt-10 inline-block rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#00A8E0] px-10 py-4 text-base font-bold text-white shadow-lg shadow-[#00BFFF]/25 transition hover:shadow-xl hover:shadow-[#00BFFF]/30"
-            >
-              Get Started — First Supplement Free
-            </Link>
-            <p className="mt-4 text-xs text-gray-500">
-              No credit card required to sign up.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ───── Final CTA ───── */}
+      {/* ───── CTA ───── */}
       <section className="border-t border-white/5">
         <div className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-32">
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Ready to recover what you&apos;re owed?
+            Ready to decode your first policy?
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-gray-400">
-            Upload your first adjuster estimate and see what the AI finds. No credit card. No commitment.
+            Upload a homeowner&apos;s policy and see exactly what&apos;s covered — and what&apos;s not. No credit card. No commitment.
           </p>
           <Link
             href="/signup"
             className="mt-8 inline-block rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#39FF9E] px-10 py-4 text-base font-bold text-white shadow-lg shadow-[#00BFFF]/25 transition hover:shadow-xl hover:shadow-[#00BFFF]/30"
           >
-            Start Your First Supplement Free
+            Get Started — First Decode Free
           </Link>
         </div>
       </section>
@@ -448,8 +347,8 @@ export default function LandingPage() {
             <a href="#features" className="transition hover:text-gray-300">
               Features
             </a>
-            <a href="#pricing" className="transition hover:text-gray-300">
-              Pricing
+            <a href="#why" className="transition hover:text-gray-300">
+              Why 4Margin
             </a>
             <Link href="/terms" className="transition hover:text-gray-300">
               Terms
