@@ -5,6 +5,13 @@ export const metadata: Metadata = {
   title: "DecodeCoverage — Free Homeowners Insurance Policy Decoder",
   description:
     "Upload your homeowners insurance policy and get a free AI-powered analysis in 60 seconds. Find coverage gaps and understand what you're really paying for.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     title: "DecodeCoverage — Is your home actually covered?",
     description:
@@ -12,6 +19,21 @@ export const metadata: Metadata = {
     url: "https://decodecoverage.com",
     siteName: "DecodeCoverage",
     type: "website",
+    images: [
+      {
+        url: "https://decodecoverage.com/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "DecodeCoverage — Free Homeowners Insurance Policy Decoder",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DecodeCoverage — Is your home actually covered?",
+    description:
+      "Free AI-powered homeowners insurance policy analysis. Upload your policy, get instant results.",
+    images: ["https://decodecoverage.com/og-image.png"],
   },
 };
 

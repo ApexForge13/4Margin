@@ -24,7 +24,11 @@ function resultsLink(leadId: string): string {
   return `${BASE_URL}/results/${leadId}`;
 }
 
-function wrapper(content: string): string {
+function unsubscribeLink(leadId: string, email: string): string {
+  return `${BASE_URL}/unsubscribe?id=${leadId}&email=${encodeURIComponent(email)}`;
+}
+
+function wrapper(content: string, leadId: string, email: string): string {
   return `
     <div style="font-family: 'DM Sans', sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
       ${content}
@@ -32,7 +36,7 @@ function wrapper(content: string): string {
       <p style="font-size: 12px; color: #8A8A8A;">
         Powered by <a href="https://4margin.com" style="color: #1B6B4A;">4Margin</a>
         <br />
-        <a href="${BASE_URL}/unsubscribe" style="color: #8A8A8A;">Unsubscribe</a>
+        <a href="${unsubscribeLink(leadId, email)}" style="color: #8A8A8A;">Unsubscribe</a>
       </p>
     </div>
   `;
@@ -70,7 +74,7 @@ export function emailSequence1(data: EmailData): EmailTemplate {
       <p style="font-size: 15px; color: #5A5A5A; margin-top: 24px;">
         — The DecodeCoverage Team
       </p>
-    `),
+    `, data.leadId, data.email),
   };
 }
 
@@ -108,7 +112,7 @@ export function emailSequence2(data: EmailData): EmailTemplate {
       <p style="font-size: 15px; color: #5A5A5A; margin-top: 24px;">
         — DC Team
       </p>
-    `),
+    `, data.leadId, data.email),
   };
 }
 
@@ -143,7 +147,7 @@ export function emailSequence3(data: EmailData): EmailTemplate {
       <p style="font-size: 15px; color: #5A5A5A; margin-top: 24px;">
         — DC Team
       </p>
-    `),
+    `, data.leadId, data.email),
   };
 }
 
@@ -174,7 +178,7 @@ export function emailSequence4(data: EmailData): EmailTemplate {
       <p style="font-size: 15px; color: #5A5A5A; margin-top: 24px;">
         — DC Team
       </p>
-    `),
+    `, data.leadId, data.email),
   };
 }
 
