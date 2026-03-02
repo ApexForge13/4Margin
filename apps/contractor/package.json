@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node -e \"try{require('lightningcss')}catch(e){console.log('Installing lightningcss platform binary...');require('child_process').execSync('npm install lightningcss --no-save',{stdio:'inherit'})}\"",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
