@@ -177,7 +177,7 @@ export function HeroUpload() {
         }}
       >
         Your policy is encrypted and analyzed by AI only. No human reads your
-        document. We never sell your data.
+        document.
       </p>
     </div>
   );

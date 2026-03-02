@@ -262,7 +262,7 @@ export function ResultsDisplay({
                 {analysis.deductibles.map((d, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "var(--surface)", borderRadius: 8 }}>
                     <div>
-                      <strong>{d.type}</strong>
+                      <strong>{humanizeDeductibleType(d.type)}</strong>
                       <span style={{ color: "var(--text-muted)", fontSize: 13, marginLeft: 8 }}>
                         applies to {d.appliesTo}
                       </span>
@@ -343,6 +343,11 @@ export function ResultsDisplay({
         {/* ═══════════════════════════════════════════ */}
         <PolicyScoreCard score={policyScore} />
 
+        {/* CTA immediately after health score — most emotional moment */}
+        {context === "organic" && !consentContact && (
+          <ConversionForm leadId={id} score={policyScore.score} />
+        )}
+
         {/* Contractor check banner */}
         {context === "contractor-check" && companyName && (
           <div style={{
@@ -358,42 +363,6 @@ export function ResultsDisplay({
             This analysis was requested by <strong>{companyName}</strong>
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="results-actions">
-          <button className="btn btn-primary" onClick={handleDownload}>
-            <Download size={16} />
-            Download PDF Report
-          </button>
-          {context === "organic" && hasEmail && (
-            <button
-              className="btn btn-primary"
-              onClick={handleEmail}
-              disabled={emailSending || emailSent}
-              style={{
-                background: emailSent ? "var(--accent-light)" : undefined,
-                color: emailSent ? "var(--accent)" : undefined,
-              }}
-            >
-              {emailSent ? (
-                <>
-                  <CheckCircle2 size={16} />
-                  Sent!
-                </>
-              ) : emailSending ? (
-                <>
-                  <span className="spinner" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail size={16} />
-                  Email Me This Report
-                </>
-              )}
-            </button>
-          )}
-        </div>
 
         {/* ═══════════════════════════════════════════ */}
         {/* SECTION 2: YOUR COVERAGE                   */}
@@ -507,11 +476,47 @@ export function ResultsDisplay({
         )}
 
         {/* ═══════════════════════════════════════════ */}
-        {/* CONVERSION FORM (organic only)             */}
+        {/* CONVERSION FORM (bottom — organic only)    */}
         {/* ═══════════════════════════════════════════ */}
         {context === "organic" && !consentContact && (
           <ConversionForm leadId={id} score={policyScore.score} />
         )}
+
+        {/* Download PDF — bottom of page */}
+        <div className="results-actions">
+          <button className="btn btn-primary" onClick={handleDownload}>
+            <Download size={16} />
+            Download PDF Report
+          </button>
+          {context === "organic" && hasEmail && (
+            <button
+              className="btn btn-primary"
+              onClick={handleEmail}
+              disabled={emailSending || emailSent}
+              style={{
+                background: emailSent ? "var(--accent-light)" : undefined,
+                color: emailSent ? "var(--accent)" : undefined,
+              }}
+            >
+              {emailSent ? (
+                <>
+                  <CheckCircle2 size={16} />
+                  Sent!
+                </>
+              ) : emailSending ? (
+                <>
+                  <span className="spinner" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail size={16} />
+                  Email Me This Report
+                </>
+              )}
+            </button>
+          )}
+        </div>
 
         {/* Disclaimer */}
         <div className="disclaimer-box">
@@ -678,6 +683,27 @@ function PolicyScoreCard({ score }: { score: PolicyScore }) {
       )}
     </div>
   );
+}
+
+/** Humanize backend deductible type names (e.g., wind_hail → Wind and Hail) */
+function humanizeDeductibleType(type: string): string {
+  const overrides: Record<string, string> = {
+    wind_hail: "Wind and Hail",
+    all_other_perils: "All Other Perils",
+    all_perils: "All Perils",
+    hurricane: "Hurricane",
+    named_storm: "Named Storm",
+    flood: "Flood",
+    earthquake: "Earthquake",
+    water_damage: "Water Damage",
+    fire: "Fire",
+  };
+  const lower = type.toLowerCase().trim();
+  if (overrides[lower]) return overrides[lower];
+  // Fallback: replace underscores with spaces and title-case
+  return lower
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Build a plain-English risk explanation based on analysis data */

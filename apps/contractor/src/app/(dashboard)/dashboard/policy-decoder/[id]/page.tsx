@@ -7,9 +7,7 @@ import { getPolicyDecoding } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DECODER_STATUS_LABELS } from "@/lib/constants";
-import { PolicyUpload } from "@/components/policy-decoder/policy-upload";
-import { PolicyDecoderResults } from "@/components/policy-decoder/decoder-results";
-import { AutoRefresh } from "@/components/supplements/auto-refresh";
+import { DecoderFlow } from "@/components/policy-decoder/decoder-flow";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -67,24 +65,70 @@ export default async function PolicyDecodingDetailPage({
     }
   }
 
-  const statusInfo = DECODER_STATUS_LABELS[decoding.status] || {
-    label: decoding.status,
-    variant: "secondary" as const,
-  };
+  // ── Determine isFirstDecode ─────────────────────────────────
+  const admin = createAdminClient();
+  const { data: userProfile } = await admin
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
 
+  let isFirstDecode = true;
+  if (userProfile?.company_id) {
+    const { count: priorPaidCount } = await admin
+      .from("policy_decodings")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", userProfile.company_id)
+      .not("paid_at", "is", null);
+    isFirstDecode = (priorPaidCount ?? 0) === 0;
+  }
+
+  // ── Compute state for DecoderFlow ──────────────────────────
   const isPaid = !!decoding.paid_at;
   const hasFile = !!decoding.policy_pdf_url;
   const isComplete = decoding.status === "complete";
   const isProcessing = decoding.status === "processing";
   const isFailed = decoding.status === "failed";
-  // Show upload when: paid + no file yet, OR paid + failed (allow retry)
-  const needsUpload = isPaid && (!hasFile || isFailed) && !isComplete && !isProcessing;
+
+  type Phase =
+    | "upload"
+    | "uploading"
+    | "payment"
+    | "paying"
+    | "processing"
+    | "complete"
+    | "error";
+
+  let initialPhase: Phase;
+  if (isComplete && decoding.policy_analysis) {
+    initialPhase = "complete";
+  } else if (isProcessing) {
+    initialPhase = "processing";
+  } else if (isFailed) {
+    initialPhase = "upload"; // allow retry
+  } else if (hasFile && !isPaid) {
+    initialPhase = "payment"; // has file, needs to pay
+  } else if (isPaid && hasFile) {
+    initialPhase = "processing"; // paid + file = ready to process
+  } else {
+    initialPhase = "upload"; // starting state
+  }
+
+  // Auto-process: paid + has file + still in draft state + returning from Stripe
+  const autoProcess =
+    isPaid &&
+    hasFile &&
+    !isComplete &&
+    !isProcessing &&
+    decoding.status === "draft";
+
+  const statusInfo = DECODER_STATUS_LABELS[decoding.status] || {
+    label: decoding.status,
+    variant: "secondary" as const,
+  };
 
   return (
     <div className="space-y-6">
-      {/* Auto-refresh while processing */}
-      {isProcessing && <AutoRefresh status="processing" />}
-
       {/* Back button + header */}
       <div>
         <Button variant="ghost" size="sm" className="mb-2 -ml-2" asChild>
@@ -137,118 +181,26 @@ export default async function PolicyDecodingDetailPage({
               })}
             </p>
           </div>
-
-          {/* Download PDF button — only when complete */}
-          {isComplete && decoding.policy_analysis && (
-            <Button variant="outline" asChild>
-              <a
-                href={`/api/policy-decoder/${decoding.id}/download`}
-                download
-              >
-                <svg
-                  className="mr-2 h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Download PDF
-              </a>
-            </Button>
-          )}
         </div>
       </div>
-
-      {/* Payment success banner */}
-      {payment === "success" && needsUpload && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          Payment confirmed! Upload your policy document below to get started.
-        </div>
-      )}
 
       {/* Payment cancelled banner */}
       {payment === "cancelled" && (
         <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-700">
-          Payment was cancelled. You can try again from the Policy Decoder list.
+          Payment was cancelled. You can try again below.
         </div>
       )}
 
-      {/* Failed banner — shown above upload so user can retry */}
-      {isFailed && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-start gap-2">
-          <svg
-            className="h-5 w-5 shrink-0 mt-0.5 text-red-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          <div>
-            <p className="font-medium">Decoding failed</p>
-            <p className="text-xs mt-0.5">
-              There was an issue processing your policy. Try uploading again
-              below — sometimes a clearer scan helps.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Upload area — shown when paid + no file, or paid + failed (retry) */}
-      {needsUpload && <PolicyUpload decodingId={decoding.id} />}
-
-      {/* Processing state */}
-      {isProcessing && (
-        <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-8 text-center">
-          <div className="mx-auto flex flex-col items-center gap-3">
-            <svg
-              className="h-8 w-8 animate-spin text-blue-500"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
-            <h3 className="text-lg font-semibold text-blue-900">
-              Decoding your policy...
-            </h3>
-            <p className="text-sm text-blue-700">
-              Our AI is analyzing coverages, deductibles, endorsements, and
-              exclusions. This typically takes 30-60 seconds.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Results — shown when complete */}
-      {isComplete && decoding.policy_analysis && (
-        <PolicyDecoderResults
-          analysis={decoding.policy_analysis}
-          documentMeta={decoding.document_meta}
-        />
-      )}
+      {/* DecoderFlow — handles upload, payment, processing, and results */}
+      <DecoderFlow
+        decodingId={decoding.id}
+        isFirstDecode={isFirstDecode}
+        initialPhase={initialPhase}
+        fileName={decoding.original_filename}
+        analysis={decoding.policy_analysis}
+        documentMeta={decoding.document_meta}
+        autoProcess={autoProcess}
+      />
     </div>
   );
 }

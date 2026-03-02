@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { createDraftDecoding } from "@/app/(dashboard)/dashboard/policy-decoder/actions";
@@ -10,36 +11,24 @@ interface NewDecodeButtonProps {
 }
 
 /**
- * Creates a draft decoding, then redirects to Stripe checkout.
- * Pay first, upload after.
+ * Creates a draft decoding and redirects to the detail page.
+ * Upload-first flow: user uploads PDF, then pays (or gets first free).
  */
 export function NewDecodeButton({ isFirstDecode }: NewDecodeButtonProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
     setLoading(true);
 
     try {
-      // 1. Create a draft row
       const { decodingId, error: createError } = await createDraftDecoding();
       if (createError || !decodingId) {
         throw new Error(createError || "Failed to create decoding");
       }
 
-      // 2. Redirect to Stripe checkout (or free unlock)
-      const res = await fetch("/api/stripe/policy-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ policyDecodingId: decodingId }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create checkout session");
-      }
-
-      window.location.href = data.url;
+      // Go straight to detail page — upload first, pay after
+      router.push(`/dashboard/policy-decoder/${decodingId}`);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Something went wrong"
@@ -71,7 +60,7 @@ export function NewDecodeButton({ isFirstDecode }: NewDecodeButtonProps) {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          Processing...
+          Creating...
         </span>
       ) : (
         <>

@@ -126,7 +126,7 @@ export async function createPolicyDecoding(
   return { decodingId: decoding.id, error: null };
 }
 
-// ── Upload Policy File (after payment) ──────────────────────
+// ── Upload Policy File (upload-first flow — before payment) ──
 
 export async function uploadPolicyFile(
   decodingId: string,
@@ -154,20 +154,16 @@ export async function uploadPolicyFile(
     return { error: "Company not found." };
   }
 
-  // Verify the decoding belongs to this company and is paid
+  // Verify the decoding belongs to this company
   const { data: decoding } = await supabase
     .from("policy_decodings")
-    .select("id, paid_at, status")
+    .select("id, status")
     .eq("id", decodingId)
     .eq("company_id", profile.company_id)
     .single();
 
   if (!decoding) {
     return { error: "Policy decoding not found." };
-  }
-
-  if (!decoding.paid_at) {
-    return { error: "Payment required before uploading." };
   }
 
   if (decoding.status === "complete") {
@@ -185,6 +181,72 @@ export async function uploadPolicyFile(
   const { error: updateError } = await supabase
     .from("policy_decodings")
     .update(updateData)
+    .eq("id", decodingId);
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  revalidatePath(`/dashboard/policy-decoder/${decodingId}`);
+
+  return { error: null };
+}
+
+// ── Unlock Free Decoding (first decode free) ─────────────────
+
+export async function unlockFreeDecoding(
+  decodingId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Session expired." };
+  }
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.company_id) {
+    return { error: "Company not found." };
+  }
+
+  // Verify decoding belongs to company
+  const { data: decoding } = await supabase
+    .from("policy_decodings")
+    .select("id, paid_at")
+    .eq("id", decodingId)
+    .eq("company_id", profile.company_id)
+    .single();
+
+  if (!decoding) {
+    return { error: "Policy decoding not found." };
+  }
+
+  if (decoding.paid_at) {
+    return { error: null }; // Already paid — no-op
+  }
+
+  // Check if this company has any prior paid decodings
+  const { count: priorPaidCount } = await supabase
+    .from("policy_decodings")
+    .select("id", { count: "exact", head: true })
+    .eq("company_id", profile.company_id)
+    .not("paid_at", "is", null);
+
+  if ((priorPaidCount ?? 0) > 0) {
+    return { error: "Free decode already used. Payment required." };
+  }
+
+  // First decode — unlock for free
+  const { error: updateError } = await supabase
+    .from("policy_decodings")
+    .update({ paid_at: new Date().toISOString() })
     .eq("id", decodingId);
 
   if (updateError) {

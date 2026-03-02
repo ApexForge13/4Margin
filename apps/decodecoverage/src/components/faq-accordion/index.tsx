@@ -17,7 +17,7 @@ const FAQS: FaqItem[] = [
   {
     question: "Who sees my policy?",
     answer:
-      "Nobody. Our AI analyzes your document automatically. No human reads your policy. Your data is encrypted and never sold to third parties.",
+      "Nobody. Our AI analyzes your document automatically. No human reads your policy. Your data is encrypted and only shared with your permission.",
   },
   {
     question: "What if I don't have the PDF?",

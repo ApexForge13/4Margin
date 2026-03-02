@@ -9,12 +9,12 @@ interface ConversionFormProps {
 
 function getBodyCopy(score: number): string {
   if (score >= 85) {
-    return "Your coverage looks solid, but there's always room to optimize. If you'd like a second opinion from a licensed advisor who's already seen your analysis, we can connect you. Or download your report and take it to your current agent — either way, you're ahead of 99% of homeowners.";
+    return "Your coverage looks solid, but there's always room to optimize. We can connect you to someone to get the coverage you deserve. Or take this report to your current agent — either way, you're ahead of 99% of homeowners.";
   }
   if (score >= 70) {
-    return "We found some gaps worth addressing. You have two options: download this report and bring it to your current agent (they may not love the conversation, but you'll be glad you had it), or let us connect you with an independent advisor who's already reviewed your analysis and can walk you through your options. No pressure either way.";
+    return "We found some gaps worth addressing. You can bring this report to your current agent (they may not love the conversation, but you'll be glad you had it), or we can connect you to someone to get the coverage you deserve. No pressure either way.";
   }
-  return "Your coverage has some real gaps. We'd strongly recommend talking to someone about this. You can take this report to your current agent, but honestly — they're the ones who sold you this policy. An independent second opinion might serve you better. We can connect you with one who's already seen your analysis. Takes 2 minutes.";
+  return "Your coverage has some real gaps. We'd strongly recommend talking to someone about this. You can take this report to your current agent, but honestly — they're the ones who sold you this policy. An independent second opinion might serve you better. We can connect you to someone to get the coverage you deserve. Takes 2 minutes.";
 }
 
 export function ConversionForm({ leadId, score }: ConversionFormProps) {
@@ -58,10 +58,6 @@ export function ConversionForm({ leadId, score }: ConversionFormProps) {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function handleDownloadOnly() {
-    window.open(`/api/report/${leadId}/download`, "_blank");
   }
 
   if (submitted) {
@@ -262,23 +258,6 @@ export function ConversionForm({ leadId, score }: ConversionFormProps) {
             : "Connect Me With an Advisor \u2014 Free, No Obligation"}
         </button>
 
-        <button
-          type="button"
-          onClick={handleDownloadOnly}
-          style={{
-            width: "100%",
-            marginTop: 10,
-            padding: "14px 24px",
-            background: "transparent",
-            color: "var(--text-secondary)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius)",
-            fontSize: 15,
-            cursor: "pointer",
-          }}
-        >
-          Just Download My Report &mdash; I&apos;ll Handle It Myself
-        </button>
       </form>
 
       <p
@@ -291,9 +270,8 @@ export function ConversionForm({ leadId, score }: ConversionFormProps) {
         }}
       >
         We connect you with licensed, independent advisors — not your current
-        carrier&apos;s sales team. They&apos;ve already reviewed your
-        DecodeCoverage analysis before they contact you, so the conversation
-        starts with solutions, not sales pitches.
+        carrier&apos;s sales team. The conversation starts with solutions,
+        not sales pitches.
       </p>
     </div>
   );
