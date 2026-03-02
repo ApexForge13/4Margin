@@ -27,6 +27,10 @@ dist/
 *.pem
 Thumbs.db
 
+# nested lockfiles (monorepo uses root lockfile only)
+apps/*/package-lock.json
+packages/*/package-lock.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
