@@ -123,9 +123,10 @@ function calculateScore(answers: QuizAnswers): { score: number; grade: string } 
   score = Math.max(0, Math.min(100, score));
 
   let grade: string;
-  if (score >= 85) grade = "A";
-  else if (score >= 70) grade = "B";
-  else if (score >= 55) grade = "C";
+  if (score >= 90) grade = "A";
+  else if (score >= 80) grade = "B";
+  else if (score >= 70) grade = "C";
+  else if (score >= 60) grade = "D";
   else grade = "F";
 
   return { score, grade };
@@ -139,6 +140,8 @@ function getScoreColorClass(grade: string): string {
       return "good";
     case "C":
       return "warning";
+    case "D":
+      return "critical";
     default:
       return "critical";
   }

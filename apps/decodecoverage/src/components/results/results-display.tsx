@@ -223,12 +223,12 @@ export function ResultsDisplay({
 
       <div className="results-page">
         {/* ═══════════════════════════════════════════ */}
-        {/* SECTION 1: OVERVIEW                        */}
+        {/* HEADER                                     */}
         {/* ═══════════════════════════════════════════ */}
 
         <div className="results-header">
           <h1>
-            {firstName ? `${firstName}'s` : "Your"} Policy Overview
+            {firstName ? `${firstName}'s` : "Your"} Coverage Report
           </h1>
           <p>
             {analysis.carrier} &middot; {analysis.policyType || "Homeowners"}
@@ -236,64 +236,22 @@ export function ResultsDisplay({
           </p>
         </div>
 
-        {/* Risk Badge */}
-        <div style={{ marginBottom: 16 }}>
-          <span className={`risk-badge ${riskClass}`}>
-            {riskIcon}
-            {analysis.riskLevel?.toUpperCase()} RISK
-          </span>
-        </div>
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 1: COVERAGE HEALTH SCORE (always)  */}
+        {/* ═══════════════════════════════════════════ */}
+        <PolicyScoreCard score={policyScore} redacted={!unlocked} />
 
-        {/* Overview summary text */}
+        {/* ═══════════════════════════════════════════ */}
+        {/* SECTION 2: POLICY OVERVIEW (always visible)*/}
+        {/* ═══════════════════════════════════════════ */}
+
         <div className="result-card">
           <h2>
             <FileText size={22} />
-            Overview
+            Policy Overview
           </h2>
 
-          {analysis.summaryForContractor && (
-            <div className="result-item">
-              <p style={{ fontSize: 15, lineHeight: 1.7 }}>
-                {analysis.summaryForContractor}
-              </p>
-            </div>
-          )}
-
-          {riskExplanation && (
-            <div className="result-item">
-              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <AlertTriangle size={16} style={{ color: analysis.riskLevel === "low" ? "var(--accent)" : "#DC2626" }} />
-                Why this risk level?
-              </h3>
-              <p style={{ lineHeight: 1.7 }}>{riskExplanation}</p>
-              {highSeverityLandmines.length > 0 && (
-                <div style={{ marginTop: 12 }}>
-                  <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 8 }}>
-                    Key concerns:
-                  </p>
-                  {highSeverityLandmines.map((l, i) => {
-                    const template = getPlainEnglishFinding(l, findingContext);
-                    return (
-                      <div key={i} style={{ padding: "8px 12px", background: "rgba(220, 38, 38, 0.05)", borderRadius: 8, marginBottom: 6, borderLeft: "3px solid #DC2626" }}>
-                        <strong>{template?.title || l.name}</strong>
-                        <span className={`severity-badge severity-${l.severity}`} style={{ marginLeft: 8 }}>{l.severity}</span>
-                        <p style={{ margin: "4px 0 0", fontSize: 13 }}>
-                          {template?.explanation || l.impact}
-                        </p>
-                        {(template?.actionRec || l.actionItem) && (
-                          <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
-                            What you can do: {template?.actionRec || l.actionItem}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Deductibles */}
+          {/* Deductibles — always visible */}
           {analysis.deductibles?.length > 0 && (
             <div className="result-item">
               <h3>
@@ -323,34 +281,7 @@ export function ResultsDisplay({
             </div>
           )}
 
-          {/* Depreciation */}
-          <div className="result-item">
-            <h3>
-              <Info size={16} />
-              Depreciation Model
-            </h3>
-            <div style={{ padding: "12px 16px", background: "var(--surface)", borderRadius: 8, marginTop: 8 }}>
-              <div style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: analysis.depreciationMethod === "RCV" ? "var(--accent)" : analysis.depreciationMethod === "ACV" ? "#DC2626" : undefined,
-              }}>
-                {depLabel}
-              </div>
-              {depExplanation && (
-                <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.6, color: "var(--text-muted)" }}>
-                  {depExplanation}
-                </p>
-              )}
-              {analysis.depreciationNotes && (
-                <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.6 }}>
-                  {analysis.depreciationNotes}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Policy Details */}
+          {/* Policy Details — always visible (generic info) */}
           <div className="result-item">
             <h3>
               <ScrollText size={16} />
@@ -358,9 +289,7 @@ export function ResultsDisplay({
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
               {[
-                ["Policy #", analysis.policyNumber],
-                ["Named Insured", analysis.namedInsured],
-                ["Property", analysis.propertyAddress],
+                ["Carrier", analysis.carrier],
                 ["Policy Type", analysis.policyType],
                 ["Effective", analysis.effectiveDate],
                 ["Expiration", analysis.expirationDate],
@@ -381,24 +310,30 @@ export function ResultsDisplay({
         </div>
 
         {/* ═══════════════════════════════════════════ */}
-        {/* POLICY HEALTH SCORE                        */}
-        {/* ═══════════════════════════════════════════ */}
-        <PolicyScoreCard score={policyScore} />
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* GATE: Teaser blur + unlock form            */}
+        {/* LOCKED SECTIONS: Unlock CTA                */}
         {/* ═══════════════════════════════════════════ */}
         {!unlocked && (
           <>
-            {/* Blurred preview of remaining findings */}
+            {/* Blurred teaser of detailed findings */}
             <div className="results-teaser-blur">
+              {/* Risk explanation teaser */}
+              <div className="result-card">
+                <h2>
+                  <AlertTriangle size={22} />
+                  Risk Analysis
+                </h2>
+                <div className="result-item">
+                  <p>Your policy has been analyzed for coverage gaps, hidden deductibles, and potential claim issues...</p>
+                </div>
+              </div>
+
               {analysis.coverages?.length > 0 && (
                 <div className="result-card">
                   <h2>
                     <Shield size={22} style={{ color: "var(--accent)" }} />
-                    Your Coverage
+                    Your Coverage ({analysis.coverages.length} items)
                   </h2>
-                  {analysis.coverages.slice(0, 3).map((c, i) => (
+                  {analysis.coverages.slice(0, 2).map((c, i) => (
                     <div className="result-item" key={i}>
                       <h3>{c.label}</h3>
                       <p>{c.description}</p>
@@ -406,14 +341,26 @@ export function ResultsDisplay({
                   ))}
                 </div>
               )}
+
+              {analysis.exclusions?.length > 0 && (
+                <div className="result-card">
+                  <h2>
+                    <Ban size={22} style={{ color: "#DC2626" }} />
+                    What&apos;s NOT Covered ({analysis.exclusions.length} items)
+                  </h2>
+                  <div className="result-item">
+                    <p>We found {analysis.exclusions.length} exclusion{analysis.exclusions.length !== 1 ? "s" : ""} in your policy...</p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Gate Card */}
+            {/* Gate Card — Unlock CTA */}
             <div className="gate-card">
               <Lock size={28} style={{ color: "var(--accent)", marginBottom: 12 }} />
-              <h2>Unlock Your Complete Report</h2>
+              <h2>Unlock My Free Report</h2>
               <p className="gate-sub">
-                See all {totalFindings} findings, coverage gaps, and recommendations
+                Get a professional breakdown of your coverage — see all {totalFindings} findings, coverage gaps, and recommendations.
               </p>
 
               <form onSubmit={handleGateSubmit}>
@@ -462,7 +409,7 @@ export function ResultsDisplay({
                     style={{ width: 18, height: 18, marginTop: 2, accentColor: "var(--accent)", flexShrink: 0 }}
                   />
                   <label htmlFor="gate-consent" style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, cursor: "pointer" }}>
-                    I agree to be contacted by a licensed agent if I choose to get a quote.
+                    I agree to receive a professional breakdown of my coverage and to be contacted by a licensed agent.
                   </label>
                 </div>
 
@@ -473,7 +420,7 @@ export function ResultsDisplay({
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={gateSubmitting}
+                  disabled={gateSubmitting || !gateConsent}
                   style={{ marginTop: 0 }}
                 >
                   {gateSubmitting ? (
@@ -482,7 +429,7 @@ export function ResultsDisplay({
                       Unlocking...
                     </>
                   ) : (
-                    "Unlock Full Report — Free"
+                    "Unlock My Free Report"
                   )}
                 </button>
               </form>
@@ -499,7 +446,121 @@ export function ResultsDisplay({
         {/* ═══════════════════════════════════════════ */}
         {unlocked && (
           <>
-            {/* CTA immediately after health score — most emotional moment */}
+            {/* Risk Badge */}
+            <div style={{ marginBottom: 16 }}>
+              <span className={`risk-badge ${riskClass}`}>
+                {riskIcon}
+                {analysis.riskLevel?.toUpperCase()} RISK
+              </span>
+            </div>
+
+            {/* Full Overview with risk explanation */}
+            <div className="result-card">
+              <h2>
+                <FileText size={22} />
+                Detailed Analysis
+              </h2>
+
+              {analysis.summaryForContractor && (
+                <div className="result-item">
+                  <p style={{ fontSize: 15, lineHeight: 1.7 }}>
+                    {analysis.summaryForContractor}
+                  </p>
+                </div>
+              )}
+
+              {riskExplanation && (
+                <div className="result-item">
+                  <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <AlertTriangle size={16} style={{ color: analysis.riskLevel === "low" ? "var(--accent)" : "#DC2626" }} />
+                    Why this risk level?
+                  </h3>
+                  <p style={{ lineHeight: 1.7 }}>{riskExplanation}</p>
+                  {highSeverityLandmines.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <p style={{ fontWeight: 600, fontSize: 13, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.3, marginBottom: 8 }}>
+                        Key concerns:
+                      </p>
+                      {highSeverityLandmines.map((l, i) => {
+                        const template = getPlainEnglishFinding(l, findingContext);
+                        return (
+                          <div key={i} style={{ padding: "8px 12px", background: "rgba(220, 38, 38, 0.05)", borderRadius: 8, marginBottom: 6, borderLeft: "3px solid #DC2626" }}>
+                            <strong>{template?.title || l.name}</strong>
+                            <span className={`severity-badge severity-${l.severity}`} style={{ marginLeft: 8 }}>{l.severity}</span>
+                            <p style={{ margin: "4px 0 0", fontSize: 13 }}>
+                              {template?.explanation || l.impact}
+                            </p>
+                            {(template?.actionRec || l.actionItem) && (
+                              <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
+                                What you can do: {template?.actionRec || l.actionItem}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Depreciation */}
+              <div className="result-item">
+                <h3>
+                  <Info size={16} />
+                  Depreciation Model
+                </h3>
+                <div style={{ padding: "12px 16px", background: "var(--surface)", borderRadius: 8, marginTop: 8 }}>
+                  <div style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: analysis.depreciationMethod === "RCV" ? "var(--accent)" : analysis.depreciationMethod === "ACV" ? "#DC2626" : undefined,
+                  }}>
+                    {depLabel}
+                  </div>
+                  {depExplanation && (
+                    <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.6, color: "var(--text-muted)" }}>
+                      {depExplanation}
+                    </p>
+                  )}
+                  {analysis.depreciationNotes && (
+                    <p style={{ margin: "6px 0 0", fontSize: 14, lineHeight: 1.6 }}>
+                      {analysis.depreciationNotes}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Full Policy Details */}
+              <div className="result-item">
+                <h3>
+                  <ScrollText size={16} />
+                  Full Policy Details
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                  {[
+                    ["Policy #", analysis.policyNumber],
+                    ["Named Insured", analysis.namedInsured],
+                    ["Property", analysis.propertyAddress],
+                    ["Policy Type", analysis.policyType],
+                    ["Effective", analysis.effectiveDate],
+                    ["Expiration", analysis.expirationDate],
+                  ]
+                    .filter(([, v]) => v)
+                    .map(([label, value], i) => (
+                      <div key={i} style={{ padding: "8px 12px", background: "var(--surface)", borderRadius: 8 }}>
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.3 }}>
+                          {label}
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            {/* CTA immediately after detailed analysis */}
             {context === "organic" && !consentContact && (
               <ConversionForm leadId={id} score={policyScore.score} />
             )}
@@ -521,7 +582,7 @@ export function ResultsDisplay({
             )}
 
             {/* ═══════════════════════════════════════════ */}
-            {/* SECTION 2: YOUR COVERAGE                   */}
+            {/* SECTION: YOUR COVERAGE                     */}
             {/* ═══════════════════════════════════════════ */}
 
             {analysis.coverages?.length > 0 && (
@@ -547,7 +608,7 @@ export function ResultsDisplay({
             )}
 
             {/* ═══════════════════════════════════════════ */}
-            {/* SECTION 3: COVERAGE STRENGTHS              */}
+            {/* SECTION: COVERAGE STRENGTHS                */}
             {/* ═══════════════════════════════════════════ */}
 
             {analysis.favorableProvisions?.length > 0 && (
@@ -569,7 +630,7 @@ export function ResultsDisplay({
             )}
 
             {/* ═══════════════════════════════════════════ */}
-            {/* SECTION 4: POLICY ADD-ONS                  */}
+            {/* SECTION: POLICY ADD-ONS                    */}
             {/* ═══════════════════════════════════════════ */}
 
             {analysis.endorsements?.length > 0 && (
@@ -603,7 +664,7 @@ export function ResultsDisplay({
             )}
 
             {/* ═══════════════════════════════════════════ */}
-            {/* SECTION 5: WHAT'S NOT COVERED              */}
+            {/* SECTION: WHAT'S NOT COVERED                */}
             {/* ═══════════════════════════════════════════ */}
 
             {analysis.exclusions?.length > 0 && (
@@ -716,6 +777,7 @@ function gradeColor(grade: string): string {
     case "A": return "var(--accent)";
     case "B": return "#D97706";
     case "C": return "#EA580C";
+    case "D": return "#DC2626";
     case "F": return "#DC2626";
     default: return "var(--text-primary)";
   }
@@ -726,12 +788,13 @@ function gradeBg(grade: string): string {
     case "A": return "var(--accent-light)";
     case "B": return "#FEF9C3";
     case "C": return "#FFF7ED";
+    case "D": return "#FEE2E2";
     case "F": return "#FEE2E2";
     default: return "var(--bg)";
   }
 }
 
-function PolicyScoreCard({ score }: { score: PolicyScore }) {
+function PolicyScoreCard({ score, redacted = false }: { score: PolicyScore; redacted?: boolean }) {
   const topFactors = score.factors.slice(0, 5);
 
   return (
@@ -755,11 +818,11 @@ function PolicyScoreCard({ score }: { score: PolicyScore }) {
 
       <h2 style={{ position: "relative" }}>
         <Shield size={22} style={{ color: gradeColor(score.grade) }} />
-        Your Coverage Health Score: {score.score}%
+        Coverage Health Score
       </h2>
 
       {/* Grade + score row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16, position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: redacted ? 0 : 16, position: "relative" }}>
         <div style={{
           width: 72,
           height: 72,
@@ -777,67 +840,76 @@ function PolicyScoreCard({ score }: { score: PolicyScore }) {
           {score.grade}
         </div>
         <div>
-          <div style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 600, marginBottom: 2 }}>
-            Score: {score.score}/100
+          <div style={{ fontSize: 32, fontWeight: 800, fontFamily: "'Fraunces', serif", color: gradeColor(score.grade) }}>
+            {score.score}
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3 }}>
-            {score.headline}
+          <div style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 600 }}>
+            out of 100
           </div>
         </div>
       </div>
 
-      {/* Recommendation */}
-      <p style={{ fontSize: 15, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 20 }}>
-        {score.recommendation}
-      </p>
-
-      {/* Score factors */}
-      {topFactors.length > 0 && (
-        <div style={{ display: "grid", gap: 8 }}>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "var(--text-muted)",
-            textTransform: "uppercase",
-            letterSpacing: 0.5,
-            marginBottom: 4,
-          }}>
-            Key Factors
+      {/* Full details only when not redacted */}
+      {!redacted && (
+        <>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.3, marginBottom: 8, marginTop: 16 }}>
+            {score.headline}
           </div>
-          {topFactors.map((f, i) => (
-            <div key={i} style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 10,
-              padding: "10px 14px",
-              background: f.severity === "negative" ? "rgba(220, 38, 38, 0.04)" : "rgba(27, 107, 74, 0.04)",
-              borderRadius: 8,
-              borderLeft: `3px solid ${f.severity === "negative" ? "#DC2626" : "var(--accent)"}`,
-            }}>
-              {f.severity === "negative" ? (
-                <TrendingDown size={14} style={{ color: "#DC2626", marginTop: 2, flexShrink: 0 }} />
-              ) : (
-                <TrendingUp size={14} style={{ color: "var(--accent)", marginTop: 2, flexShrink: 0 }} />
-              )}
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>
-                  {f.label}
-                  <span style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: f.severity === "negative" ? "#DC2626" : "var(--accent)",
-                    marginLeft: 8,
-                  }}>
-                    {f.impact > 0 ? "+" : ""}{f.impact}
-                  </span>
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, marginTop: 2 }}>
-                  {f.explanation}
-                </div>
+
+          {/* Recommendation */}
+          <p style={{ fontSize: 15, lineHeight: 1.7, color: "var(--text-secondary)", marginBottom: 20 }}>
+            {score.recommendation}
+          </p>
+
+          {/* Score factors */}
+          {topFactors.length > 0 && (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 4,
+              }}>
+                Key Factors
               </div>
+              {topFactors.map((f, i) => (
+                <div key={i} style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  padding: "10px 14px",
+                  background: f.severity === "negative" ? "rgba(220, 38, 38, 0.04)" : "rgba(27, 107, 74, 0.04)",
+                  borderRadius: 8,
+                  borderLeft: `3px solid ${f.severity === "negative" ? "#DC2626" : "var(--accent)"}`,
+                }}>
+                  {f.severity === "negative" ? (
+                    <TrendingDown size={14} style={{ color: "#DC2626", marginTop: 2, flexShrink: 0 }} />
+                  ) : (
+                    <TrendingUp size={14} style={{ color: "var(--accent)", marginTop: 2, flexShrink: 0 }} />
+                  )}
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>
+                      {f.label}
+                      <span style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: f.severity === "negative" ? "#DC2626" : "var(--accent)",
+                        marginLeft: 8,
+                      }}>
+                        {f.impact > 0 ? "+" : ""}{f.impact}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, marginTop: 2 }}>
+                      {f.explanation}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

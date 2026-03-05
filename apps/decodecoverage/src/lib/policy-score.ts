@@ -2,7 +2,7 @@
  * Policy Health Score — calculates a 0-100 score + letter grade
  * from existing PolicyAnalysis data. No API calls needed.
  *
- * Grades: A (90+), B (70-89), C (50-69), F (<50)
+ * Grades: A (90+), B (80-89), C (70-79), D (60-69), F (<60)
  * Scoring is intentionally aggressive (base 60, high penalties)
  * to maximize lead conversion on the conversion form.
  */
@@ -16,7 +16,7 @@ export interface ScoreFactor {
 
 export interface PolicyScore {
   score: number;
-  grade: "A" | "B" | "C" | "F";
+  grade: "A" | "B" | "C" | "D" | "F";
   factors: ScoreFactor[];
   shouldSwitch: boolean;
   headline: string;
@@ -194,7 +194,7 @@ export function calculatePolicyScore(
   score = Math.max(0, Math.min(100, score));
 
   const grade = scoreToGrade(score);
-  const shouldSwitch = grade === "C" || grade === "F";
+  const shouldSwitch = grade === "D" || grade === "F";
   const negatives = factors.filter((f) => f.severity === "negative");
   const { headline, recommendation } = buildMessaging(grade, negatives.length, score);
 
@@ -206,8 +206,9 @@ export function calculatePolicyScore(
 
 function scoreToGrade(score: number): PolicyScore["grade"] {
   if (score >= 90) return "A";
-  if (score >= 70) return "B";
-  if (score >= 50) return "C";
+  if (score >= 80) return "B";
+  if (score >= 70) return "C";
+  if (score >= 60) return "D";
   return "F";
 }
 
@@ -234,6 +235,12 @@ function buildMessaging(
         headline: "Your policy has meaningful coverage gaps",
         recommendation:
           `Your policy has meaningful coverage gaps. We found ${gapCount} issue${gapCount !== 1 ? "s" : ""} that could leave you exposed to significant out-of-pocket costs in a claim. We recommend reviewing these findings with an agent before your next renewal — or sooner if storm season is approaching.`,
+      };
+    case "D":
+      return {
+        headline: "Your policy has serious coverage gaps",
+        recommendation:
+          `Your policy has serious coverage gaps. We found ${gapCount} issue${gapCount !== 1 ? "s" : ""} that could leave you significantly underprotected. We strongly recommend talking to an agent about adjusting your coverage before your next renewal.`,
       };
     case "F":
       return {

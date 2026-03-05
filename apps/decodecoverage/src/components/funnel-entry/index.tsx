@@ -355,12 +355,7 @@ export function FunnelEntry({ onSelectQuiz }: FunnelEntryProps) {
                   type="file"
                   accept=".pdf,image/*"
                   onChange={handleFileChange}
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    opacity: 0,
-                    cursor: "pointer",
-                  }}
+                  style={{ display: "none" }}
                 />
                 <div className="upload-icon">
                   {file ? (
