@@ -10,9 +10,55 @@ import {
   Shield,
 } from "lucide-react";
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      name: "DecodeCoverage",
+      url: "https://decodecoverage.com",
+      description:
+        "Free AI-powered homeowners insurance policy analysis. Upload your policy, get instant results.",
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "Is this really free?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Yes. No credit card, no hidden fees. We make money when homeowners choose to get connected with better coverage options. If you just want the free report, that's completely fine.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "Who sees my policy?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Nobody. Our AI analyzes your document automatically. No human reads your policy. Your data is encrypted and only shared with your permission.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "What if I don't have the PDF?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Take a photo of your declarations page (the summary page your insurer sends at renewal). That's usually enough to identify the most critical gaps.",
+          },
+        },
+      ],
+    },
+  ],
+};
+
 export default function LandingPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* NAV */}
       <nav>
         <div className="nav-inner">

@@ -7,14 +7,6 @@
     {
       "path": "/api/cron/retrigger",
       "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/cron/weather-alerts",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/anniversary",
-      "schedule": "0 10 1 * *"
     }
   ]
 }

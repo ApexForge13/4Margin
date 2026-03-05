@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /results/
+Disallow: /check/
+Disallow: /unsubscribe
+
+Sitemap: https://decodecoverage.com/sitemap.xml
