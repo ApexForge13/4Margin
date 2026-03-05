@@ -1,10 +1,10 @@
 import { HeroUpload } from "@/components/hero-upload";
 import { FaqAccordion } from "@/components/faq-accordion";
-import { PoliciesCounter } from "@/components/policies-counter";
 import {
   Upload,
   Search,
   BarChart3,
+  ArrowRight,
   Shield,
 } from "lucide-react";
 
@@ -18,27 +18,22 @@ export default function LandingPage() {
             Decode<span>Coverage</span>
           </a>
           <a href="#upload" className="nav-cta">
-            Get My Free Report
+            Upload My Policy
           </a>
         </div>
       </nav>
 
       {/* HERO */}
       <section className="hero" id="upload">
-        <div className="hero-badge fade-up">
-          <Shield size={14} />
-          <PoliciesCounter />
-        </div>
-
-        <h1 className="fade-up delay-1">
+        <h1 className="fade-up">
           Your Insurance Policy Is<br />
           Hiding Something.<br />
           <em>We&apos;ll Show You What.</em>
         </h1>
-        <p className="fade-up delay-2">
-          Get a free Coverage Health Score in 60 seconds. Our AI decodes every
-          page and shows you exactly what you&apos;re covered for, what
-          you&apos;re not, and what it could cost you.
+        <p className="fade-up delay-1">
+          Upload your homeowners policy. Our AI decodes every page in 60 seconds
+          and shows you exactly what you&apos;re covered for, what you&apos;re
+          not, and what it could cost you. Free. No calls unless you want them.
         </p>
 
         <div className="trust-bar-inline fade-up delay-2">
@@ -50,22 +45,6 @@ export default function LandingPage() {
 
         <div className="fade-up delay-3">
           <HeroUpload />
-        </div>
-
-        {/* Social proof stats */}
-        <div className="hero-stats fade-up delay-4">
-          <div className="hero-stat">
-            <div className="num">73%</div>
-            <div className="label">Have coverage gaps</div>
-          </div>
-          <div className="hero-stat">
-            <div className="num">$487</div>
-            <div className="label">Avg. savings found</div>
-          </div>
-          <div className="hero-stat">
-            <div className="num">60s</div>
-            <div className="label">To get your report</div>
-          </div>
         </div>
       </section>
 
@@ -85,17 +64,17 @@ export default function LandingPage() {
       {/* HOW IT WORKS */}
       <section className="how-it-works">
         <div className="section-label">How It Works</div>
-        <h2>Three steps to clarity</h2>
+        <h2>Four steps to clarity</h2>
         <div className="steps">
           <div className="step">
             <div className="step-icon">
               <Upload size={20} />
             </div>
             <div className="step-num">01</div>
-            <h3>Enter your email</h3>
+            <h3>Upload your policy</h3>
             <p>
-              Tell us where to send your report. Then upload your policy PDF
-              or answer 5 quick questions — your choice.
+              Drop in your PDF or snap a photo of your declarations page. Our AI
+              reads every page instantly. Takes about 60 seconds.
             </p>
           </div>
           <div className="step">
@@ -114,10 +93,23 @@ export default function LandingPage() {
               <Search size={20} />
             </div>
             <div className="step-num">03</div>
-            <h3>Unlock your full report</h3>
+            <h3>See exactly where you stand</h3>
             <p>
-              See every finding in plain English. Download your report, or
-              get connected with a licensed advisor who can help fix the gaps.
+              Get specific findings in plain English: what you&apos;re covered
+              for, what you&apos;re not, and exactly what it would cost you if
+              something happened.
+            </p>
+          </div>
+          <div className="step">
+            <div className="step-icon">
+              <ArrowRight size={20} />
+            </div>
+            <div className="step-num">04</div>
+            <h3>Take action (or don&apos;t)</h3>
+            <p>
+              Download your free report and take it to your current agent, or let
+              us connect you with someone who can help. Your choice. Zero
+              pressure.
             </p>
           </div>
         </div>
@@ -140,7 +132,7 @@ export default function LandingPage() {
           yourself thousands.
         </p>
         <a href="#upload" className="bottom-cta-btn">
-          Get My Free Report
+          Upload My Policy Free
           <svg
             width={18}
             height={18}

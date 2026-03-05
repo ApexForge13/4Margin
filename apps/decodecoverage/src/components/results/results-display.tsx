@@ -21,7 +21,6 @@ import { calculatePolicyScore, type PolicyScore } from "@/lib/policy-score";
 import { getPlainEnglishFinding } from "@/lib/finding-templates";
 import { ConversionForm } from "@/components/conversion-form";
 import { ExitIntent } from "@/components/exit-intent";
-import { ReportGate } from "@/components/results/report-gate";
 
 interface PolicyAnalysis {
   policyType: string;
@@ -106,7 +105,6 @@ export function ResultsDisplay({
 }: ResultsDisplayProps) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [reportUnlocked, setReportUnlocked] = useState(!!firstName || consentContact);
 
   const policyScore = useMemo(() => calculatePolicyScore(analysis), [analysis]);
 
@@ -345,24 +343,8 @@ export function ResultsDisplay({
         {/* ═══════════════════════════════════════════ */}
         <PolicyScoreCard score={policyScore} />
 
-        {/* ═══════════════════════════════════════════ */}
-        {/* REPORT GATE — unlock full report           */}
-        {/* ═══════════════════════════════════════════ */}
-        {context === "organic" && !reportUnlocked && (
-          <ReportGate
-            leadId={id}
-            score={policyScore.score}
-            grade={policyScore.grade}
-            findingCount={
-              (analysis.landmines?.length || 0) +
-              (analysis.exclusions?.length || 0)
-            }
-            onUnlock={() => setReportUnlocked(true)}
-          />
-        )}
-
         {/* CTA immediately after health score — most emotional moment */}
-        {context === "organic" && reportUnlocked && !consentContact && (
+        {context === "organic" && !consentContact && (
           <ConversionForm leadId={id} score={policyScore.score} />
         )}
 
@@ -381,11 +363,6 @@ export function ResultsDisplay({
             This analysis was requested by <strong>{companyName}</strong>
           </div>
         )}
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* FULL REPORT (gated for organic anon users) */}
-        {/* ═══════════════════════════════════════════ */}
-        {(reportUnlocked || context !== "organic") && (<>
 
         {/* ═══════════════════════════════════════════ */}
         {/* SECTION 2: YOUR COVERAGE                   */}
@@ -504,8 +481,6 @@ export function ResultsDisplay({
         {context === "organic" && !consentContact && (
           <ConversionForm leadId={id} score={policyScore.score} />
         )}
-
-        </>)}
 
         {/* Download PDF — bottom of page */}
         <div className="results-actions">
