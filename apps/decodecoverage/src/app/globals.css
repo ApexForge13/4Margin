@@ -1613,3 +1613,108 @@ footer {
 @media (max-width: 768px) {
   .path-chooser { grid-template-columns: 1fr; }
 }
+
+/* === QUIZ FLOW === */
+.quiz-flow {
+  max-width: 560px;
+  margin: 0 auto;
+}
+.quiz-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+.quiz-progress-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.quiz-progress-bar.filled {
+  background: var(--accent);
+}
+.quiz-question {
+  animation: fadeUp 0.3s ease forwards;
+}
+.quiz-question h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+.quiz-options {
+  display: grid;
+  gap: 10px;
+}
+.quiz-option {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  text-align: left;
+  color: var(--text-primary);
+}
+.quiz-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+.quiz-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  font-weight: 600;
+}
+.quiz-back {
+  display: block;
+  margin: 16px auto 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+}
+.quiz-back:hover { color: var(--text-primary); }
+.quiz-result {
+  text-align: center;
+  animation: fadeUp 0.4s ease forwards;
+}
+.quiz-score-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  border: 6px solid;
+}
+.quiz-score-circle .score-num {
+  font-family: 'Fraunces', serif;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+}
+.quiz-score-circle .score-grade {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.quiz-cta-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 32px;
+}
+@media (max-width: 768px) {
+  .quiz-cta-cards { grid-template-columns: 1fr; }
+  .quiz-question h3 { font-size: 20px; }
+}

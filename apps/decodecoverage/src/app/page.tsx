@@ -1,5 +1,6 @@
 import { PoliciesCounter } from "@/components/policies-counter";
 import { SampleScore } from "@/components/sample-score";
+import { HeroFunnel } from "@/components/hero-funnel";
 import { FaqAccordion } from "@/components/faq-accordion";
 import {
   Upload,
@@ -38,7 +39,9 @@ export default function LandingPage() {
           not, and what it could cost you. Free. No calls unless you want them.
         </p>
 
-        <div id="funnel-entry" className="fade-up delay-3"></div>
+        <div className="fade-up delay-3">
+          <HeroFunnel />
+        </div>
 
         <SampleScore />
       </section>
