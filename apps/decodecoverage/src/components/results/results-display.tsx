@@ -106,7 +106,7 @@ export function ResultsDisplay({
 }: ResultsDisplayProps) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [unlocked, setUnlocked] = useState(!!firstName);
+  const [unlocked, setUnlocked] = useState(consentContact);
   const [gateFirstName, setGateFirstName] = useState("");
   const [gatePhone, setGatePhone] = useState("");
   const [gateZip, setGateZip] = useState("");
