@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const policyFile = formData.get("policy") as File | null;
+    const emailField = formData.get("email") as string;
     const utmSource = formData.get("utmSource") as string;
     const utmMedium = formData.get("utmMedium") as string;
     const utmCampaign = formData.get("utmCampaign") as string;
@@ -22,10 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Create anonymous lead (no contact info)
+    // 1. Create lead (with email if provided from funnel)
     const { data: lead, error: insertErr } = await supabase
       .from("consumer_leads")
       .insert({
+        email: emailField || null,
         status: "processing",
         utm_source: utmSource || null,
         utm_medium: utmMedium || null,
