@@ -1,4 +1,5 @@
-import { HeroUpload } from "@/components/hero-upload";
+import { PoliciesCounter } from "@/components/policies-counter";
+import { SampleScore } from "@/components/sample-score";
 import { FaqAccordion } from "@/components/faq-accordion";
 import {
   Upload,
@@ -17,14 +18,15 @@ export default function LandingPage() {
           <a href="/" className="logo">
             Decode<span>Coverage</span>
           </a>
-          <a href="#upload" className="nav-cta">
-            Upload My Policy
+          <a href="#start" className="nav-cta">
+            Get My Free Score
           </a>
         </div>
       </nav>
 
       {/* HERO */}
-      <section className="hero" id="upload">
+      <section className="hero" id="start">
+        <PoliciesCounter />
         <h1 className="fade-up">
           Your Insurance Policy Is<br />
           Hiding Something.<br />
@@ -36,16 +38,9 @@ export default function LandingPage() {
           not, and what it could cost you. Free. No calls unless you want them.
         </p>
 
-        <div className="trust-bar-inline fade-up delay-2">
-          <span>&#10003; No phone number required</span>
-          <span>&#10003; No agent calls</span>
-          <span>&#10003; 100% free</span>
-          <span>&#10003; Results in 60 seconds</span>
-        </div>
+        <div id="funnel-entry" className="fade-up delay-3"></div>
 
-        <div className="fade-up delay-3">
-          <HeroUpload />
-        </div>
+        <SampleScore />
       </section>
 
       {/* WHY 73% HAVE GAPS */}
@@ -131,8 +126,8 @@ export default function LandingPage() {
           better tonight knowing you&apos;re covered. If we do, you just saved
           yourself thousands.
         </p>
-        <a href="#upload" className="bottom-cta-btn">
-          Upload My Policy Free
+        <a href="#start" className="bottom-cta-btn">
+          Get My Free Score
           <svg
             width={18}
             height={18}

@@ -16,6 +16,7 @@ import {
   Info,
   TrendingDown,
   TrendingUp,
+  Lock,
 } from "lucide-react";
 import { calculatePolicyScore, type PolicyScore } from "@/lib/policy-score";
 import { getPlainEnglishFinding } from "@/lib/finding-templates";
@@ -105,8 +106,49 @@ export function ResultsDisplay({
 }: ResultsDisplayProps) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [unlocked, setUnlocked] = useState(!!firstName);
+  const [gateFirstName, setGateFirstName] = useState("");
+  const [gatePhone, setGatePhone] = useState("");
+  const [gateZip, setGateZip] = useState("");
+  const [gateConsent, setGateConsent] = useState(true);
+  const [gateSubmitting, setGateSubmitting] = useState(false);
+  const [gateError, setGateError] = useState("");
 
   const policyScore = useMemo(() => calculatePolicyScore(analysis), [analysis]);
+
+  // Total findings count for the gate card
+  const totalFindings =
+    (analysis.landmines?.length || 0) +
+    (analysis.exclusions?.length || 0) +
+    (analysis.endorsements?.length || 0) +
+    (analysis.favorableProvisions?.length || 0);
+
+  const handleGateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gateFirstName.trim() || !gatePhone.trim() || !gateZip.trim()) {
+      setGateError("Please fill in all fields.");
+      return;
+    }
+    setGateSubmitting(true);
+    setGateError("");
+    try {
+      const res = await fetch(`/api/leads/${id}/contact`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: gateFirstName.trim(),
+          phone: gatePhone.trim(),
+          zipCode: gateZip.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setUnlocked(true);
+    } catch {
+      setGateError("Something went wrong. Please try again.");
+    } finally {
+      setGateSubmitting(false);
+    }
+  };
 
   const riskClass =
     analysis.riskLevel === "high"
@@ -343,180 +385,296 @@ export function ResultsDisplay({
         {/* ═══════════════════════════════════════════ */}
         <PolicyScoreCard score={policyScore} />
 
-        {/* CTA immediately after health score — most emotional moment */}
-        {context === "organic" && !consentContact && (
-          <ConversionForm leadId={id} score={policyScore.score} />
-        )}
-
-        {/* Contractor check banner */}
-        {context === "contractor-check" && companyName && (
-          <div style={{
-            textAlign: "center",
-            padding: "12px 20px",
-            background: "var(--bg)",
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            marginBottom: 16,
-            fontSize: 14,
-            color: "var(--text-secondary)",
-          }}>
-            This analysis was requested by <strong>{companyName}</strong>
-          </div>
-        )}
-
         {/* ═══════════════════════════════════════════ */}
-        {/* SECTION 2: YOUR COVERAGE                   */}
+        {/* GATE: Teaser blur + unlock form            */}
         {/* ═══════════════════════════════════════════ */}
-
-        {analysis.coverages?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <Shield size={22} style={{ color: "var(--accent)" }} />
-              Your Coverage
-            </h2>
-            {analysis.coverages.map((c, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  {c.label}
-                  {c.limit && (
-                    <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: 14 }}>
-                      {c.limit}
-                    </span>
-                  )}
-                </h3>
-                <p>{c.description}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* SECTION 3: COVERAGE STRENGTHS              */}
-        {/* ═══════════════════════════════════════════ */}
-
-        {analysis.favorableProvisions?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <CheckCircle2 size={22} style={{ color: "var(--accent)" }} />
-              Coverage Strengths ({analysis.favorableProvisions.length})
-            </h2>
-            {analysis.favorableProvisions.map((p, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  <ShieldCheck size={16} style={{ color: "var(--accent)" }} />
-                  {p.name}
-                </h3>
-                <p>{p.impact}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* SECTION 4: POLICY ADD-ONS                  */}
-        {/* ═══════════════════════════════════════════ */}
-
-        {analysis.endorsements?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <ScrollText size={22} />
-              Policy Add-Ons ({analysis.endorsements.length})
-            </h2>
-            {analysis.endorsements.map((en, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  {en.name}
-                  {en.number && (
-                    <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 13 }}>
-                      {" "}({en.number})
-                    </span>
-                  )}
-                  <span className={`severity-badge severity-${en.severity}`}>
-                    {en.severity}
-                  </span>
-                </h3>
-                <p>{en.description}</p>
-                {en.impact && (
-                  <p style={{ marginTop: 6, fontWeight: 500, fontSize: 13 }}>
-                    {en.impact}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* SECTION 5: WHAT'S NOT COVERED              */}
-        {/* ═══════════════════════════════════════════ */}
-
-        {analysis.exclusions?.length > 0 && (
-          <div className="result-card">
-            <h2>
-              <Ban size={22} style={{ color: "#DC2626" }} />
-              What&apos;s NOT Covered ({analysis.exclusions.length})
-            </h2>
-            {analysis.exclusions.map((ex, i) => (
-              <div className="result-item" key={i}>
-                <h3>
-                  {ex.name}
-                  <span className={`severity-badge severity-${ex.severity}`}>
-                    {ex.severity}
-                  </span>
-                </h3>
-                <p>{ex.description}</p>
-                {ex.impact && (
-                  <p style={{ marginTop: 6, color: "#DC2626", fontWeight: 500, fontSize: 13 }}>
-                    Impact: {ex.impact}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════ */}
-        {/* CONVERSION FORM (bottom — organic only)    */}
-        {/* ═══════════════════════════════════════════ */}
-        {context === "organic" && !consentContact && (
-          <ConversionForm leadId={id} score={policyScore.score} />
-        )}
-
-        {/* Download PDF — bottom of page */}
-        <div className="results-actions">
-          <button className="btn btn-primary" onClick={handleDownload}>
-            <Download size={16} />
-            Download PDF Report
-          </button>
-          {context === "organic" && hasEmail && (
-            <button
-              className="btn btn-primary"
-              onClick={handleEmail}
-              disabled={emailSending || emailSent}
-              style={{
-                background: emailSent ? "var(--accent-light)" : undefined,
-                color: emailSent ? "var(--accent)" : undefined,
-              }}
-            >
-              {emailSent ? (
-                <>
-                  <CheckCircle2 size={16} />
-                  Sent!
-                </>
-              ) : emailSending ? (
-                <>
-                  <span className="spinner" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Mail size={16} />
-                  Email Me This Report
-                </>
+        {!unlocked && (
+          <>
+            {/* Blurred preview of remaining findings */}
+            <div className="results-teaser-blur">
+              {analysis.coverages?.length > 0 && (
+                <div className="result-card">
+                  <h2>
+                    <Shield size={22} style={{ color: "var(--accent)" }} />
+                    Your Coverage
+                  </h2>
+                  {analysis.coverages.slice(0, 3).map((c, i) => (
+                    <div className="result-item" key={i}>
+                      <h3>{c.label}</h3>
+                      <p>{c.description}</p>
+                    </div>
+                  ))}
+                </div>
               )}
-            </button>
-          )}
-        </div>
+            </div>
+
+            {/* Gate Card */}
+            <div className="gate-card">
+              <Lock size={28} style={{ color: "var(--accent)", marginBottom: 12 }} />
+              <h2>Unlock Your Complete Report</h2>
+              <p className="gate-sub">
+                See all {totalFindings} findings, coverage gaps, and recommendations
+              </p>
+
+              <form onSubmit={handleGateSubmit}>
+                <div className="form-group">
+                  <label htmlFor="gate-first-name">First name</label>
+                  <input
+                    id="gate-first-name"
+                    type="text"
+                    placeholder="Jane"
+                    value={gateFirstName}
+                    onChange={(e) => setGateFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="gate-phone">Phone number</label>
+                  <input
+                    id="gate-phone"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={gatePhone}
+                    onChange={(e) => setGatePhone(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="gate-zip">ZIP code</label>
+                  <input
+                    id="gate-zip"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="12345"
+                    maxLength={10}
+                    value={gateZip}
+                    onChange={(e) => setGateZip(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 20, textAlign: "left" }}>
+                  <input
+                    type="checkbox"
+                    id="gate-consent"
+                    checked={gateConsent}
+                    onChange={(e) => setGateConsent(e.target.checked)}
+                    style={{ width: 18, height: 18, marginTop: 2, accentColor: "var(--accent)", flexShrink: 0 }}
+                  />
+                  <label htmlFor="gate-consent" style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5, cursor: "pointer" }}>
+                    I agree to be contacted by a licensed agent if I choose to get a quote.
+                  </label>
+                </div>
+
+                {gateError && (
+                  <p style={{ color: "#DC2626", fontSize: 14, marginBottom: 12, textAlign: "center" }}>{gateError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={gateSubmitting}
+                  style={{ marginTop: 0 }}
+                >
+                  {gateSubmitting ? (
+                    <>
+                      <span className="spinner" />
+                      Unlocking...
+                    </>
+                  ) : (
+                    "Unlock Full Report — Free"
+                  )}
+                </button>
+              </form>
+
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 14 }}>
+                Your data is encrypted. No cost, no obligation.
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* ═══════════════════════════════════════════ */}
+        {/* FULL REPORT (shown when unlocked)          */}
+        {/* ═══════════════════════════════════════════ */}
+        {unlocked && (
+          <>
+            {/* CTA immediately after health score — most emotional moment */}
+            {context === "organic" && !consentContact && (
+              <ConversionForm leadId={id} score={policyScore.score} />
+            )}
+
+            {/* Contractor check banner */}
+            {context === "contractor-check" && companyName && (
+              <div style={{
+                textAlign: "center",
+                padding: "12px 20px",
+                background: "var(--bg)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                marginBottom: 16,
+                fontSize: 14,
+                color: "var(--text-secondary)",
+              }}>
+                This analysis was requested by <strong>{companyName}</strong>
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* SECTION 2: YOUR COVERAGE                   */}
+            {/* ═══════════════════════════════════════════ */}
+
+            {analysis.coverages?.length > 0 && (
+              <div className="result-card">
+                <h2>
+                  <Shield size={22} style={{ color: "var(--accent)" }} />
+                  Your Coverage
+                </h2>
+                {analysis.coverages.map((c, i) => (
+                  <div className="result-item" key={i}>
+                    <h3>
+                      {c.label}
+                      {c.limit && (
+                        <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: 14 }}>
+                          {c.limit}
+                        </span>
+                      )}
+                    </h3>
+                    <p>{c.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* SECTION 3: COVERAGE STRENGTHS              */}
+            {/* ═══════════════════════════════════════════ */}
+
+            {analysis.favorableProvisions?.length > 0 && (
+              <div className="result-card">
+                <h2>
+                  <CheckCircle2 size={22} style={{ color: "var(--accent)" }} />
+                  Coverage Strengths ({analysis.favorableProvisions.length})
+                </h2>
+                {analysis.favorableProvisions.map((p, i) => (
+                  <div className="result-item" key={i}>
+                    <h3>
+                      <ShieldCheck size={16} style={{ color: "var(--accent)" }} />
+                      {p.name}
+                    </h3>
+                    <p>{p.impact}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* SECTION 4: POLICY ADD-ONS                  */}
+            {/* ═══════════════════════════════════════════ */}
+
+            {analysis.endorsements?.length > 0 && (
+              <div className="result-card">
+                <h2>
+                  <ScrollText size={22} />
+                  Policy Add-Ons ({analysis.endorsements.length})
+                </h2>
+                {analysis.endorsements.map((en, i) => (
+                  <div className="result-item" key={i}>
+                    <h3>
+                      {en.name}
+                      {en.number && (
+                        <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: 13 }}>
+                          {" "}({en.number})
+                        </span>
+                      )}
+                      <span className={`severity-badge severity-${en.severity}`}>
+                        {en.severity}
+                      </span>
+                    </h3>
+                    <p>{en.description}</p>
+                    {en.impact && (
+                      <p style={{ marginTop: 6, fontWeight: 500, fontSize: 13 }}>
+                        {en.impact}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* SECTION 5: WHAT'S NOT COVERED              */}
+            {/* ═══════════════════════════════════════════ */}
+
+            {analysis.exclusions?.length > 0 && (
+              <div className="result-card">
+                <h2>
+                  <Ban size={22} style={{ color: "#DC2626" }} />
+                  What&apos;s NOT Covered ({analysis.exclusions.length})
+                </h2>
+                {analysis.exclusions.map((ex, i) => (
+                  <div className="result-item" key={i}>
+                    <h3>
+                      {ex.name}
+                      <span className={`severity-badge severity-${ex.severity}`}>
+                        {ex.severity}
+                      </span>
+                    </h3>
+                    <p>{ex.description}</p>
+                    {ex.impact && (
+                      <p style={{ marginTop: 6, color: "#DC2626", fontWeight: 500, fontSize: 13 }}>
+                        Impact: {ex.impact}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════ */}
+            {/* CONVERSION FORM (bottom — organic only)    */}
+            {/* ═══════════════════════════════════════════ */}
+            {context === "organic" && !consentContact && (
+              <ConversionForm leadId={id} score={policyScore.score} />
+            )}
+
+            {/* Download PDF — bottom of page */}
+            <div className="results-actions">
+              <button className="btn btn-primary" onClick={handleDownload}>
+                <Download size={16} />
+                Download PDF Report
+              </button>
+              {context === "organic" && hasEmail && (
+                <button
+                  className="btn btn-primary"
+                  onClick={handleEmail}
+                  disabled={emailSending || emailSent}
+                  style={{
+                    background: emailSent ? "var(--accent-light)" : undefined,
+                    color: emailSent ? "var(--accent)" : undefined,
+                  }}
+                >
+                  {emailSent ? (
+                    <>
+                      <CheckCircle2 size={16} />
+                      Sent!
+                    </>
+                  ) : emailSending ? (
+                    <>
+                      <span className="spinner" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail size={16} />
+                      Email Me This Report
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Disclaimer */}
         <div className="disclaimer-box">

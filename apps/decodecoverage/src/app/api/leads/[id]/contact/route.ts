@@ -8,9 +8,9 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
-  if (!body.firstName || !body.email) {
+  if (!body.firstName || (!body.email && !body.phone)) {
     return NextResponse.json(
-      { error: "Name and email are required" },
+      { error: "Name and email or phone are required" },
       { status: 400 }
     );
   }
@@ -38,8 +38,9 @@ export async function PATCH(
   const updates: Record<string, unknown> = {
     first_name: body.firstName,
     last_name: body.lastName || null,
-    email: body.email,
+    email: body.email || null,
     phone: body.phone || null,
+    ...(body.zipCode ? { property_address: body.zipCode } : {}),
     preferred_contact_method: body.preferredContact || null,
     best_time: body.bestTime || null,
     consent_terms: true,
