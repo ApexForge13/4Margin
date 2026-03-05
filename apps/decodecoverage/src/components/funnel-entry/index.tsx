@@ -210,7 +210,6 @@ export function FunnelEntry({ onSelectQuiz }: FunnelEntryProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              autoFocus
             />
 
             <button
