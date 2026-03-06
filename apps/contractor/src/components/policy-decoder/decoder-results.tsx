@@ -216,6 +216,13 @@ export function PolicyDecoderResults({
             />
           </div>
 
+          {/* Grounding disclaimer */}
+          <div className="rounded-md border border-green-200 bg-green-50 p-3 text-xs text-green-800">
+            This analysis identifies language present in the uploaded policy document.
+            It is not legal or insurance advice. All flagged items should be verified
+            against the source document before use in any claim discussion.
+          </div>
+
           {/* Contractor summary */}
           {analysis.summaryForContractor && (
             <div className="rounded-lg bg-slate-50 p-3 text-sm">

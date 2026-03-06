@@ -461,7 +461,22 @@ export function ResultsDisplay({
                 Detailed Analysis
               </h2>
 
-              {analysis.summaryForContractor && (
+              <div style={{
+              padding: "10px 14px",
+              background: "rgba(45, 106, 79, 0.06)",
+              borderRadius: 8,
+              borderLeft: "3px solid var(--accent)",
+              fontSize: 12,
+              lineHeight: 1.6,
+              color: "var(--text-secondary)",
+              marginBottom: 8,
+            }}>
+              This analysis identifies language present in the uploaded policy document.
+              It is not legal or insurance advice. All flagged items should be verified
+              against the source document before use in any coverage discussion.
+            </div>
+
+            {analysis.summaryForContractor && (
                 <div className="result-item">
                   <p style={{ fontSize: 15, lineHeight: 1.7 }}>
                     {analysis.summaryForContractor}

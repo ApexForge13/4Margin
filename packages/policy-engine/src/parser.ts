@@ -67,6 +67,7 @@ export interface PolicyExclusion {
   name: string;
   description: string;
   policyLanguage: string;
+  pageReference: string | null;
   severity: "critical" | "warning" | "info";
   impact: string;
   needsVerification: boolean;
@@ -79,6 +80,7 @@ export interface PolicyEndorsement {
   effectiveDate: string | null;
   description: string;
   impact: string;
+  pageReference: string | null;
   severity: "critical" | "warning" | "info";
   needsVerification: boolean;
   verificationReason: string | null;
@@ -90,6 +92,7 @@ export interface DetectedLandmine {
   severity: "critical" | "warning" | "info";
   category: string;
   policyLanguage: string;
+  pageReference: string | null;
   impact: string;
   actionItem: string;
 }
@@ -185,6 +188,7 @@ const policyExclusionSchema = z.object({
   name: z.string().default("Unknown Exclusion"),
   description: z.string().default(""),
   policyLanguage: z.string().default(""),
+  pageReference: z.string().nullable().default(null),
   severity: severitySchema.default("info"),
   impact: z.string().default(""),
   needsVerification: z.boolean().default(false),
@@ -197,6 +201,7 @@ const policyEndorsementSchema = z.object({
   effectiveDate: z.string().nullable().default(null),
   description: z.string().default(""),
   impact: z.string().default(""),
+  pageReference: z.string().nullable().default(null),
   severity: severitySchema.default("info"),
   needsVerification: z.boolean().default(false),
   verificationReason: z.string().nullable().default(null),
@@ -208,6 +213,7 @@ const detectedLandmineSchema = z.object({
   severity: severitySchema.default("warning"),
   category: z.string().default("unknown"),
   policyLanguage: z.string().default(""),
+  pageReference: z.string().nullable().default(null),
   impact: z.string().default(""),
   actionItem: z.string().default(""),
 });
@@ -550,6 +556,26 @@ For each found, quote the relevant language.
 
 ${getClaimTypeFocusPrompt(claimType, claimDescription)}
 
+## GROUNDING RULES — NON-NEGOTIABLE
+
+1. ONLY list an exclusion, endorsement, landmine, or favorable provision
+   if you can find actual evidence of it in this specific document.
+   Do NOT list items you cannot positively identify.
+2. For every exclusion, endorsement, and landmine: you MUST provide
+   the exact quoted policy language in the policyLanguage field.
+   If you cannot find a direct quote, set policyLanguage to
+   "LANGUAGE NOT FOUND IN DOCUMENT" and set needsVerification to true.
+3. For every item you list, include pageReference: the page number
+   or section heading where you found it (e.g. "Page 14, Section III"
+   or "Endorsement Schedule, Page 2").
+4. The summaryForContractor must ONLY contain facts directly stated
+   in the policy document. Do not infer, advise, or draw conclusions
+   beyond what the policy explicitly states. If uncertain, omit it
+   from the summary.
+5. If a section (deductibles, exclusions, endorsements) is not found
+   or not legible, return an empty array. Do NOT populate it with
+   assumed standard provisions.
+
 ### 10. Per-Section Confidence
 Rate your confidence for each section from 0.0 to 1.0:
 - 0.9-1.0 = Very confident, clear text, unambiguous
@@ -576,13 +602,13 @@ Return a JSON object with this exact structure:
   "depreciationMethod": "RCV",
   "depreciationNotes": "Policy provides replacement cost coverage...",
   "exclusions": [
-    { "name": "Cosmetic Damage Exclusion", "description": "...", "policyLanguage": "exact quote...", "severity": "critical", "impact": "...", "needsVerification": false, "verificationReason": null }
+    { "name": "Cosmetic Damage Exclusion", "description": "...", "policyLanguage": "exact quote...", "pageReference": "Page 14, Section III", "severity": "critical", "impact": "...", "needsVerification": false, "verificationReason": null }
   ],
   "endorsements": [
-    { "name": "Roof Payment Schedule", "number": "FE-5398", "effectiveDate": "2025-06-01", "description": "...", "impact": "...", "severity": "critical", "needsVerification": false, "verificationReason": null }
+    { "name": "Roof Payment Schedule", "number": "FE-5398", "effectiveDate": "2025-06-01", "description": "...", "impact": "...", "pageReference": "Endorsement Schedule, Page 2", "severity": "critical", "needsVerification": false, "verificationReason": null }
   ],
   "landmines": [
-    { "ruleId": "cosmetic_exclusion", "name": "Cosmetic Damage Exclusion", "severity": "critical", "category": "endorsement", "policyLanguage": "exact quote...", "impact": "...", "actionItem": "..." }
+    { "ruleId": "cosmetic_exclusion", "name": "Cosmetic Damage Exclusion", "severity": "critical", "category": "endorsement", "policyLanguage": "exact quote...", "pageReference": "Page 18", "impact": "...", "actionItem": "..." }
   ],
   "favorableProvisions": [
     { "provisionId": "matching_required", "name": "Matching Provision", "policyLanguage": "quote...", "impact": "...", "supplementRelevance": "..." }
@@ -603,8 +629,9 @@ Return a JSON object with this exact structure:
 
 RULES:
 - Return ONLY valid JSON, no markdown wrapping
-- Quote actual policy language when possible (in policyLanguage fields)
-- If a section is not found or not applicable, use empty arrays
+- You MUST quote exact policy language in policyLanguage fields. If you cannot find exact text, set policyLanguage to "LANGUAGE NOT FOUND IN DOCUMENT" and needsVerification to true
+- Include pageReference for every exclusion, endorsement, and landmine (e.g. "Page 3" or "Section II, Exclusions")
+- If a section is not found or not applicable, use empty arrays — do NOT infer or assume standard provisions
 - Set confidence AND sectionConfidence lower if the PDF is hard to read or sections are missing
 - severity: "critical" = directly affects claim value, "warning" = could affect claim, "info" = good to know
 - riskLevel: "high" if ANY critical landmines found, "medium" if warnings only, "low" if none
@@ -809,13 +836,13 @@ Return a JSON object with ONLY the corrections/additions:
     { "type": "...", "amount": "...", "dollarAmount": <number|null>, "appliesTo": "...", "needsVerification": false, "verificationReason": null }
   ],
   "additionalEndorsements": [
-    { "name": "...", "number": "...", "effectiveDate": null, "description": "...", "impact": "...", "severity": "...", "needsVerification": false, "verificationReason": null }
+    { "name": "...", "number": "...", "effectiveDate": null, "description": "...", "impact": "...", "pageReference": "Page X", "severity": "...", "needsVerification": false, "verificationReason": null }
   ],
   "additionalExclusions": [
-    { "name": "...", "description": "...", "policyLanguage": "...", "severity": "...", "impact": "...", "needsVerification": false, "verificationReason": null }
+    { "name": "...", "description": "...", "policyLanguage": "...", "pageReference": "Page X", "severity": "...", "impact": "...", "needsVerification": false, "verificationReason": null }
   ],
   "additionalLandmines": [
-    { "ruleId": "...", "name": "...", "severity": "...", "category": "...", "policyLanguage": "...", "impact": "...", "actionItem": "..." }
+    { "ruleId": "...", "name": "...", "severity": "...", "category": "...", "policyLanguage": "...", "pageReference": "Page X", "impact": "...", "actionItem": "..." }
   ],
   "additionalFavorableProvisions": [
     { "provisionId": "...", "name": "...", "policyLanguage": "...", "impact": "...", "supplementRelevance": "..." }
@@ -828,6 +855,13 @@ Return a JSON object with ONLY the corrections/additions:
   },
   "verificationNotes": "Any observations about the extraction quality or issues found."
 }
+
+CRITICAL CHECK: For every item in the previous extraction that has
+policyLanguage set to "LANGUAGE NOT FOUND IN DOCUMENT" — make one
+final attempt to find the actual language. If you find it, provide
+the exact quote and page reference. If you still cannot find it,
+confirm needsVerification: true in your response and include it in
+the corrections.
 
 If nothing needs correction, return empty arrays and null corrections. Return ONLY valid JSON.`;
 
@@ -1017,6 +1051,7 @@ function enrichWithCarrierForms(
         effectiveDate: null,
         description: knownForm.effect,
         impact: knownForm.effect,
+        pageReference: "Endorsement Schedule (declarations page)",
         severity: knownForm.severity,
         needsVerification:
           docMeta.documentType === "dec_page_only",
@@ -1039,7 +1074,8 @@ function enrichWithCarrierForms(
             name: `${knownForm.name} (from endorsement ${formNumber})`,
             description: knownForm.effect,
             policyLanguage:
-              "Identified from endorsement form number — full text not available",
+              "LANGUAGE NOT FOUND IN DOCUMENT",
+            pageReference: "Endorsement Schedule (declarations page)",
             severity: knownForm.severity,
             impact: knownForm.effect,
             needsVerification: true,
@@ -1075,6 +1111,43 @@ function enrichLandmines(detected: DetectedLandmine[]): DetectedLandmine[] {
     }
     return landmine;
   });
+}
+
+// ── Confidence Gate (Post-Processing) ────────────────────────────────────────
+
+function applyConfidenceGate(analysis: PolicyAnalysis): PolicyAnalysis {
+  const result = { ...analysis };
+  const GATE_THRESHOLD = 0.5;
+
+  if (result.sectionConfidence.exclusions < GATE_THRESHOLD) {
+    result.exclusions = result.exclusions.map((e) => ({
+      ...e,
+      needsVerification: true,
+      verificationReason:
+        e.verificationReason ||
+        "Low section confidence — manual verification recommended",
+    }));
+  }
+  if (result.sectionConfidence.endorsements < GATE_THRESHOLD) {
+    result.endorsements = result.endorsements.map((e) => ({
+      ...e,
+      needsVerification: true,
+      verificationReason:
+        e.verificationReason ||
+        "Low section confidence — manual verification recommended",
+    }));
+  }
+  if (result.sectionConfidence.deductibles < GATE_THRESHOLD) {
+    result.deductibles = result.deductibles.map((d) => ({
+      ...d,
+      needsVerification: true,
+      verificationReason:
+        d.verificationReason ||
+        "Low section confidence — manual verification recommended",
+    }));
+  }
+
+  return result;
 }
 
 // ── Percentage Deductible Calculator ────────────────────────────────────────
@@ -1201,6 +1274,9 @@ export async function parsePolicyPdfV2(
 
     // Post-processing: calculate percentage deductibles
     verified = calculatePercentageDeductibles(verified);
+
+    // Post-processing: apply confidence gate — flag items in low-confidence sections
+    verified = applyConfidenceGate(verified);
 
     console.log(
       `[policy-parser] Pipeline complete. Final confidence: ${verified.confidence.toFixed(2)}, Risk: ${verified.riskLevel}, Deductibles: ${verified.deductibles.length}, Endorsements: ${verified.endorsements.length}, Exclusions: ${verified.exclusions.length}`
