@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/tracking";
 
 interface ConversionFormProps {
   leadId: string;
@@ -52,6 +53,7 @@ export function ConversionForm({ leadId, score }: ConversionFormProps) {
         throw new Error(data.error || "Something went wrong");
       }
 
+      trackEvent("conversion_form_submitted", { lead_id: leadId, score });
       setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

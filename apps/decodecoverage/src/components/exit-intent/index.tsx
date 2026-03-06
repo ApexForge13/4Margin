@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { trackEvent } from "@/lib/tracking";
 
 interface ExitIntentProps {
   leadId: string;
@@ -24,6 +25,7 @@ export function ExitIntent({ leadId, score, alreadyConverted }: ExitIntentProps)
       if (score >= 85) return;
 
       setVisible(true);
+      trackEvent("exit_intent_triggered", { score });
 
       // Mark exit intent shown
       fetch(`/api/leads/${leadId}/exit-intent`, {
@@ -44,6 +46,7 @@ export function ExitIntent({ leadId, score, alreadyConverted }: ExitIntentProps)
   }
 
   function handleDownload() {
+    trackEvent("exit_intent_download", { lead_id: leadId });
     window.open(`/api/report/${leadId}/download`, "_blank");
     handleDismiss();
   }
@@ -63,6 +66,7 @@ export function ExitIntent({ leadId, score, alreadyConverted }: ExitIntentProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), firstName: "" }),
       });
+      trackEvent("exit_intent_email", { lead_id: leadId });
       setEmailSent(true);
       setTimeout(() => handleDismiss(), 2000);
     } catch {

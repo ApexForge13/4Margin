@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Lock,
 } from "lucide-react";
+import { trackEvent } from "@/lib/tracking";
 
 interface FunnelEntryProps {
   onSelectQuiz: (email: string) => void;
@@ -76,6 +77,7 @@ export function FunnelEntry({ onSelectQuiz }: FunnelEntryProps) {
       }),
     }).catch(() => {});
 
+    trackEvent("email_captured", { method: "hero_form" });
     setStep("choose");
   };
 
@@ -129,6 +131,7 @@ export function FunnelEntry({ onSelectQuiz }: FunnelEntryProps) {
 
     setSubmitting(true);
     setError(null);
+    trackEvent("upload_started", { file_type: file.type });
 
     try {
       const formData = new FormData();
@@ -169,6 +172,7 @@ export function FunnelEntry({ onSelectQuiz }: FunnelEntryProps) {
       }
 
       const data = await res.json();
+      trackEvent("upload_complete", { lead_id: data.id });
       router.push(`/results/${data.id}`);
     } catch (err) {
       setError(

@@ -22,6 +22,7 @@ import { calculatePolicyScore, type PolicyScore } from "@/lib/policy-score";
 import { getPlainEnglishFinding } from "@/lib/finding-templates";
 import { ConversionForm } from "@/components/conversion-form";
 import { ExitIntent } from "@/components/exit-intent";
+import { trackEvent } from "@/lib/tracking";
 
 interface PolicyAnalysis {
   policyType: string;
@@ -142,6 +143,7 @@ export function ResultsDisplay({
         }),
       });
       if (!res.ok) throw new Error("Failed");
+      trackEvent("gate_unlocked", { lead_id: id });
       setUnlocked(true);
     } catch {
       setGateError("Something went wrong. Please try again.");
@@ -167,6 +169,7 @@ export function ResultsDisplay({
     );
 
   const handleDownload = () => {
+    trackEvent("report_downloaded", { lead_id: id });
     const url = downloadUrl || `/api/report/${id}/download`;
     window.open(url, "_blank");
   };
@@ -176,6 +179,7 @@ export function ResultsDisplay({
     try {
       const res = await fetch(`/api/report/${id}/email`, { method: "POST" });
       if (res.ok) {
+        trackEvent("report_emailed", { lead_id: id });
         setEmailSent(true);
       }
     } catch {
