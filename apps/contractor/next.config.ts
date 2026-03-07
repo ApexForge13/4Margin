@@ -7,36 +7,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
-  async redirects() {
-    return [
-      // Decoder-only MVP — redirect supplement routes to policy decoder
-      {
-        source: "/dashboard/supplements",
-        destination: "/dashboard/policy-decoder",
-        permanent: false,
-      },
-      {
-        source: "/dashboard/supplements/:id",
-        destination: "/dashboard/policy-decoder",
-        permanent: false,
-      },
-      {
-        source: "/dashboard/upload",
-        destination: "/dashboard/policy-decoder",
-        permanent: false,
-      },
-      {
-        source: "/dashboard/policy-checks",
-        destination: "/dashboard/policy-decoder",
-        permanent: false,
-      },
-      {
-        source: "/dashboard/policy-checks/:id",
-        destination: "/dashboard/policy-decoder",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 export default withSentryConfig(nextConfig, {
