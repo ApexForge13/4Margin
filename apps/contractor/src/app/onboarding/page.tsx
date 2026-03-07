@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { createCompanyAndProfile } from "./actions";
+import { createCompanyAndProfile, checkAutoJoin } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,30 @@ import { toast } from "sonner";
 export default function OnboardingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [autoJoining, setAutoJoining] = useState(false);
+  const [autoJoinCompany, setAutoJoinCompany] = useState<string | null>(null);
+  const autoJoinChecked = useRef(false);
+
+  // Check for enterprise domain auto-join on mount
+  useEffect(() => {
+    if (autoJoinChecked.current) return;
+    autoJoinChecked.current = true;
+
+    (async () => {
+      try {
+        const result = await checkAutoJoin();
+        if (result.autoJoin && result.companyName) {
+          setAutoJoining(true);
+          setAutoJoinCompany(result.companyName);
+          toast.success(`Joined ${result.companyName}!`);
+          router.push("/dashboard");
+        }
+      } catch {
+        // Not an enterprise domain — show normal form
+      }
+    })();
+  }, [router]);
+
   const [form, setForm] = useState({
     companyName: "",
     phone: "",
@@ -61,6 +85,45 @@ export default function OnboardingPage() {
     toast.success("Welcome to 4Margin!");
     router.push("/dashboard");
   };
+
+  // Show auto-join spinner if enterprise domain was matched
+  if (autoJoining) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
+        <Card className="w-full max-w-sm">
+          <CardContent className="flex flex-col items-center gap-4 pt-8 pb-8">
+            <svg
+              className="h-8 w-8 animate-spin text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
+            </svg>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">
+                Joining {autoJoinCompany}...
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Setting up your account
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">

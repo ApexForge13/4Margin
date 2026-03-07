@@ -5,6 +5,58 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { onboardingSchema, validate } from "@/lib/validations/schemas";
 import { getResendClient, FROM_EMAIL } from "@/lib/email/client";
 import { welcomeEmail } from "@/lib/email/templates";
+import { checkDomainAutoJoin } from "@/lib/auth/domain-join";
+import { sendEnterpriseUserJoinedEmail } from "@/lib/email/send";
+
+// ── Check if user's email matches an enterprise domain ──────
+
+export async function checkAutoJoin(): Promise<{
+  autoJoin: boolean;
+  companyName?: string;
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user?.email) {
+    return { autoJoin: false, error: "Session expired." };
+  }
+
+  const match = await checkDomainAutoJoin(user.email);
+  if (!match) return { autoJoin: false };
+
+  // Auto-join: create user profile linked to the enterprise company
+  const admin = createAdminClient();
+  const { error: userError } = await admin.from("users").insert({
+    id: user.id,
+    company_id: match.companyId,
+    full_name: user.user_metadata?.full_name || user.email || "User",
+    email: user.email,
+    role: "user", // Enterprise reps start as 'user'
+  });
+
+  if (userError) {
+    // If user already exists, that's fine — they're already joined
+    if (userError.code === "23505") {
+      return { autoJoin: true, companyName: match.companyName };
+    }
+    return { autoJoin: false, error: userError.message };
+  }
+
+  // Notify the enterprise owner (fire-and-forget)
+  sendEnterpriseUserJoinedEmail(
+    match.companyId,
+    user.user_metadata?.full_name || user.email || "New user",
+    user.email
+  ).catch(() => {});
+
+  return { autoJoin: true, companyName: match.companyName };
+}
+
+// ── Create company + profile (individual signup) ─────────────
 
 export async function createCompanyAndProfile(data: unknown) {
   // ── Validate input ──────────────────────────────────────────

@@ -6,6 +6,7 @@ import {
   policyDecoderCheckoutSchema,
   validate,
 } from "@/lib/validations/schemas";
+import { shouldBypassPayment, recordUsage, checkEnterpriseAccess } from "@/lib/billing";
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,6 +66,40 @@ export async function POST(request: NextRequest) {
         { error: "This policy decode has already been paid for" },
         { status: 400 }
       );
+    }
+
+    // ── Enterprise subscription check ───────────────────────
+    const accessError = await checkEnterpriseAccess(companyId);
+    if (accessError) {
+      return NextResponse.json({ error: accessError }, { status: 403 });
+    }
+
+    // ── Enterprise bypass — no Stripe checkout needed ─────────
+    if (await shouldBypassPayment(companyId)) {
+      await admin
+        .from("policy_decodings")
+        .update({ paid_at: new Date().toISOString() })
+        .eq("id", policyDecodingId);
+
+      const { data: userWithOffice } = await admin
+        .from("users")
+        .select("office_id")
+        .eq("id", user.id)
+        .single();
+
+      await recordUsage(
+        companyId,
+        user.id,
+        userWithOffice?.office_id || null,
+        "decode",
+        policyDecodingId
+      );
+
+      const origin =
+        request.headers.get("origin") || "http://localhost:3000";
+      return NextResponse.json({
+        url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=success`,
+      });
     }
 
     // ── First Decode Free (mirrors supplement pattern) ────────

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getPolicyDecodings, getPaidDecodingCount } from "./actions";
 import { NewDecodeButton } from "@/components/policy-decoder/new-decode-button";
 import { DecodingsList } from "@/components/policy-decoder/decodings-list";
@@ -19,6 +20,26 @@ export default async function PolicyDecoderPage() {
 
   const isFirstDecode = paidCount === 0;
 
+  // Check if enterprise account
+  const admin = createAdminClient();
+  const { data: userProfile } = await admin
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
+
+  let isEnterprise = false;
+  if (userProfile?.company_id) {
+    const { data: company } = await admin
+      .from("companies")
+      .select("account_type, subscription_status")
+      .eq("id", userProfile.company_id)
+      .single();
+    isEnterprise =
+      company?.account_type === "enterprise" &&
+      company?.subscription_status === "active";
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -29,7 +50,7 @@ export default async function PolicyDecoderPage() {
             endorsements, and exclusions.
           </p>
         </div>
-        <NewDecodeButton isFirstDecode={isFirstDecode} />
+        <NewDecodeButton isFirstDecode={isFirstDecode} isEnterprise={isEnterprise} />
       </div>
 
       {error && (

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DECODER_STATUS_LABELS } from "@/lib/constants";
 import { DecoderFlow } from "@/components/policy-decoder/decoder-flow";
+import { shouldBypassPayment, recordUsage } from "@/lib/billing";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -91,6 +92,40 @@ export default async function PolicyDecodingDetailPage({
     isFirstDecode = (priorPaidCount ?? 0) === 0;
   }
 
+  // ── Detect enterprise account ──────────────────────────────
+  const isEnterprise = userProfile?.company_id
+    ? await shouldBypassPayment(userProfile.company_id)
+    : false;
+
+  // Enterprise auto-pay: if enterprise + has file + not yet paid, mark paid and record usage
+  if (isEnterprise && !decoding.paid_at && decoding.policy_pdf_url) {
+    await admin
+      .from("policy_decodings")
+      .update({ paid_at: new Date().toISOString() })
+      .eq("id", decoding.id);
+
+    // Record usage for billing
+    const { data: userWithOffice } = await admin
+      .from("users")
+      .select("office_id")
+      .eq("id", user.id)
+      .single();
+
+    await recordUsage(
+      userProfile!.company_id,
+      user.id,
+      userWithOffice?.office_id || null,
+      "decode",
+      decoding.id
+    );
+
+    // Re-fetch to reflect paid status
+    const refreshed = await getPolicyDecoding(id);
+    if (refreshed.decoding) {
+      decoding = refreshed.decoding;
+    }
+  }
+
   // ── Compute state for DecoderFlow ──────────────────────────
   const isPaid = !!decoding.paid_at;
   const hasFile = !!decoding.policy_pdf_url;
@@ -114,6 +149,8 @@ export default async function PolicyDecodingDetailPage({
     initialPhase = "processing";
   } else if (isFailed) {
     initialPhase = "upload"; // allow retry
+  } else if (isEnterprise && hasFile) {
+    initialPhase = "processing"; // enterprise: skip payment step
   } else if (hasFile && !isPaid) {
     initialPhase = "payment"; // has file, needs to pay
   } else if (isPaid && hasFile) {
@@ -122,7 +159,7 @@ export default async function PolicyDecodingDetailPage({
     initialPhase = "upload"; // starting state
   }
 
-  // Auto-process: paid + has file + still in draft state + returning from Stripe
+  // Auto-process: paid + has file + still in draft state
   const autoProcess =
     isPaid &&
     hasFile &&
@@ -209,6 +246,7 @@ export default async function PolicyDecodingDetailPage({
         documentMeta={decoding.document_meta}
         autoProcess={autoProcess}
         paymentReturned={payment === "success"}
+        isEnterprise={isEnterprise}
       />
     </div>
   );

@@ -11,7 +11,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, full_name, email, role, companies(name, phone, email, address, city, state, zip, license_number)")
+    .select("id, full_name, email, role, companies(name, phone, email, address, city, state, zip, license_number, account_type)")
     .eq("id", user.id)
     .single();
 
@@ -35,6 +35,7 @@ export default async function SettingsPage() {
       state: string | null;
       zip: string | null;
       license_number: string | null;
+      account_type: string | null;
     },
   };
 

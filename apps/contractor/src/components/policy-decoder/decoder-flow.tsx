@@ -36,6 +36,8 @@ interface DecoderFlowProps {
   autoProcess: boolean;
   /** True when user just returned from Stripe with ?payment=success */
   paymentReturned?: boolean;
+  /** Enterprise accounts skip payment entirely */
+  isEnterprise?: boolean;
 }
 
 /* ─── Claim types ─── */
@@ -70,6 +72,7 @@ export function DecoderFlow({
   documentMeta: initialDocumentMeta,
   autoProcess,
   paymentReturned,
+  isEnterprise,
 }: DecoderFlowProps) {
   const router = useRouter();
 
@@ -291,7 +294,13 @@ export function DecoderFlow({
         clearInterval(progressTimer);
         setUploadProgress(100);
 
-        // 3. Check if this is a free decode — auto-unlock and proceed
+        // 3. Enterprise accounts — skip payment entirely
+        if (isEnterprise) {
+          await startProcessing();
+          return;
+        }
+
+        // 4. Check if this is a free decode — auto-unlock and proceed
         if (isFirstDecode) {
           const unlockResult = await unlockFreeDecoding(decodingId);
           if (unlockResult.error) {
@@ -305,7 +314,7 @@ export function DecoderFlow({
           return;
         }
 
-        // 4. Not free — show payment gate
+        // 5. Not free — show payment gate
         setPhase("payment");
       } catch (err) {
         clearInterval(progressTimer);
@@ -404,9 +413,18 @@ export function DecoderFlow({
   // ──────────────────────────────────────────────────────────────
 
   /* ── Stepper bar ── */
-  const stepLabels = ["Upload", "Payment", "Processing", "Results"];
-  const stepIndex =
-    phase === "upload" || phase === "uploading"
+  const stepLabels = isEnterprise
+    ? ["Upload", "Processing", "Results"]
+    : ["Upload", "Payment", "Processing", "Results"];
+  const stepIndex = isEnterprise
+    ? phase === "upload" || phase === "uploading"
+      ? 0
+      : phase === "processing"
+        ? 1
+        : phase === "complete"
+          ? 2
+          : 0
+    : phase === "upload" || phase === "uploading"
       ? 0
       : phase === "payment" || phase === "paying"
         ? 1

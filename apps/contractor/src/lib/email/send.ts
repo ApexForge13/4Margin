@@ -13,6 +13,8 @@ import {
   teamInviteEmail,
   policyCheckInviteEmail,
   policyCheckCompleteEmail,
+  enterpriseUserJoinedEmail,
+  usageLimitApproachingEmail,
 } from "./templates";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -380,6 +382,109 @@ export async function sendConciergeEmail(checkId: string): Promise<void> {
     );
   } catch (err) {
     console.error("[email] Failed to send concierge email:", err);
+  }
+}
+
+/**
+ * Notify enterprise owner when a new user auto-joins via domain match.
+ */
+export async function sendEnterpriseUserJoinedEmail(
+  companyId: string,
+  newUserName: string,
+  newUserEmail: string
+): Promise<void> {
+  try {
+    const supabase = createAdminClient();
+
+    // Find the company owner
+    const { data: owner } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("company_id", companyId)
+      .eq("role", "owner")
+      .single();
+
+    if (!owner) return;
+
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", companyId)
+      .single();
+
+    if (!company) return;
+
+    const resend = getResendClient();
+    const { subject, html } = enterpriseUserJoinedEmail({
+      ownerName: owner.full_name || "there",
+      newUserName,
+      newUserEmail,
+      companyName: company.name,
+      manageUrl: `${APP_URL}/dashboard/enterprise`,
+    });
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: owner.email,
+      subject,
+      html,
+    });
+
+    console.log(`[email] Enterprise user joined notification sent to ${owner.email}`);
+  } catch (err) {
+    console.error("[email] Failed to send enterprise user joined email:", err);
+  }
+}
+
+/**
+ * Notify enterprise owner when usage approaches the monthly limit.
+ */
+export async function sendUsageLimitApproachingEmail(
+  companyId: string,
+  recordType: string,
+  currentCount: number,
+  limit: number
+): Promise<void> {
+  try {
+    const supabase = createAdminClient();
+
+    const { data: owner } = await supabase
+      .from("users")
+      .select("email, full_name")
+      .eq("company_id", companyId)
+      .eq("role", "owner")
+      .single();
+
+    if (!owner) return;
+
+    const { data: company } = await supabase
+      .from("companies")
+      .select("name")
+      .eq("id", companyId)
+      .single();
+
+    if (!company) return;
+
+    const resend = getResendClient();
+    const { subject, html } = usageLimitApproachingEmail({
+      ownerName: owner.full_name || "there",
+      companyName: company.name,
+      recordType,
+      currentCount,
+      limit,
+      manageUrl: `${APP_URL}/dashboard/enterprise`,
+    });
+
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: owner.email,
+      subject,
+      html,
+    });
+
+    console.log(`[email] Usage limit approaching notification sent to ${owner.email}`);
+  } catch (err) {
+    console.error("[email] Failed to send usage limit email:", err);
   }
 }
 

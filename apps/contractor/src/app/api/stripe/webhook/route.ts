@@ -127,5 +127,80 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ── Enterprise subscription lifecycle ─────────────────────
+  if (event.type === "invoice.payment_succeeded") {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerId =
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
+    if (customerId) {
+      const admin = createAdminClient();
+      await admin
+        .from("companies")
+        .update({ subscription_status: "active" })
+        .eq("stripe_customer_id", customerId)
+        .eq("account_type", "enterprise");
+      console.log(`[webhook] Subscription active for customer ${customerId}`);
+    }
+  }
+
+  if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerId =
+      typeof invoice.customer === "string"
+        ? invoice.customer
+        : invoice.customer?.id;
+    if (customerId) {
+      const admin = createAdminClient();
+      await admin
+        .from("companies")
+        .update({ subscription_status: "past_due" })
+        .eq("stripe_customer_id", customerId)
+        .eq("account_type", "enterprise");
+      console.log(
+        `[webhook] Subscription past_due for customer ${customerId}`
+      );
+    }
+  }
+
+  if (event.type === "customer.subscription.updated") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer?.id;
+    if (customerId) {
+      const admin = createAdminClient();
+      await admin
+        .from("companies")
+        .update({ subscription_status: subscription.status })
+        .eq("stripe_customer_id", customerId)
+        .eq("account_type", "enterprise");
+      console.log(
+        `[webhook] Subscription status → ${subscription.status} for ${customerId}`
+      );
+    }
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId =
+      typeof subscription.customer === "string"
+        ? subscription.customer
+        : subscription.customer?.id;
+    if (customerId) {
+      const admin = createAdminClient();
+      await admin
+        .from("companies")
+        .update({ subscription_status: "canceled" })
+        .eq("stripe_customer_id", customerId)
+        .eq("account_type", "enterprise");
+      console.log(
+        `[webhook] Subscription canceled for customer ${customerId}`
+      );
+    }
+  }
+
   return NextResponse.json({ received: true });
 }

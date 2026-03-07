@@ -8,13 +8,14 @@ import { createDraftDecoding } from "@/app/(dashboard)/dashboard/policy-decoder/
 
 interface NewDecodeButtonProps {
   isFirstDecode?: boolean;
+  isEnterprise?: boolean;
 }
 
 /**
  * Creates a draft decoding and redirects to the detail page.
  * Upload-first flow: user uploads PDF, then pays (or gets first free).
  */
-export function NewDecodeButton({ isFirstDecode }: NewDecodeButtonProps) {
+export function NewDecodeButton({ isFirstDecode, isEnterprise }: NewDecodeButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -77,7 +78,7 @@ export function NewDecodeButton({ isFirstDecode }: NewDecodeButtonProps) {
               d="M12 4v16m8-8H4"
             />
           </svg>
-          New Policy Decode{isFirstDecode ? " — FREE" : " — $50"}
+          New Policy Decode{isEnterprise ? "" : isFirstDecode ? " — FREE" : " — $50"}
         </>
       )}
     </Button>

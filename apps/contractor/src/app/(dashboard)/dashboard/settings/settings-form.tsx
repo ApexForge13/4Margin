@@ -24,6 +24,7 @@ interface SettingsFormProps {
       state: string | null;
       zip: string | null;
       license_number: string | null;
+      account_type?: string | null;
     };
   };
 }
@@ -44,7 +45,28 @@ export function SettingsForm({ profile }: SettingsFormProps) {
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [profileSaving, setProfileSaving] = useState(false);
 
+  const [billingLoading, setBillingLoading] = useState(false);
+
   const isOwnerOrAdmin = profile.role === "owner" || profile.role === "admin";
+  const isEnterpriseOwner =
+    profile.role === "owner" &&
+    profile.companies.account_type === "enterprise";
+
+  const handleManageBilling = async () => {
+    setBillingLoading(true);
+    try {
+      const res = await fetch("/api/stripe/billing-portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.error || "Failed to open billing portal");
+      }
+    } catch {
+      toast.error("Failed to open billing portal");
+    }
+    setBillingLoading(false);
+  };
 
   const handleCompanySave = async () => {
     if (!companyName.trim()) {
@@ -225,6 +247,28 @@ export function SettingsForm({ profile }: SettingsFormProps) {
           </Button>
         </CardContent>
       </Card>
+
+      {/* Billing — enterprise owners only */}
+      {isEnterpriseOwner && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Billing</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Manage your subscription, payment methods, and view invoices via
+              the Stripe billing portal.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleManageBilling}
+              disabled={billingLoading}
+            >
+              {billingLoading ? "Opening..." : "Manage Billing"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

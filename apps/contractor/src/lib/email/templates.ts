@@ -290,6 +290,71 @@ export function policyCheckCompleteEmail(data: {
   };
 }
 
+// ─── Enterprise: New User Auto-Joined ───────────────────────
+
+export function enterpriseUserJoinedEmail(data: {
+  ownerName: string;
+  newUserName: string;
+  newUserEmail: string;
+  companyName: string;
+  manageUrl: string;
+}) {
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#0f172a;">New team member joined</h2>
+    <p style="margin:0 0 24px;color:#52525b;font-size:14px;">Hi ${data.ownerName},</p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      <strong>${data.newUserName}</strong> (${data.newUserEmail}) has joined
+      <strong>${data.companyName}</strong> via domain-based auto-join.
+    </p>
+    <p style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      You can assign them to an office and set their role from the Enterprise dashboard.
+    </p>
+    <a href="${data.manageUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+      Manage Team
+    </a>
+  `;
+
+  return {
+    subject: `${data.newUserName} joined ${data.companyName}`,
+    html: layout(body),
+  };
+}
+
+// ─── Enterprise: Usage Approaching Limit ────────────────────
+
+export function usageLimitApproachingEmail(data: {
+  ownerName: string;
+  companyName: string;
+  recordType: string;
+  currentCount: number;
+  limit: number;
+  manageUrl: string;
+}) {
+  const pct = Math.round((data.currentCount / data.limit) * 100);
+  const typeLabel = data.recordType === "decode" ? "policy decodes" : "supplements";
+
+  const body = `
+    <h2 style="margin:0 0 8px;font-size:20px;color:#0f172a;">Usage approaching limit</h2>
+    <p style="margin:0 0 24px;color:#52525b;font-size:14px;">Hi ${data.ownerName},</p>
+    <p style="margin:0 0 16px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      <strong>${data.companyName}</strong> has used <strong>${data.currentCount} of ${data.limit}</strong>
+      included ${typeLabel} this billing period (${pct}%).
+    </p>
+    <p style="margin:0 0 24px;color:#3f3f46;font-size:14px;line-height:1.6;">
+      Additional ${typeLabel} beyond the limit will be billed at the overage rate
+      per your enterprise agreement.
+    </p>
+    <a href="${data.manageUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:6px;">
+      View Usage
+    </a>
+  `;
+
+  return {
+    subject: `Usage alert — ${pct}% of ${typeLabel} used`,
+    html: layout(body),
+  };
+}
+
 // ─── Pipeline Error ─────────────────────────────────────────
 
 export function pipelineErrorEmail(data: {
