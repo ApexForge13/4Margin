@@ -1158,7 +1158,7 @@ function sanitizeFavorableProvisions(analysis: PolicyAnalysis): PolicyAnalysis {
 
   result.favorableProvisions = result.favorableProvisions.filter((fp) => {
     const nameUpper = (fp.name || "").toUpperCase();
-    const id = (fp as { provisionId?: string }).provisionId || "";
+    const id = fp.provisionId || "";
 
     // Rule 1: ACV policies should never have RCV-related favorable provisions
     if (result.depreciationMethod === "ACV") {
