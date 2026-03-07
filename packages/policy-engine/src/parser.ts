@@ -1150,6 +1150,57 @@ function applyConfidenceGate(analysis: PolicyAnalysis): PolicyAnalysis {
   return result;
 }
 
+// ── Sanitize Favorable Provisions (Post-Processing) ─────────────────────────
+
+function sanitizeFavorableProvisions(analysis: PolicyAnalysis): PolicyAnalysis {
+  const result = { ...analysis };
+  const originalCount = result.favorableProvisions.length;
+
+  result.favorableProvisions = result.favorableProvisions.filter((fp) => {
+    const nameUpper = (fp.name || "").toUpperCase();
+    const id = (fp as { provisionId?: string }).provisionId || "";
+
+    // Rule 1: ACV policies should never have RCV-related favorable provisions
+    if (result.depreciationMethod === "ACV") {
+      if (
+        id === "recoverable_depreciation" ||
+        nameUpper.includes("RCV") ||
+        nameUpper.includes("REPLACEMENT COST")
+      ) {
+        console.log(
+          `[policy-parser] Removed inconsistent favorable provision: ${fp.name} (depreciationMethod=${result.depreciationMethod}, policyType=${result.policyType})`
+        );
+        return false;
+      }
+    }
+
+    // Rule 2: HO-4 (renter's) policies have no dwelling — remove depreciation-related provisions
+    if (result.policyType?.toUpperCase().startsWith("HO-4")) {
+      if (
+        id === "recoverable_depreciation" ||
+        nameUpper.includes("RCV") ||
+        nameUpper.includes("REPLACEMENT COST") ||
+        nameUpper.includes("RECOVERABLE DEPRECIATION")
+      ) {
+        console.log(
+          `[policy-parser] Removed inconsistent favorable provision: ${fp.name} (depreciationMethod=${result.depreciationMethod}, policyType=${result.policyType})`
+        );
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  if (result.favorableProvisions.length < originalCount) {
+    console.log(
+      `[policy-parser] sanitizeFavorableProvisions removed ${originalCount - result.favorableProvisions.length} provision(s)`
+    );
+  }
+
+  return result;
+}
+
 // ── Percentage Deductible Calculator ────────────────────────────────────────
 
 function calculatePercentageDeductibles(
@@ -1277,6 +1328,9 @@ export async function parsePolicyPdfV2(
 
     // Post-processing: apply confidence gate — flag items in low-confidence sections
     verified = applyConfidenceGate(verified);
+
+    // Post-processing: sanitize favorable provisions for data consistency
+    verified = sanitizeFavorableProvisions(verified);
 
     console.log(
       `[policy-parser] Pipeline complete. Final confidence: ${verified.confidence.toFixed(2)}, Risk: ${verified.riskLevel}, Deductibles: ${verified.deductibles.length}, Endorsements: ${verified.endorsements.length}, Exclusions: ${verified.exclusions.length}`

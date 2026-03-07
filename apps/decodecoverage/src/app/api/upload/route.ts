@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 import { parsePolicyPdfV2 } from "@4margin/policy-engine";
 import { calculatePolicyScore } from "@/lib/policy-score";
+import { createHash } from "crypto";
 
 export const maxDuration = 300;
 
@@ -22,11 +23,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Read buffer once — used for hash, storage upload, and AI parsing
+    const buffer = Buffer.from(await policyFile.arrayBuffer());
+
+    // Compute SHA-256 hash for deduplication
+    const fileHash = createHash("sha256").update(buffer).digest("hex");
+
+    // Check for existing completed result with same file hash
+    const { data: existingLead } = await supabase
+      .from("consumer_leads")
+      .select("id")
+      .eq("file_hash", fileHash)
+      .eq("status", "complete")
+      .limit(1)
+      .single();
+
+    if (existingLead) {
+      console.log(
+        `[upload] Duplicate detected — returning cached lead ${existingLead.id} (hash=${fileHash.slice(0, 12)}…)`
+      );
+      return NextResponse.json({ id: existingLead.id, cached: true });
+    }
+
     // 1. Create anonymous lead (no contact info)
     const { data: lead, error: insertErr } = await supabase
       .from("consumer_leads")
       .insert({
         status: "processing",
+        file_hash: fileHash,
         utm_source: utmSource || null,
         utm_medium: utmMedium || null,
         utm_campaign: utmCampaign || null,
@@ -47,7 +71,6 @@ export async function POST(request: NextRequest) {
     // 2. Upload PDF to storage
     const originalFilename = policyFile.name;
     const storagePath = `consumer-policies/${leadId}/${policyFile.name}`;
-    const buffer = Buffer.from(await policyFile.arrayBuffer());
 
     const { error: uploadErr } = await supabase.storage
       .from("consumer-policies")
@@ -78,9 +101,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Parse policy with AI
     try {
-      const base64 = Buffer.from(await policyFile.arrayBuffer()).toString(
-        "base64"
-      );
+      const base64 = buffer.toString("base64");
 
       console.log(`[upload] Starting parse for lead ${leadId}`);
       const startTime = Date.now();
