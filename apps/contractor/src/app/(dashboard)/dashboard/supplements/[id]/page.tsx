@@ -180,25 +180,12 @@ export default async function SupplementDetailPage({
         </div>
       </div>
 
-      {/* Draft / awaiting payment — actionable payment card */}
+      {/* Draft / awaiting payment — hidden when payment=success is in URL (PaymentToast handles that state) */}
       {status === ("draft" as SupplementStatus) && !supplement.paid_at && (
         <DraftPaymentCard
           supplementId={id}
           isFirstSupplement={isFirstSupplement}
         />
-      )}
-
-      {/* Draft but paid — pipeline starting */}
-      {status === ("draft" as SupplementStatus) && !!supplement.paid_at && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="flex items-center gap-3 py-6">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-            <div>
-              <p className="font-medium text-blue-900">Starting analysis...</p>
-              <p className="text-sm text-blue-700">Payment confirmed. Your supplement analysis is about to begin.</p>
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Generating indicator — or timeout warning if stuck */}

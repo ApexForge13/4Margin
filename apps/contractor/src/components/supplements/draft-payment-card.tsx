@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -14,13 +15,19 @@ interface DraftPaymentCardProps {
 /**
  * Prominent payment card shown on the supplement detail page
  * when the supplement is in "draft" (awaiting payment) status.
- * Includes a large "Complete Payment" button that triggers Stripe checkout.
+ * Hidden when ?payment=success is present (PaymentToast handles that state).
  */
 export function DraftPaymentCard({
   supplementId,
   isFirstSupplement,
 }: DraftPaymentCardProps) {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  // Hide if payment just completed — PaymentToast shows the "analyzing" card instead
+  if (searchParams.get("payment") === "success") {
+    return null;
+  }
 
   const handleCheckout = async () => {
     setLoading(true);
