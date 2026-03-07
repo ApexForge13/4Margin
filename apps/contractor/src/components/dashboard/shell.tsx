@@ -82,31 +82,24 @@ export function DashboardShell({
         </svg>
       ),
     },
-    // Supplements tab hidden — dashboard shows the same data
-    // {
-    //   label: "Supplements",
-    //   href: "/dashboard/supplements",
-    //   icon: ( ... ),
-    // },
-    // ── Hidden for decoder-only MVP ──
-    // {
-    //   label: "New Supplement",
-    //   href: "/dashboard/upload",
-    //   icon: (
-    //     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-    //     </svg>
-    //   ),
-    // },
-    // {
-    //   label: "Policy Checks",
-    //   href: "/dashboard/policy-checks",
-    //   icon: (
-    //     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    //     </svg>
-    //   ),
-    // },
+    {
+      label: "Supplements",
+      href: "/dashboard/supplements",
+      icon: (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+    },
+    {
+      label: "New Supplement",
+      href: "/dashboard/upload",
+      icon: (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+      ),
+    },
     {
       label: "Policy Decoder",
       href: "/dashboard/policy-decoder",
