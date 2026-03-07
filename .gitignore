@@ -47,6 +47,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# test fixtures (sample policies are sensitive, output is generated)
+test-fixtures/sample-policies/
+test-fixtures/output/
+
 # claude
 .claude/
 

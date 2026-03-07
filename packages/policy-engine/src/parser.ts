@@ -163,7 +163,16 @@ export interface PolicyAnalysis {
 
 // ── Zod Validation Schemas ──────────────────────────────────────────────────
 
-const severitySchema = z.enum(["critical", "warning", "info"]);
+function normalizeSeverity(val: unknown): string {
+  if (typeof val !== "string") return "info";
+  const v = val.toLowerCase().trim();
+  if (v === "critical" || v === "high" || v === "severe" || v === "major") return "critical";
+  if (v === "warning" || v === "moderate" || v === "medium" || v === "caution") return "warning";
+  if (v === "info" || v === "low" || v === "informational" || v === "note" || v === "minor") return "info";
+  return val;
+}
+
+const severitySchema = z.preprocess(normalizeSeverity, z.enum(["critical", "warning", "info"]).catch("info"));
 
 const policyCoverageSchema = z.object({
   section: z.string().default("unknown"),
@@ -230,21 +239,21 @@ const sectionConfidenceSchema = z.object({
 });
 
 const policyAnalysisSchema = z.object({
-  policyType: z.string().default("UNKNOWN"),
-  carrier: z.string().default("Unknown Carrier"),
-  policyNumber: z.string().default(""),
+  policyType: z.string().nullable().default("UNKNOWN").transform(val => val ?? "UNKNOWN"),
+  carrier: z.string().nullable().default("Unknown Carrier").transform(val => val ?? "Unknown Carrier"),
+  policyNumber: z.string().nullable().default("").transform(val => val ?? ""),
   effectiveDate: z.string().nullable().default(null),
   expirationDate: z.string().nullable().default(null),
-  namedInsured: z.string().default(""),
-  propertyAddress: z.string().default(""),
+  namedInsured: z.string().nullable().default("").transform(val => val ?? ""),
+  propertyAddress: z.string().nullable().default("").transform(val => val ?? ""),
 
   coverages: z.array(policyCoverageSchema).default([]),
   deductibles: z.array(policyDeductibleSchema).default([]),
 
   depreciationMethod: z
     .enum(["RCV", "ACV", "MODIFIED_ACV", "UNKNOWN"])
-    .default("UNKNOWN"),
-  depreciationNotes: z.string().default(""),
+    .catch("UNKNOWN"),
+  depreciationNotes: z.string().nullable().default("").transform(val => val ?? ""),
 
   exclusions: z.array(policyExclusionSchema).default([]),
   endorsements: z.array(policyEndorsementSchema).default([]),
@@ -252,14 +261,15 @@ const policyAnalysisSchema = z.object({
   landmines: z.array(detectedLandmineSchema).default([]),
   favorableProvisions: z.array(detectedFavorableSchema).default([]),
 
-  summaryForContractor: z.string().default(""),
-  riskLevel: z.enum(["low", "medium", "high"]).default("medium"),
+  summaryForContractor: z.string().nullable().default("").transform(val => val ?? ""),
+  riskLevel: z.enum(["low", "medium", "high"]).catch("medium"),
 
   // V2 fields — may not be in Claude's response (we inject them)
-  documentType: z
-    .enum(["full_policy", "dec_page_only", "endorsement_only", "unknown"])
-    .default("unknown"),
-  scanQuality: z.enum(["good", "fair", "poor"]).default("good"),
+  documentType: z.preprocess(
+    normalizeDocumentType,
+    z.enum(["full_policy", "dec_page_only", "endorsement_only", "unknown"]).catch("unknown")
+  ),
+  scanQuality: z.enum(["good", "fair", "poor"]).catch("good"),
   missingDocumentWarning: z.string().nullable().default(null),
   endorsementFormNumbers: z.array(z.string()).default([]),
   sectionConfidence: sectionConfidenceSchema.default({
@@ -272,18 +282,31 @@ const policyAnalysisSchema = z.object({
   }),
 
   confidence: z.number().min(0).max(1).default(0.5),
-  parseNotes: z.string().default(""),
+  parseNotes: z.string().nullable().default("").transform(val => val ?? ""),
 });
 
+/** Normalize AI-returned documentType values to our canonical enum */
+function normalizeDocumentType(val: unknown): string {
+  if (typeof val !== "string") return "unknown";
+  const v = val.toLowerCase().trim().replace(/[\s_-]+/g, "_");
+  if (v === "full_policy" || v === "full" || v === "complete" || v === "complete_policy") return "full_policy";
+  if (v.includes("dec") || v.includes("declaration")) return "dec_page_only";
+  if (v.includes("endorsement")) return "endorsement_only";
+  if (v.includes("jacket") || v.includes("cover")) return "full_policy";
+  if (v === "unknown") return "unknown";
+  return val; // pass through for enum validation / .catch fallback
+}
+
 const documentMetaSchema = z.object({
-  documentType: z
-    .enum(["full_policy", "dec_page_only", "endorsement_only", "unknown"])
-    .default("unknown"),
+  documentType: z.preprocess(
+    normalizeDocumentType,
+    z.enum(["full_policy", "dec_page_only", "endorsement_only", "unknown"]).catch("unknown")
+  ),
   pageCount: z.number().nullable().default(null),
   carrier: z.string().nullable().default(null),
   policyFormType: z.string().nullable().default(null),
   endorsementFormNumbers: z.array(z.string()).default([]),
-  scanQuality: z.enum(["good", "fair", "poor"]).default("good"),
+  scanQuality: z.enum(["good", "fair", "poor"]).catch("good"),
   missingDocumentWarning: z.string().nullable().default(null),
 });
 
@@ -327,22 +350,27 @@ export async function analyzeDocumentType(
   const prompt = `Quickly analyze this insurance document and answer these questions. Return ONLY a JSON object.
 
 {
-  "documentType": "full_policy" | "dec_page_only" | "endorsement_only" | "unknown",
+  "documentType": "<MUST be exactly one of: full_policy, dec_page_only, endorsement_only, unknown>",
   "pageCount": <number or null>,
   "carrier": "<carrier name or null>",
   "policyFormType": "<HO-3, HO-5, HO-6, DP-1, DP-3, HO-4, HO-8, or null>",
-  "endorsementFormNumbers": ["<list all endorsement form numbers visible in any schedule, e.g. HW 08 02, FE-5398>"],
-  "scanQuality": "good" | "fair" | "poor",
+  "endorsementFormNumbers": ["<list ALL form numbers found anywhere in the document>"],
+  "scanQuality": "<MUST be exactly one of: good, fair, poor>",
   "missingDocumentWarning": "<warning message if document is incomplete, or null>"
 }
 
-Classification guide:
-- "full_policy": Contains declarations page AND policy conditions/exclusions AND endorsement text (usually 20+ pages)
+CRITICAL — documentType must be one of these EXACT strings (no variations):
+- "full_policy": Contains declarations page AND policy conditions/exclusions AND endorsement text (usually 20+ pages). Also use this for policy jackets.
 - "dec_page_only": Contains only the declarations/summary page(s) — shows coverage limits, deductibles, endorsement schedule, but NOT the actual endorsement or exclusion text (usually 2-8 pages)
 - "endorsement_only": Contains only endorsement pages, not the base policy
-- "unknown": Cannot determine
+- "unknown": Cannot determine document type
 
-For endorsementFormNumbers: Look for a "Forms and Endorsements" schedule/table on the declarations page. List every form number you can find (e.g., "HO 00 03", "HW 08 02", "FE-5398", "IL 01 70").
+For endorsementFormNumbers — THIS IS CRITICAL, do not skip:
+- Search the ENTIRE document for a "Forms and Endorsements" schedule or table
+- List EVERY form number visible anywhere: endorsement schedule, page headers, footers, form references
+- Include ALL form numbers regardless of carrier (e.g., "HO 00 03", "HW 08 02", "FE-5398", "FE-5397", "IL 01 70", "EP 43 29")
+- For State Farm policies specifically, look for FE- prefixed forms (FE-5398, FE-5397, FE-3784, FE-6148) and HW- prefixed forms (HW 08 02, HW-2111, HW-2143)
+- Do NOT return an empty array unless you truly cannot find any form numbers
 
 For scanQuality: "good" = clear digital text, "fair" = readable but some blur/artifacts, "poor" = significant OCR issues, blurry, or hard to read.
 
@@ -352,7 +380,7 @@ Return ONLY the JSON object, no explanation.`;
     const response = await withRetry(
       () =>
         client.messages.create({
-          model: "claude-3-5-haiku-20241022",
+          model: "claude-haiku-4-5-20251001",
           max_tokens: 1000,
           messages: [
             {
@@ -534,7 +562,12 @@ Search the entire document for endorsement headers, form numbers, and schedule l
 - Law & ordinance modifications
 - Any other endorsements affecting exterior claims
 
-For each, note the endorsement form number if visible. If you can see the form number but not the endorsement text (common on dec pages), still list it with what you can determine from the form number.
+For each, note the endorsement form number in the "number" field. If you can see the form number but not the endorsement text (common on dec pages), still list it with what you can determine from the form number.
+
+### 6b. Endorsement Form Numbers
+Extract ALL policy form numbers, endorsement numbers, and option codes visible ANYWHERE in the document — page headers, footers, endorsement schedules, forms listings.
+For State Farm policies, look specifically for FE- and HW- prefixed form numbers (e.g., FE-5398, FE-5397, FE-3784, HW 08 02, HW-2111, HW-2143).
+Return these in the "endorsementFormNumbers" array in the output.
 
 ### 7. Landmine Detection
 Specifically search for these dangerous provisions:
@@ -589,6 +622,7 @@ Return a JSON object with this exact structure:
   ],
   "summaryForContractor": "2-3 sentence plain-English summary.",
   "riskLevel": "high",
+  "endorsementFormNumbers": ["HO 00 03", "FE-5398", "HW 08 02"],
   "sectionConfidence": {
     "policyMeta": 0.95,
     "coverages": 0.9,
@@ -693,7 +727,18 @@ RULES:
   validated.documentType = docMeta.documentType;
   validated.scanQuality = docMeta.scanQuality;
   validated.missingDocumentWarning = docMeta.missingDocumentWarning;
-  validated.endorsementFormNumbers = docMeta.endorsementFormNumbers;
+
+  // Merge endorsement form numbers from Pass 1 (docMeta) + Pass 2 (endorsements + top-level)
+  const pass2EndorsementNumbers = validated.endorsements
+    .map((e) => e.number)
+    .filter((n): n is string => !!n);
+  validated.endorsementFormNumbers = [
+    ...new Set([
+      ...docMeta.endorsementFormNumbers,
+      ...validated.endorsementFormNumbers,
+      ...pass2EndorsementNumbers,
+    ]),
+  ];
 
   // Post-process: enrich landmines with knowledge base data
   validated.landmines = enrichLandmines(validated.landmines);
@@ -987,13 +1032,20 @@ function enrichWithCarrierForms(
   analysis: PolicyAnalysis,
   docMeta: DocumentMeta
 ): PolicyAnalysis {
-  if (!docMeta.carrier || docMeta.endorsementFormNumbers.length === 0) {
+  // Use carrier from docMeta (Pass 1) or analysis (Pass 2) — whichever is available
+  const carrier = docMeta.carrier || analysis.carrier;
+  // Use merged form numbers from analysis (already merged from Pass 1 + Pass 2)
+  const formNumbers = analysis.endorsementFormNumbers;
+
+  if (!carrier || carrier === "Unknown Carrier" || formNumbers.length === 0) {
     return analysis;
   }
 
-  const carrierName = docMeta.carrier.toLowerCase();
+  const carrierName = carrier.toLowerCase();
   const matchingForms = CARRIER_ENDORSEMENT_FORMS.filter(
-    (f) => carrierName.includes(f.carrier.toLowerCase())
+    (f) =>
+      carrierName.includes(f.carrier.toLowerCase()) ||
+      f.carrier.toLowerCase().includes(carrierName)
   );
 
   if (matchingForms.length === 0) return analysis;
@@ -1003,11 +1055,14 @@ function enrichWithCarrierForms(
     result.endorsements.map((e) => e.name.toLowerCase())
   );
 
-  for (const formNumber of docMeta.endorsementFormNumbers) {
-    const normalized = formNumber.trim().toUpperCase().replace(/\s+/g, " ");
+  for (const formNumber of formNumbers) {
+    // Normalize: strip "Form " prefix, collapse whitespace, uppercase
+    const normalized = formNumber.trim().toUpperCase().replace(/^FORM\s+/i, "").replace(/\s+/g, " ");
     const knownForm = matchingForms.find(
-      (f) =>
-        normalized.includes(f.formNumber.toUpperCase().replace(/\s+/g, " "))
+      (f) => {
+        const knownNorm = f.formNumber.toUpperCase().replace(/\s+/g, " ");
+        return normalized.includes(knownNorm) || knownNorm.includes(normalized);
+      }
     );
 
     if (knownForm && !existingEndorsementNames.has(knownForm.name.toLowerCase())) {
@@ -1078,6 +1133,43 @@ function enrichLandmines(detected: DetectedLandmine[]): DetectedLandmine[] {
 }
 
 // ── Percentage Deductible Calculator ────────────────────────────────────────
+
+function sanitizeFavorableProvisions(
+  analysis: PolicyAnalysis
+): PolicyAnalysis {
+  const { depreciationMethod, policyType, favorableProvisions } = analysis;
+  const isACV = depreciationMethod === "ACV";
+  const isHO4 = policyType.toUpperCase().startsWith("HO-4");
+
+  if (!isACV && !isHO4) return analysis;
+
+  const filtered = favorableProvisions.filter((fp) => {
+    const id = (fp.provisionId || "").toLowerCase();
+    const name = (fp.name || "").toLowerCase();
+    const isDepreciationProvision =
+      id === "recoverable_depreciation" ||
+      name.includes("rcv") ||
+      name.includes("replacement cost");
+
+    if (isACV && isDepreciationProvision) {
+      console.log(
+        `[policy-parser] Removed inconsistent favorable provision: ${fp.name} (depreciationMethod=${depreciationMethod}, policyType=${policyType})`
+      );
+      return false;
+    }
+
+    if (isHO4 && isDepreciationProvision) {
+      console.log(
+        `[policy-parser] Removed inconsistent favorable provision: ${fp.name} (depreciationMethod=${depreciationMethod}, policyType=${policyType})`
+      );
+      return false;
+    }
+
+    return true;
+  });
+
+  return { ...analysis, favorableProvisions: filtered };
+}
 
 function calculatePercentageDeductibles(
   analysis: PolicyAnalysis
@@ -1201,6 +1293,9 @@ export async function parsePolicyPdfV2(
 
     // Post-processing: calculate percentage deductibles
     verified = calculatePercentageDeductibles(verified);
+
+    // Post-processing: remove inconsistent favorable provisions
+    verified = sanitizeFavorableProvisions(verified);
 
     console.log(
       `[policy-parser] Pipeline complete. Final confidence: ${verified.confidence.toFixed(2)}, Risk: ${verified.riskLevel}, Deductibles: ${verified.deductibles.length}, Endorsements: ${verified.endorsements.length}, Exclusions: ${verified.exclusions.length}`

@@ -3,11 +3,21 @@ import { createAdminClient } from "@/lib/supabase";
 import { generateDecoderPdf } from "@4margin/pdf";
 import type { DecoderPdfData } from "@4margin/pdf";
 import { sendPolicyReport } from "@/lib/email";
+import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const ip = getClientIp(_request);
+  const rl = checkRateLimit(`email:${ip}`, RATE_LIMITS.email);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil(rl.resetMs / 1000)) } }
+    );
+  }
+
   const { id } = await params;
   const supabase = createAdminClient();
 

@@ -21,6 +21,7 @@ import { calculatePolicyScore, type PolicyScore } from "@/lib/policy-score";
 import { getPlainEnglishFinding } from "@/lib/finding-templates";
 import { ConversionForm } from "@/components/conversion-form";
 import { ExitIntent } from "@/components/exit-intent";
+import { trackEvent } from "@/components/analytics";
 
 interface PolicyAnalysis {
   policyType: string;
@@ -125,6 +126,7 @@ export function ResultsDisplay({
     );
 
   const handleDownload = () => {
+    trackEvent("report_downloaded", { id });
     const url = downloadUrl || `/api/report/${id}/download`;
     window.open(url, "_blank");
   };
@@ -135,6 +137,7 @@ export function ResultsDisplay({
       const res = await fetch(`/api/report/${id}/email`, { method: "POST" });
       if (res.ok) {
         setEmailSent(true);
+        trackEvent("report_emailed", { id });
       }
     } catch {
       alert("Failed to send email. Please try downloading instead.");

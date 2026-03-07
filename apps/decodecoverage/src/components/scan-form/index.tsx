@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, CheckCircle, ArrowRight, Lock, Shield } from "lucide-react";
+import { trackEvent } from "@/components/analytics";
 
 const CARRIERS = [
   "State Farm",
@@ -118,6 +119,7 @@ export function ScanForm() {
       }
 
       const { id } = await res.json();
+      trackEvent("policy_upload_completed", { carrier });
       router.push(`/results/${id}`);
     } catch (err) {
       console.error("Submit error:", err);
