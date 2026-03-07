@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   uploadPolicyFile,
   unlockFreeDecoding,
+  checkPaymentStatus,
 } from "@/app/(dashboard)/dashboard/policy-decoder/actions";
 import { PolicyDecoderResults } from "./decoder-results";
 
@@ -33,6 +34,8 @@ interface DecoderFlowProps {
   documentMeta: Record<string, unknown> | null;
   /** True when paid + hasFile + status still draft — triggers auto-process */
   autoProcess: boolean;
+  /** True when user just returned from Stripe with ?payment=success */
+  paymentReturned?: boolean;
 }
 
 /* ─── Claim types ─── */
@@ -66,6 +69,7 @@ export function DecoderFlow({
   analysis: initialAnalysis,
   documentMeta: initialDocumentMeta,
   autoProcess,
+  paymentReturned,
 }: DecoderFlowProps) {
   const router = useRouter();
 
@@ -95,23 +99,79 @@ export function DecoderFlow({
   );
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoProcessedRef = useRef(false);
+  const paymentPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Cleanup timers on unmount ──
   useEffect(() => {
     return () => {
       if (processingTimerRef.current) clearInterval(processingTimerRef.current);
       if (stepTimerRef.current) clearInterval(stepTimerRef.current);
+      if (paymentPollRef.current) clearInterval(paymentPollRef.current);
     };
   }, []);
 
-  // ── Auto-process on mount when conditions are met ──
+  // ── Auto-process: start when autoProcess prop becomes true ──
+  // This fires on initial mount (if already paid) OR after router.refresh()
+  // updates the server component props to reflect confirmed payment.
   useEffect(() => {
     if (autoProcess && !autoProcessedRef.current) {
       autoProcessedRef.current = true;
+      // Stop payment polling if it's running
+      if (paymentPollRef.current) {
+        clearInterval(paymentPollRef.current);
+        paymentPollRef.current = null;
+      }
       startProcessing();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoProcess]);
+
+  // ── Verify payment and auto-process when returned from Stripe ──
+  // Calls checkPaymentStatus server action directly (verifies with Stripe
+  // API + updates paid_at in DB). Polls until confirmed or times out.
+  useEffect(() => {
+    if (!paymentReturned || autoProcess) return;
+
+    // Show "verifying" spinner instead of the pay button
+    setPhase("paying");
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 20; // ~40 seconds total
+
+    const verify = async () => {
+      while (!cancelled && attempts < maxAttempts) {
+        attempts++;
+        try {
+          const { paid } = await checkPaymentStatus(decodingId);
+          if (paid && !cancelled) {
+            // Payment confirmed — go straight to processing
+            startProcessing();
+            return;
+          }
+        } catch {
+          // Server action failed — keep trying
+        }
+        if (!cancelled) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+
+      if (!cancelled) {
+        setPhase("payment");
+        toast.error(
+          "Payment verification timed out. If you were charged, try refreshing the page."
+        );
+      }
+    };
+
+    verify();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentReturned]);
 
   // ── Start processing (call the parse API) ──
   const startProcessing = useCallback(async () => {
@@ -584,6 +644,9 @@ export function DecoderFlow({
 
   /* ── Payment phase ── */
   if (phase === "payment" || phase === "paying") {
+    // If returned from Stripe and verifying, show a different UI
+    const isVerifying = phase === "paying" && paymentReturned;
+
     return (
       <div className="space-y-4">
         {renderStepper()}
@@ -605,7 +668,9 @@ export function DecoderFlow({
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Policy uploaded!</h3>
+              <h3 className="text-lg font-semibold">
+                {isVerifying ? "Payment received!" : "Policy uploaded!"}
+              </h3>
               {fileName && (
                 <p className="text-sm text-muted-foreground mt-1">
                   {fileName}
@@ -613,58 +678,88 @@ export function DecoderFlow({
               )}
             </div>
             <div className="border-t pt-4 mt-2 w-full max-w-sm">
-              <p className="text-sm text-muted-foreground mb-4">
-                Pay <span className="font-semibold text-foreground">$50</span>{" "}
-                to decode your policy and get a full coverage analysis.
-              </p>
-              <Button
-                size="lg"
-                onClick={handlePay}
-                disabled={phase === "paying"}
-                className="w-full"
-              >
-                {phase === "paying" ? (
-                  <span className="flex items-center gap-2">
-                    <svg
-                      className="h-4 w-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    Redirecting to checkout...
-                  </span>
-                ) : (
-                  <>
-                    <svg
-                      className="mr-2 h-4 w-4"
-                      fill="none"
+              {isVerifying ? (
+                <div className="flex flex-col items-center gap-3">
+                  <svg
+                    className="h-6 w-6 animate-spin text-primary"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
                       stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                      />
-                    </svg>
-                    Pay $50 to Decode
-                  </>
-                )}
-              </Button>
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  <p className="text-sm text-muted-foreground">
+                    Verifying payment and starting decode...
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Pay{" "}
+                    <span className="font-semibold text-foreground">$50</span>{" "}
+                    to decode your policy and get a full coverage analysis.
+                  </p>
+                  <Button
+                    size="lg"
+                    onClick={handlePay}
+                    disabled={phase === "paying"}
+                    className="w-full"
+                  >
+                    {phase === "paying" ? (
+                      <span className="flex items-center gap-2">
+                        <svg
+                          className="h-4 w-4 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                          />
+                        </svg>
+                        Redirecting to checkout...
+                      </span>
+                    ) : (
+                      <>
+                        <svg
+                          className="mr-2 h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                          />
+                        </svg>
+                        Pay $50 to Decode
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

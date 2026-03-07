@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe";
 import { createPolicyDecodingSchema, validate } from "@/lib/validations/schemas";
 
 // ── Types ────────────────────────────────────────────────────
@@ -365,4 +367,64 @@ export async function getPaidDecodingCount(): Promise<number> {
     .not("paid_at", "is", null);
 
   return count || 0;
+}
+
+// ── Check Payment Status (poll from client after Stripe return) ──
+
+export async function checkPaymentStatus(
+  decodingId: string
+): Promise<{ paid: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { paid: false };
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("company_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.company_id) return { paid: false };
+
+  // Fetch current state
+  const admin = createAdminClient();
+  const { data: decoding } = await admin
+    .from("policy_decodings")
+    .select("id, paid_at, stripe_checkout_session_id")
+    .eq("id", decodingId)
+    .eq("company_id", profile.company_id)
+    .single();
+
+  if (!decoding) return { paid: false };
+
+  // Already paid (webhook fired)
+  if (decoding.paid_at) return { paid: true };
+
+  // Try to verify with Stripe
+  if (decoding.stripe_checkout_session_id) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(
+        decoding.stripe_checkout_session_id
+      );
+
+      if (session.payment_status === "paid") {
+        await admin
+          .from("policy_decodings")
+          .update({
+            paid_at: new Date().toISOString(),
+            stripe_payment_id: (session.payment_intent as string) || null,
+          })
+          .eq("id", decodingId);
+
+        return { paid: true };
+      }
+    } catch (err) {
+      console.error("[checkPaymentStatus] Stripe verify failed:", err);
+    }
+  }
+
+  return { paid: false };
 }

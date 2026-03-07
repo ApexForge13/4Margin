@@ -11,7 +11,7 @@ import { DecoderFlow } from "@/components/policy-decoder/decoder-flow";
 
 interface Props {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ payment?: string }>;
+  searchParams: Promise<{ payment?: string; session_id?: string }>;
 }
 
 export default async function PolicyDecodingDetailPage({
@@ -26,7 +26,7 @@ export default async function PolicyDecodingDetailPage({
   if (!user) redirect("/login");
 
   const { id } = await params;
-  const { payment } = await searchParams;
+  const { payment, session_id } = await searchParams;
   let { decoding, error } = await getPolicyDecoding(id);
 
   if (error || !decoding) {
@@ -34,34 +34,42 @@ export default async function PolicyDecodingDetailPage({
   }
 
   // ── Handle Stripe webhook race / failure ────────────────────────────
-  // The webhook that sets paid_at may not have fired yet (race condition)
-  // or may have failed entirely. If paid_at is null but a checkout session
-  // exists, verify with Stripe directly and set paid_at if payment succeeded.
-  if (!decoding.paid_at && decoding.stripe_checkout_session_id) {
-    try {
-      const session = await stripe.checkout.sessions.retrieve(
-        decoding.stripe_checkout_session_id
-      );
+  // The webhook that sets paid_at may not have fired yet when the user
+  // returns from Stripe. Verify payment using either:
+  //   1. session_id from the success URL (most reliable — Stripe injects it)
+  //   2. stripe_checkout_session_id from the DB (fallback)
+  if (!decoding.paid_at) {
+    const sessionIdToVerify =
+      session_id || decoding.stripe_checkout_session_id;
 
-      if (session.payment_status === "paid") {
-        const admin = createAdminClient();
-        await admin
-          .from("policy_decodings")
-          .update({
-            paid_at: new Date().toISOString(),
-            stripe_payment_id: (session.payment_intent as string) || null,
-          })
-          .eq("id", decoding.id);
+    if (sessionIdToVerify) {
+      try {
+        const session =
+          await stripe.checkout.sessions.retrieve(sessionIdToVerify);
 
-        // Re-fetch so the rest of the page renders correctly
-        const refreshed = await getPolicyDecoding(id);
-        if (refreshed.decoding) {
-          decoding = refreshed.decoding;
+        if (
+          session.payment_status === "paid" &&
+          session.metadata?.policyDecodingId === decoding.id
+        ) {
+          const admin = createAdminClient();
+          await admin
+            .from("policy_decodings")
+            .update({
+              paid_at: new Date().toISOString(),
+              stripe_payment_id: (session.payment_intent as string) || null,
+              stripe_checkout_session_id: session.id,
+            })
+            .eq("id", decoding.id);
+
+          // Re-fetch so the rest of the page renders correctly
+          const refreshed = await getPolicyDecoding(id);
+          if (refreshed.decoding) {
+            decoding = refreshed.decoding;
+          }
         }
+      } catch (err) {
+        console.error("[policy-decoder] Failed to verify Stripe session:", err);
       }
-    } catch {
-      // Stripe call failed — continue with unpaid state
-      console.error("[policy-decoder] Failed to verify Stripe session");
     }
   }
 
@@ -200,6 +208,7 @@ export default async function PolicyDecodingDetailPage({
         analysis={decoding.policy_analysis}
         documentMeta={decoding.document_meta}
         autoProcess={autoProcess}
+        paymentReturned={payment === "success"}
       />
     </div>
   );

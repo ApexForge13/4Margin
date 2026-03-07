@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=success`,
+      success_url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=cancelled`,
     });
 
