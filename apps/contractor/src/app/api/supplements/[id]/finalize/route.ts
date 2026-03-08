@@ -6,6 +6,10 @@ import {
   generateSupplementPdf,
   type SupplementPdfData,
 } from "@/lib/pdf/generate-supplement";
+import {
+  generateCoverLetter,
+  type CoverLetterData,
+} from "@/lib/pdf/generate-cover-letter";
 
 export async function POST(
   request: NextRequest,
@@ -216,11 +220,57 @@ export async function POST(
       );
     }
 
+    // Generate cover letter PDF
+    const coverLetterData: CoverLetterData = {
+      companyName: company?.name || "",
+      companyPhone: company?.phone || "",
+      companyAddress,
+      companyLicense: company?.license_number || "",
+      claimNumber: (claim.claim_number as string) || "",
+      policyNumber: (claim.policy_number as string) || "",
+      carrierName,
+      propertyAddress: [
+        claim.property_address,
+        claim.property_city,
+        claim.property_state,
+        claim.property_zip,
+      ]
+        .filter(Boolean)
+        .join(", "),
+      dateOfLoss: claim.date_of_loss
+        ? new Date(claim.date_of_loss as string).toLocaleDateString("en-US")
+        : "",
+      adjusterName: (claim.adjuster_name as string) || "",
+      adjusterTotal: supplement.adjuster_total
+        ? Number(supplement.adjuster_total)
+        : null,
+      supplementTotal,
+      itemCount: items.length,
+      generatedDate: pdfData.generatedDate,
+    };
+
+    const coverLetterBuffer = generateCoverLetter(coverLetterData);
+    const coverLetterPath = `${supplement.company_id}/${supplementId}/cover-letter.pdf`;
+    const coverLetterBlob = new Blob([coverLetterBuffer], { type: "application/pdf" });
+
+    const { error: coverLetterUploadError } = await admin.storage
+      .from("supplements")
+      .upload(coverLetterPath, coverLetterBlob, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
+
+    if (coverLetterUploadError) {
+      console.error("Failed to upload cover letter PDF:", coverLetterUploadError);
+      // Non-fatal: continue even if cover letter upload fails
+    }
+
     // Update supplement record
     await admin
       .from("supplements")
       .update({
         generated_pdf_url: pdfPath,
+        cover_letter_pdf_url: coverLetterUploadError ? null : coverLetterPath,
         supplement_total: supplementTotal,
       })
       .eq("id", supplementId);
@@ -228,6 +278,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       pdfPath,
+      coverLetterPath: coverLetterUploadError ? null : coverLetterPath,
       supplementTotal,
       itemCount: items.length,
     });

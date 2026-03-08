@@ -18,7 +18,7 @@ import { detectMissingItems, type AnalysisInput } from "./analyze";
 import { analyzePhotos, type PhotoAnalysisResult } from "./photos";
 import { parsePolicyPdfV2 } from "@/lib/ai/policy-parser";
 import { generateWeatherReportPdf } from "@/lib/pdf/generate-weather-report";
-import { fetchWeatherData, type WeatherData } from "@/lib/weather/fetch-weather";
+import { fetchWeatherData, shouldIncludeWeatherReport, type WeatherData } from "@/lib/weather/fetch-weather";
 import { sendSupplementReadyEmail, sendPipelineErrorEmail } from "@/lib/email/send";
 
 export interface PipelineInput {
@@ -172,6 +172,49 @@ export async function runSupplementPipeline(
 
     const analysisResult = await detectMissingItems(analysisInput);
 
+    // ── 4b. Backfill claim data from extracted estimate metadata ──
+    // If the AI extracted claim/contractor fields from the PDF, update any
+    // missing fields on the claims table. Only fills blanks — never overwrites
+    // data the user manually entered.
+    if (analysisResult.extractedClaimData) {
+      try {
+        const ex = analysisResult.extractedClaimData;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const claimUpdate: Record<string, any> = {};
+
+        if (ex.claim_number && !claim.claim_number) claimUpdate.claim_number = ex.claim_number;
+        if (ex.policy_number && !claim.policy_number) claimUpdate.policy_number = ex.policy_number;
+        if (ex.property_address && !claim.property_address) claimUpdate.property_address = ex.property_address;
+        if (ex.property_city && !claim.property_city) claimUpdate.property_city = ex.property_city;
+        if (ex.property_state && !claim.property_state) claimUpdate.property_state = ex.property_state;
+        if (ex.property_zip && !claim.property_zip) claimUpdate.property_zip = ex.property_zip;
+        if (ex.date_of_loss && !claim.date_of_loss) claimUpdate.date_of_loss = ex.date_of_loss;
+        if (ex.adjuster_name && !claim.adjuster_name) claimUpdate.adjuster_name = ex.adjuster_name;
+        if (ex.adjuster_email && !claim.adjuster_email) claimUpdate.adjuster_email = ex.adjuster_email;
+        if (ex.adjuster_phone && !claim.adjuster_phone) claimUpdate.adjuster_phone = ex.adjuster_phone;
+
+        // Handle carrier: upsert to carriers table and set carrier_id if missing
+        if (ex.carrier_name && !claim.carrier_id) {
+          const { data: carrier } = await supabase
+            .from("carriers")
+            .upsert({ name: ex.carrier_name.trim() }, { onConflict: "name" })
+            .select("id")
+            .single();
+          if (carrier?.id) {
+            claimUpdate.carrier_id = carrier.id;
+          }
+        }
+
+        if (Object.keys(claimUpdate).length > 0) {
+          await supabase.from("claims").update(claimUpdate).eq("id", claimId);
+          console.log(`[pipeline] Backfilled claim fields: ${Object.keys(claimUpdate).join(", ")}`);
+        }
+      } catch (backfillErr) {
+        console.error("[pipeline] Claim data backfill failed (non-blocking):", backfillErr);
+        // Continue — backfill is best-effort, never blocks the pipeline
+      }
+    }
+
     // ── 5. Analyze photos (best-effort, non-blocking) ──
     // Photo analysis is supplementary — don't let it block or timeout the pipeline.
     // Skip if we've already used >90s to leave time for weather + DB writes.
@@ -306,36 +349,44 @@ export async function runSupplementPipeline(
         weatherData = await fetchWeatherData(fullAddress, claim.date_of_loss);
 
         if (weatherData) {
-          const weatherPdfBuffer = generateWeatherReportPdf({
-            propertyAddress,
-            dateOfLoss: dateOfLossFormatted,
-            claimNumber: claim.claim_number || "",
-            companyName: company?.name || "",
-            weather: weatherData,
-            generatedDate,
-          });
-
-          weatherPdfPath = `${companyId}/${supplementId}/weather-report.pdf`;
-          const weatherBlob = new Blob([weatherPdfBuffer], {
-            type: "application/pdf",
-          });
-
-          const { error: weatherUploadError } = await supabase.storage
-            .from("supplements")
-            .upload(weatherPdfPath, weatherBlob, {
-              contentType: "application/pdf",
-              upsert: true,
+          // Only generate the weather PDF if conditions meet severity thresholds.
+          // Weather data is always saved to the supplement for reference regardless.
+          if (shouldIncludeWeatherReport(weatherData)) {
+            const weatherPdfBuffer = generateWeatherReportPdf({
+              propertyAddress,
+              dateOfLoss: dateOfLossFormatted,
+              claimNumber: claim.claim_number || "",
+              companyName: company?.name || "",
+              weather: weatherData,
+              generatedDate,
             });
 
-          if (weatherUploadError) {
-            console.error(
-              "Failed to upload weather PDF:",
-              weatherUploadError
-            );
-            weatherPdfPath = null;
+            weatherPdfPath = `${companyId}/${supplementId}/weather-report.pdf`;
+            const weatherBlob = new Blob([weatherPdfBuffer], {
+              type: "application/pdf",
+            });
+
+            const { error: weatherUploadError } = await supabase.storage
+              .from("supplements")
+              .upload(weatherPdfPath, weatherBlob, {
+                contentType: "application/pdf",
+                upsert: true,
+              });
+
+            if (weatherUploadError) {
+              console.error(
+                "Failed to upload weather PDF:",
+                weatherUploadError
+              );
+              weatherPdfPath = null;
+            } else {
+              console.log(
+                `[pipeline] Weather report generated: ${weatherData.verdict}`
+              );
+            }
           } else {
             console.log(
-              `[pipeline] Weather report generated: ${weatherData.verdict}`
+              `[pipeline] Weather below thresholds (${weatherData.verdict}), skipping PDF generation`
             );
           }
         }

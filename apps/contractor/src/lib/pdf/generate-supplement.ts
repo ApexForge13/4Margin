@@ -51,6 +51,10 @@ export interface SupplementPdfData {
   adjusterTotal: number | null;
   supplementTotal: number;
 
+  // Depreciation context (optional — backward compatible)
+  depreciationMethod?: string | null; // "RCV" | "ACV" | "MODIFIED_ACV" | "UNKNOWN"
+  depreciationPercent?: number | null; // e.g., 0.40 for 40%
+
   // Measurements
   measuredSquares: number | null;
   wastePercent: number | null;
@@ -65,7 +69,9 @@ export interface SupplementPdfData {
     quantity: number;
     unit: string;
     unit_price: number;
-    total_price: number;
+    total_price: number;        // RCV
+    depreciation?: number;     // Depreciation amount (typically negative); defaults to 0
+    acv?: number;              // ACV = RCV - |depreciation|; defaults to total_price
     justification: string;
     irc_reference: string;
   }>;
@@ -108,58 +114,40 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
   };
 
   // ══════════════════════════════════════════════
-  // PAGE 1: BRANDED HEADER
+  // PAGE 1: CONTRACTOR-BRANDED HEADER
   // ══════════════════════════════════════════════
 
   // Top brand bar
   setFillColor(BRAND.accent);
   doc.rect(0, 0, pageWidth, 72, "F");
 
-  // 4MARGIN wordmark
-  doc.setFontSize(24);
+  // Contractor name (replaces "4MARGIN")
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   setColor(BRAND.white);
-  doc.text("4MARGIN", margin, 44);
+  const displayName = data.companyName || "Supplement Request";
+  doc.text(displayName.toUpperCase(), margin, 38);
 
-  // Subtitle
-  doc.setFontSize(9);
+  // Contractor contact line
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   setColor(BRAND.textLight);
-  doc.text("Supplement Analysis Report", margin + 120, 44);
+  const contactParts = [data.companyPhone, data.companyAddress].filter(Boolean);
+  if (contactParts.length > 0) {
+    doc.text(contactParts.join("  |  "), margin, 54);
+  }
 
-  // Date in top right
+  // License number (top right)
+  if (data.companyLicense) {
+    doc.text(`License: ${data.companyLicense}`, pageWidth - margin, 38, { align: "right" });
+  }
+
+  // Date (top right, below license)
   doc.setFontSize(8);
   setColor(BRAND.textLight);
-  doc.text(data.generatedDate, pageWidth - margin, 44, { align: "right" });
+  doc.text(data.generatedDate, pageWidth - margin, 50, { align: "right" });
 
   y = 90;
-
-  // ── Document title ──
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  setColor(BRAND.accent);
-  doc.text("SUPPLEMENT REQUEST", margin, y);
-  y += 6;
-
-  // Primary brand accent line
-  setDrawColor(BRAND.primary);
-  doc.setLineWidth(2.5);
-  doc.line(margin, y, margin + 170, y);
-  y += 18;
-
-  // Company info (right-aligned block)
-  if (data.companyName) {
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    setColor(BRAND.textMuted);
-    const companyLines = [data.companyName, data.companyPhone, data.companyAddress].filter(Boolean);
-    if (data.companyLicense) companyLines.push(`License #${data.companyLicense}`);
-    companyLines.forEach((line) => {
-      doc.text(line, margin, y);
-      y += 11;
-    });
-    y += 8;
-  }
 
   // ══════════════════════════════════════════════
   // CLAIM INFORMATION PANEL
@@ -258,7 +246,7 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
   y += 12;
 
   // ══════════════════════════════════════════════
-  // XACTIMATE-STYLE LINE ITEMS TABLE
+  // XACTIMATE-STYLE LINE ITEMS TABLE (7-col + line #)
   // ══════════════════════════════════════════════
   setDrawColor(BRAND.border);
   doc.setLineWidth(0.5);
@@ -271,6 +259,13 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
   doc.text("SUPPLEMENT LINE ITEMS", margin, y);
   y += 18;
 
+  // Helper: format depreciation in parentheses
+  const fmtDeprec = (n: number) => {
+    const abs = Math.abs(n);
+    const str = abs.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n === 0 ? "$0.00" : `($${str})`;
+  };
+
   if (data.items.length === 0) {
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
@@ -278,118 +273,191 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
     doc.text("No line items detected.", margin, y);
     y += 20;
   } else {
-    // Column definitions — Xactimate style
+    // 8 column definitions — #, Description, Qty, Unit, Unit Price, RCV, Deprec., ACV
     const cols = [
-      { label: "Code", x: margin, w: 72 },
-      { label: "Description", x: margin + 72, w: 180 },
-      { label: "Qty", x: margin + 252, w: 36 },
-      { label: "Unit", x: margin + 288, w: 32 },
-      { label: "Unit Price", x: margin + 320, w: 65 },
-      { label: "RCV", x: margin + 385, w: 80 },
+      { label: "#",          x: margin,       w: 20,  align: "left"  as const },
+      { label: "Description", x: margin + 20,  w: 200, align: "left"  as const },
+      { label: "Qty",         x: margin + 220, w: 36,  align: "left"  as const },
+      { label: "Unit",        x: margin + 256, w: 32,  align: "left"  as const },
+      { label: "Unit Price",  x: margin + 288, w: 56,  align: "right" as const },
+      { label: "RCV",         x: margin + 344, w: 56,  align: "right" as const },
+      { label: "Deprec.",     x: margin + 400, w: 52,  align: "right" as const },
+      { label: "ACV",         x: margin + 452, w: 64,  align: "right" as const },
     ];
 
-    // Table header row
-    checkPage(50);
-    setFillColor(BRAND.accent);
-    doc.rect(margin, y - 10, contentWidth, 16, "F");
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "bold");
-    setColor(BRAND.white);
-    cols.forEach((col) => {
-      const align = col.label === "RCV" || col.label === "Unit Price" ? "right" : "left";
-      if (align === "right") {
-        doc.text(col.label, col.x + col.w - 4, y, { align: "right" });
-      } else {
-        doc.text(col.label, col.x + 3, y);
-      }
-    });
-    y += 12;
+    // Render table header row helper (reused after page breaks)
+    const renderTableHeader = () => {
+      setFillColor(BRAND.accent);
+      doc.rect(margin, y - 10, contentWidth, 16, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      setColor(BRAND.white);
+      cols.forEach((col) => {
+        if (col.align === "right") {
+          doc.text(col.label, col.x + col.w - 4, y, { align: "right" });
+        } else {
+          doc.text(col.label, col.x + 3, y);
+        }
+      });
+      y += 12;
+    };
 
-    // Table rows — grouped by category
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    let currentCategory = "";
-    let rowIndex = 0;
-
+    // Group items by category
+    const categoryOrder: string[] = [];
+    const categoryGroups: Record<string, typeof data.items> = {};
     data.items.forEach((item) => {
+      const cat = item.category || "General";
+      if (!categoryGroups[cat]) {
+        categoryGroups[cat] = [];
+        categoryOrder.push(cat);
+      }
+      categoryGroups[cat].push(item);
+    });
+
+    // Initial table header
+    checkPage(50);
+    renderTableHeader();
+
+    let lineNum = 1;
+
+    categoryOrder.forEach((category) => {
+      const groupItems = categoryGroups[category];
+
+      // ── Category header row ──
       checkPage(32);
+      y += 3;
+      setFillColor(BRAND.bgAccent);
+      doc.rect(margin, y - 9, contentWidth, 14, "F");
+      setDrawColor(BRAND.primary);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y - 9, margin + 3, y - 9);
+      doc.line(margin, y + 5, margin + 3, y + 5);
 
-      // Category header row
-      if (item.category !== currentCategory) {
-        currentCategory = item.category;
-        y += 3;
-        setFillColor(BRAND.bgAccent);
-        doc.rect(margin, y - 9, contentWidth, 14, "F");
-        setDrawColor(BRAND.primary);
-        doc.setLineWidth(0.5);
-        doc.line(margin, y - 9, margin + 3, y - 9);
-        doc.line(margin, y + 5, margin + 3, y + 5);
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7);
-        setColor(BRAND.primaryDark);
-        doc.text(currentCategory.toUpperCase(), margin + 6, y);
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "normal");
-        setColor(BRAND.text);
-        y += 14;
-        rowIndex = 0;
-      }
-
-      // Alternating row background
-      if (rowIndex % 2 === 0) {
-        setFillColor(BRAND.bgLight);
-        doc.rect(margin, y - 9, contentWidth, 14, "F");
-      }
-
-      // Code
       doc.setFont("helvetica", "bold");
-      setColor(BRAND.text);
-      doc.text(item.xactimate_code, cols[0].x + 3, y);
-
-      // Description — truncate to fit
+      doc.setFontSize(7);
+      setColor(BRAND.primaryDark);
+      doc.text(category.toUpperCase(), margin + 6, y);
+      doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       setColor(BRAND.text);
-      const desc = item.description.length > 42
-        ? item.description.substring(0, 40) + "..."
-        : item.description;
-      doc.text(desc, cols[1].x + 3, y);
-
-      // Qty
-      doc.text(String(item.quantity), cols[2].x + 3, y);
-
-      // Unit
-      setColor(BRAND.textMuted);
-      doc.text(item.unit, cols[3].x + 3, y);
-
-      // Unit price (right aligned)
-      setColor(BRAND.text);
-      doc.text(fmt(item.unit_price), cols[4].x + cols[4].w - 4, y, { align: "right" });
-
-      // RCV total (right aligned, bold)
-      doc.setFont("helvetica", "bold");
-      doc.text(fmt(item.total_price), cols[5].x + cols[5].w - 4, y, { align: "right" });
-      doc.setFont("helvetica", "normal");
-
       y += 14;
 
-      // Light divider
-      setDrawColor(BRAND.border);
-      doc.setLineWidth(0.2);
-      doc.line(margin, y - 5, pageWidth - margin, y - 5);
+      // Category subtotal accumulators
+      let catRcv = 0;
+      let catDeprec = 0;
+      let catAcv = 0;
 
-      rowIndex++;
+      // ── Render each item row ──
+      groupItems.forEach((item, rowIdx) => {
+        checkPage(32);
+
+        const deprec = item.depreciation ?? 0;
+        const acv = item.acv ?? item.total_price;
+
+        catRcv += item.total_price;
+        catDeprec += deprec;
+        catAcv += acv;
+
+        // Alternating row background
+        if (rowIdx % 2 === 0) {
+          setFillColor(BRAND.bgLight);
+          doc.rect(margin, y - 9, contentWidth, 14, "F");
+        }
+
+        doc.setFontSize(7);
+
+        // # (line number)
+        doc.setFont("helvetica", "normal");
+        setColor(BRAND.textMuted);
+        doc.text(String(lineNum), cols[0].x + 3, y);
+
+        // Description — truncate to fit 200pt column
+        doc.setFont("helvetica", "normal");
+        setColor(BRAND.text);
+        const desc = item.description.length > 48
+          ? item.description.substring(0, 46) + "..."
+          : item.description;
+        doc.text(desc, cols[1].x + 3, y);
+
+        // Qty
+        doc.text(String(item.quantity), cols[2].x + 3, y);
+
+        // Unit
+        setColor(BRAND.textMuted);
+        doc.text(item.unit, cols[3].x + 3, y);
+
+        // Unit Price (right aligned)
+        setColor(BRAND.text);
+        doc.text(fmt(item.unit_price), cols[4].x + cols[4].w - 4, y, { align: "right" });
+
+        // RCV (right aligned, bold)
+        doc.setFont("helvetica", "bold");
+        doc.text(fmt(item.total_price), cols[5].x + cols[5].w - 4, y, { align: "right" });
+
+        // Deprec. (right aligned, parentheses)
+        doc.setFont("helvetica", "normal");
+        setColor(BRAND.textMuted);
+        doc.text(fmtDeprec(deprec), cols[6].x + cols[6].w - 4, y, { align: "right" });
+
+        // ACV (right aligned, bold)
+        doc.setFont("helvetica", "bold");
+        setColor(BRAND.text);
+        doc.text(fmt(acv), cols[7].x + cols[7].w - 4, y, { align: "right" });
+        doc.setFont("helvetica", "normal");
+
+        y += 14;
+
+        // Light divider
+        setDrawColor(BRAND.border);
+        doc.setLineWidth(0.2);
+        doc.line(margin, y - 5, pageWidth - margin, y - 5);
+
+        lineNum++;
+      });
+
+      // ── Category subtotal row ──
+      checkPage(20);
+      y += 2;
+      setFillColor(BRAND.bgAccent);
+      doc.rect(margin, y - 9, contentWidth, 14, "F");
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      setColor(BRAND.primaryDark);
+      doc.text(`${category} Subtotal`, cols[1].x + 3, y);
+
+      // RCV subtotal
+      doc.text(fmt(catRcv), cols[5].x + cols[5].w - 4, y, { align: "right" });
+      // Deprec. subtotal
+      setColor(BRAND.textMuted);
+      doc.text(fmtDeprec(catDeprec), cols[6].x + cols[6].w - 4, y, { align: "right" });
+      // ACV subtotal
+      setColor(BRAND.primaryDark);
+      doc.text(fmt(catAcv), cols[7].x + cols[7].w - 4, y, { align: "right" });
+
+      y += 16;
     });
 
-    // ── Total row ──
-    y += 4;
+    // ── Grand total row ──
+    const grandRcv = data.supplementTotal;
+    const grandDeprec = data.items.reduce((sum, it) => sum + (it.depreciation ?? 0), 0);
+    const grandAcv = data.items.reduce((sum, it) => sum + (it.acv ?? it.total_price), 0);
+
+    y += 2;
+    checkPage(24);
     setFillColor(BRAND.accent);
     doc.rect(margin, y - 9, contentWidth, 18, "F");
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     setColor(BRAND.white);
     doc.text("SUPPLEMENT TOTAL", margin + 6, y + 1);
-    doc.text(fmt(data.supplementTotal), cols[5].x + cols[5].w - 4, y + 1, { align: "right" });
+
+    // Grand RCV
+    doc.text(fmt(grandRcv), cols[5].x + cols[5].w - 4, y + 1, { align: "right" });
+    // Grand Deprec.
+    doc.text(fmtDeprec(grandDeprec), cols[6].x + cols[6].w - 4, y + 1, { align: "right" });
+    // Grand ACV
+    doc.text(fmt(grandAcv), cols[7].x + cols[7].w - 4, y + 1, { align: "right" });
+
     y += 20;
   }
 
@@ -523,14 +591,15 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
     doc.setLineWidth(0.5);
     doc.line(margin, pageHeight - 36, pageWidth - margin, pageHeight - 36);
 
-    // Left: 4Margin branding
+    // Left: contractor branding
     doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    setColor(BRAND.primary);
-    doc.text("4MARGIN", margin, pageHeight - 18);
     doc.setFont("helvetica", "normal");
-    setColor(BRAND.textLight);
-    doc.text(`  |  ${data.generatedDate}`, margin + 40, pageHeight - 18);
+    setColor(BRAND.textMuted);
+    doc.text(
+      `${data.companyName}  |  ${data.generatedDate}`,
+      margin,
+      pageHeight - 18
+    );
 
     // Right: Page number
     doc.setFont("helvetica", "normal");

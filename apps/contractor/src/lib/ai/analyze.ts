@@ -86,12 +86,30 @@ export interface DetectedItem {
   detection_source: string;
 }
 
+/** Claim & contractor metadata extracted from the estimate PDF */
+export interface ExtractedClaimData {
+  claim_number?: string;
+  policy_number?: string;
+  carrier_name?: string;
+  property_address?: string;
+  property_city?: string;
+  property_state?: string;
+  property_zip?: string;
+  date_of_loss?: string;
+  adjuster_name?: string;
+  adjuster_email?: string;
+  adjuster_phone?: string;
+  adjuster_estimate_total?: number | null;
+}
+
 export interface AnalysisResult {
   items: DetectedItem[];
   adjuster_total: number | null;
   supplement_total: number;
   waste_adjuster: number | null;
   summary: string;
+  /** Claim/contractor metadata extracted from the estimate PDF */
+  extractedClaimData?: ExtractedClaimData;
   /** Raw Claude response text (first 1000 chars) for debugging */
   debugRawResponse?: string;
 }
@@ -189,6 +207,19 @@ export async function detectMissingItems(
     adjuster_total: number | null;
     waste_percent_adjuster: number | null;
     summary: string;
+    claim_data?: {
+      claim_number?: string;
+      policy_number?: string;
+      carrier_name?: string;
+      property_address?: string;
+      property_city?: string;
+      property_state?: string;
+      property_zip?: string;
+      date_of_loss?: string;
+      adjuster_name?: string;
+      adjuster_email?: string;
+      adjuster_phone?: string;
+    };
     missing_items: Array<{
       xactimate_code: string;
       description: string;
@@ -264,12 +295,31 @@ export async function detectMissingItems(
 
   const supplement_total = items.reduce((sum, i) => sum + i.total_price, 0);
 
+  // Build extracted claim data from Claude's response
+  const extractedClaimData: ExtractedClaimData | undefined = result.claim_data
+    ? {
+        claim_number: result.claim_data.claim_number || undefined,
+        policy_number: result.claim_data.policy_number || undefined,
+        carrier_name: result.claim_data.carrier_name || undefined,
+        property_address: result.claim_data.property_address || undefined,
+        property_city: result.claim_data.property_city || undefined,
+        property_state: result.claim_data.property_state || undefined,
+        property_zip: result.claim_data.property_zip || undefined,
+        date_of_loss: result.claim_data.date_of_loss || undefined,
+        adjuster_name: result.claim_data.adjuster_name || undefined,
+        adjuster_email: result.claim_data.adjuster_email || undefined,
+        adjuster_phone: result.claim_data.adjuster_phone || undefined,
+        adjuster_estimate_total: result.adjuster_total,
+      }
+    : undefined;
+
   return {
     items,
     adjuster_total: result.adjuster_total,
     supplement_total: Math.round(supplement_total * 100) / 100,
     waste_adjuster: result.waste_percent_adjuster,
     summary: result.summary,
+    extractedClaimData,
     debugRawResponse: textBlock.text.substring(0, 1000),
   };
 }
@@ -383,6 +433,19 @@ Return ONLY JSON — no markdown, no code fences:
   "adjuster_total": <number or null>,
   "waste_percent_adjuster": <number or null>,
   "summary": "<2-3 sentence summary of missing items and estimated recovery>",
+  "claim_data": {
+    "claim_number": "<claim/file number from the estimate or empty string>",
+    "policy_number": "<insurance policy number or empty string>",
+    "carrier_name": "<insurance carrier/company name or empty string>",
+    "property_address": "<street address of the property or empty string>",
+    "property_city": "<city or empty string>",
+    "property_state": "<2-letter state abbreviation or empty string>",
+    "property_zip": "<ZIP code or empty string>",
+    "date_of_loss": "<date of loss in YYYY-MM-DD format or empty string>",
+    "adjuster_name": "<adjuster's full name or empty string>",
+    "adjuster_email": "<adjuster's email or empty string>",
+    "adjuster_phone": "<adjuster's phone number or empty string>"
+  },
   "missing_items": [
     {
       "xactimate_code": "<code>",

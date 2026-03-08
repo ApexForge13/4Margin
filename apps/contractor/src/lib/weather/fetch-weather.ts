@@ -104,6 +104,24 @@ export interface WeatherData {
   fetchedAt: string; // ISO timestamp
 }
 
+/* ─────── Threshold Check ─────── */
+
+/** Check if weather conditions meet severity thresholds for report inclusion */
+export function shouldIncludeWeatherReport(weather: WeatherData): boolean {
+  // Always include if verdict says severe or moderate
+  if (weather.verdict === "severe_confirmed" || weather.verdict === "moderate_weather") {
+    return true;
+  }
+
+  // Check specific thresholds
+  const hasHail = weather.hailDetected === true;
+  const hasHighWind = weather.maxWindGust >= 50;
+  const hasHeavyPrecip = weather.precip >= 1.0;
+  const hasSevereRisk = weather.severerisk > 30;
+
+  return hasHail || hasHighWind || hasHeavyPrecip || hasSevereRisk;
+}
+
 /* ─────── API Client ─────── */
 
 const API_BASE =
