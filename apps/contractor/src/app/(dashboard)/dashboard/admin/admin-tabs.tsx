@@ -7,6 +7,7 @@ import { UsersTable, type AdminUser } from "./users-table";
 import { CodesTable } from "./codes-table";
 import { CarriersTable } from "./carriers-table";
 import { TeamTable } from "./team-table";
+import { DatabaseTab } from "./database-tab";
 
 export interface XactimateCode {
   id: string;
@@ -56,6 +57,7 @@ interface AdminTabsProps {
   stats: PlatformStats;
   allClaims: AdminClaim[];
   allUsers: AdminUser[];
+  tables: string[];
 }
 
 export function AdminTabs({
@@ -66,6 +68,7 @@ export function AdminTabs({
   stats,
   allClaims,
   allUsers,
+  tables,
 }: AdminTabsProps) {
   return (
     <Tabs defaultValue="overview" className="space-y-4">
@@ -85,6 +88,9 @@ export function AdminTabs({
         </TabsTrigger>
         <TabsTrigger value="team">
           Team ({team.length})
+        </TabsTrigger>
+        <TabsTrigger value="database">
+          Database
         </TabsTrigger>
       </TabsList>
 
@@ -110,6 +116,10 @@ export function AdminTabs({
 
       <TabsContent value="team">
         <TeamTable team={team} pendingInvites={pendingInvites} />
+      </TabsContent>
+
+      <TabsContent value="database">
+        <DatabaseTab tables={tables} />
       </TabsContent>
     </Tabs>
   );

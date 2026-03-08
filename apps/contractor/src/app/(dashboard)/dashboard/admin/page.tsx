@@ -4,6 +4,7 @@ import { AdminTabs } from "./admin-tabs";
 import type { PlatformStats } from "./overview-tab";
 import type { AdminClaim } from "./claims-table";
 import type { AdminUser } from "./users-table";
+import { listTables } from "./database-actions";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -33,6 +34,7 @@ export default async function AdminPage() {
     allSupplementsRes,
     companiesCountRes,
     pendingInvitesRes,
+    tablesResult,
   ] = await Promise.all([
     // Existing: reference data
     admin
@@ -90,6 +92,8 @@ export default async function AdminPage() {
       .is("accepted_at", null)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false }),
+    // Database browser: list all tables
+    listTables(),
   ]);
 
   // --- Build allUsers list with counts ---
@@ -254,6 +258,7 @@ export default async function AdminPage() {
         stats={stats}
         allClaims={allClaims}
         allUsers={allUsers}
+        tables={tablesResult}
       />
     </div>
   );

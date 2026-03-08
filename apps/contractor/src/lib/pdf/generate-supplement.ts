@@ -494,7 +494,7 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
         doc.setFontSize(7);
         doc.setFont("helvetica", "bold");
         setColor(BRAND.primaryDark);
-        doc.text(`📋 Code Reference: ${item.irc_reference}`, margin + 12, y);
+        doc.text(`Code Ref: ${item.irc_reference}`, margin + 12, y);
         y += 12;
       }
 
@@ -564,10 +564,11 @@ function splitIntoPoints(text: string): string[] {
       .filter((s) => s.trim().length > 0);
   }
 
-  // Try splitting by sentences (periods followed by space + capital letter)
-  const sentences = text.match(/[^.!?]+[.!?]+/g);
-  if (sentences && sentences.length > 1) {
-    return sentences.map((s) => s.trim()).filter((s) => s.length > 0);
+  // Split by sentence boundaries — period/!/?  followed by space + uppercase letter.
+  // This protects decimals ($2,153.62), code refs (R905.2.8.4), and abbreviations.
+  const sentenceParts = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+  if (sentenceParts.length > 1) {
+    return sentenceParts.map((s) => s.trim()).filter((s) => s.length > 0);
   }
 
   // Fallback: return as single point

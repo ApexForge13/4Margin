@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { updateCompany, updateProfile } from "./actions";
+import { LogoUpload } from "@/components/settings/logo-upload";
 
 interface SettingsFormProps {
   profile: {
@@ -15,6 +16,7 @@ interface SettingsFormProps {
     full_name: string;
     email: string;
     role: string;
+    company_id: string;
     companies: {
       name: string;
       phone: string | null;
@@ -25,6 +27,7 @@ interface SettingsFormProps {
       zip: string | null;
       license_number: string | null;
       account_type?: string | null;
+      logo_url?: string | null;
     };
   };
 }
@@ -212,6 +215,13 @@ export function SettingsForm({ profile }: SettingsFormProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Company Logo */}
+      <LogoUpload
+        companyId={profile.company_id}
+        logoUrl={profile.companies.logo_url ?? null}
+        isOwner={isOwnerOrAdmin}
+      />
 
       {/* Profile */}
       <Card>

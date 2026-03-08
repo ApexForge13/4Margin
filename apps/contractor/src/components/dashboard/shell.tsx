@@ -24,6 +24,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/upload": "New Supplement",
   "/dashboard/policy-checks": "Policy Checks",
   "/dashboard/policy-decoder": "Policy Decoder",
+  "/dashboard/knowledge-base": "Knowledge Base",
   "/dashboard/settings": "Settings",
   "/dashboard/admin": "Admin",
   "/dashboard/enterprise": "Enterprise",
@@ -65,6 +66,11 @@ const NAV_ICONS = {
     <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  ),
+  knowledgeBase: (
+    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
     </svg>
   ),
   enterprise: (
@@ -117,6 +123,7 @@ export function DashboardShell({
     { label: "Supplements", href: "/dashboard/supplements", icon: NAV_ICONS.supplements },
     { label: "New Supplement", href: "/dashboard/upload", icon: NAV_ICONS.upload },
     { label: "Policy Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.decoder },
+    { label: "Knowledge Base", href: "/dashboard/knowledge-base", icon: NAV_ICONS.knowledgeBase },
     { label: "Settings", href: "/dashboard/settings", icon: NAV_ICONS.settings },
     ...(isEnterpriseOwner
       ? [{ label: "Enterprise", href: "/dashboard/enterprise", icon: NAV_ICONS.enterprise }]
