@@ -13,11 +13,7 @@ function Logo() {
   return (
     <span className="text-xl font-bold tracking-tight uppercase">
       <span className="text-[#00BFFF]">4</span>
-      <span className="text-white">M</span>
-      <span className="text-[#39FF9E]">A</span>
-      <span className="text-white">RG</span>
-      <span className="text-[#39FF9E]">I</span>
-      <span className="text-white">N</span>
+      <span className="text-white">MARGIN</span>
     </span>
   );
 }

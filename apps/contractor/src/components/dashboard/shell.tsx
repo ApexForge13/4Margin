@@ -172,11 +172,7 @@ export function DashboardShell({
       <div className="flex h-14 items-center justify-between px-6">
         <span className="font-bold text-lg tracking-tight uppercase">
           <span style={{ color: '#00BFFF' }}>4</span>
-          <span>M</span>
-          <span style={{ color: '#39FF9E' }}>A</span>
-          <span>RG</span>
-          <span style={{ color: '#39FF9E' }}>I</span>
-          <span>N</span>
+          <span>MARGIN</span>
         </span>
         {/* Close button — mobile only */}
         <button
