@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -95,10 +95,28 @@ export function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   // Close sidebar on route change
   useEffect(() => {
     setSidebarOpen(false);
+  }, [pathname]);
+
+  // Close profile dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    if (profileOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [profileOpen]);
+
+  // Close profile dropdown on route change
+  useEffect(() => {
+    setProfileOpen(false);
   }, [pathname]);
 
   // Prevent body scroll when sidebar is open
@@ -152,8 +170,8 @@ export function DashboardShell({
   /* ─── Sidebar content (shared between mobile + desktop) ─── */
   const sidebarContent = (
     <>
-      {/* Logo area */}
-      <div className="flex h-[72px] items-center justify-between px-7">
+      {/* Logo + profile area */}
+      <div className="flex h-[72px] items-center justify-between px-5">
         <Link href="/dashboard" className="flex items-center gap-2.5">
           {/* Favicon-style icon */}
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#1a2035] to-[#0f1524] shadow-sm">
@@ -166,16 +184,70 @@ export function DashboardShell({
             4MARGIN
           </span>
         </Link>
-        {/* Close button — mobile only */}
-        <button
-          className="md:hidden rounded-lg p-1.5 text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close sidebar"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+
+        <div className="flex items-center gap-2">
+          {/* Profile avatar — click to open dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen((prev) => !prev)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#00BFFF]/20 to-[#0090cc]/20 border border-white/10 hover:border-white/25 transition-all duration-200 group"
+              aria-label="Profile menu"
+            >
+              {/* Abstract person icon */}
+              <svg className="h-[18px] w-[18px] text-white/60 group-hover:text-white/90 transition-colors" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            </button>
+
+            {/* Profile dropdown */}
+            {profileOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-[#1e2a42] border border-white/10 shadow-xl shadow-black/30 z-50 overflow-hidden">
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <p className="text-sm font-medium text-white/90 truncate">{user.full_name}</p>
+                  <p className="text-[11px] text-white/40 truncate">{user.email}</p>
+                  {user.companies?.name && (
+                    <p className="text-[11px] text-[#00BFFF]/60 truncate mt-0.5">{user.companies.name}</p>
+                  )}
+                </div>
+                {/* Actions */}
+                <div className="py-1.5">
+                  <Link
+                    href="/dashboard/settings"
+                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors"
+                    onClick={() => setProfileOpen(false)}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Settings
+                  </Link>
+                  <button
+                    className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] text-red-400/70 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+                    onClick={handleSignOut}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Close button — mobile only */}
+          <button
+            className="md:hidden rounded-lg p-1.5 text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Divider */}
@@ -212,29 +284,8 @@ export function DashboardShell({
         })}
       </nav>
 
-      {/* User section */}
-      <div className="mx-4 mb-4 rounded-xl bg-white/[0.04] p-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#00BFFF] to-[#0090cc] text-[11px] font-bold text-white shadow-sm">
-            {initials}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-medium text-white/90">{user.full_name}</p>
-            <p className="truncate text-[11px] text-white/40">
-              {user.companies?.name}
-            </p>
-          </div>
-        </div>
-        <button
-          className="mt-2.5 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-white/40 transition-colors hover:text-white/70 hover:bg-white/[0.04]"
-          onClick={handleSignOut}
-        >
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Sign out
-        </button>
-      </div>
+      {/* Spacer — pushes nav to fill, keeps sidebar clean */}
+      <div className="mb-4" />
     </>
   );
 

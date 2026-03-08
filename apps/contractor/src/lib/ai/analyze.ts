@@ -12,6 +12,7 @@ import {
   buildCodeContextForPrompt,
   enrichIrcReference,
 } from "@/data/building-codes";
+import { buildManufacturerContextForPrompt } from "@/data/manufacturers";
 import { withRetry } from "./retry";
 
 const getClient = () => {
@@ -39,6 +40,8 @@ export interface AnalysisInput {
   damageTypes: string[];
   policyContext?: string | null; // From policy decoder
   propertyState?: string | null; // For jurisdiction-specific building codes (e.g., "MD", "PA")
+  propertyZip?: string | null;   // For county-level code lookups
+  manufacturerName?: string | null; // Shingle manufacturer (if known) — narrows manufacturer context
   measurements: {
     measuredSquares: number | null;
     wastePercent: number | null;
@@ -140,6 +143,12 @@ export async function detectMissingItems(
     ? buildCodeContextForPrompt(input.propertyState)
     : "";
 
+  // Build manufacturer installation requirements context
+  // If manufacturer is known, narrow to that one; otherwise include all 6
+  const manufacturerContext = buildManufacturerContextForPrompt(
+    input.manufacturerName || undefined
+  );
+
   const prompt = buildAnalysisPrompt({
     codesContext,
     measurementsContext,
@@ -149,6 +158,7 @@ export async function detectMissingItems(
     damageTypes: input.damageTypes,
     policyContext: input.policyContext || null,
     buildingCodeContext,
+    manufacturerContext,
   });
 
   const client = getClient();
@@ -385,6 +395,7 @@ function buildAnalysisPrompt(ctx: {
   damageTypes: string[];
   policyContext: string | null;
   buildingCodeContext: string;
+  manufacturerContext: string;
 }): string {
   // Build contractor notes section with emphasis if they exist
   const contractorSection = ctx.itemsBelievedMissing
@@ -405,6 +416,7 @@ ${contractorSection}
 ${ctx.measurementsContext}
 ${ctx.policyContext ? `\n## POLICY CONTEXT\n${ctx.policyContext}` : ""}
 ${ctx.buildingCodeContext ? `\n${ctx.buildingCodeContext}` : ""}
+${ctx.manufacturerContext ? `\n${ctx.manufacturerContext}` : ""}
 ## COMMONLY MISSED XACTIMATE CODES
 ${ctx.codesContext}
 Note: You may also use valid Xactimate codes from your training knowledge if applicable.

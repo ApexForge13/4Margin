@@ -1,5 +1,5 @@
 import { BUILDING_CODES } from "@/data/building-codes";
-import { MD_COUNTIES, PA_COUNTIES } from "@/data/county-jurisdictions";
+import { MD_COUNTIES, PA_COUNTIES, DE_COUNTIES } from "@/data/county-jurisdictions";
 import { MANUFACTURERS } from "@/data/manufacturer-requirements";
 import {
   COVERAGE_SECTIONS,
@@ -19,6 +19,7 @@ export default function KnowledgeBasePage() {
       buildingCodes={BUILDING_CODES}
       mdCounties={MD_COUNTIES}
       paCounties={PA_COUNTIES}
+      deCounties={DE_COUNTIES}
       manufacturers={MANUFACTURERS}
       coverageSections={COVERAGE_SECTIONS}
       depreciationMethods={DEPRECIATION_METHODS}

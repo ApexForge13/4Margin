@@ -14,12 +14,26 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { detectMissingItems, type AnalysisInput } from "./analyze";
+import { detectMissingItems, type AnalysisInput, type DetectedItem } from "./analyze";
 import { analyzePhotos, type PhotoAnalysisResult } from "./photos";
 import { parsePolicyPdfV2 } from "@/lib/ai/policy-parser";
 import { generateWeatherReportPdf } from "@/lib/pdf/generate-weather-report";
 import { fetchWeatherData, shouldIncludeWeatherReport, type WeatherData } from "@/lib/weather/fetch-weather";
 import { sendSupplementReadyEmail, sendPipelineErrorEmail } from "@/lib/email/send";
+import {
+  scoreConfidence,
+  type ConfidenceInput,
+  type ConfidenceResult,
+} from "@/lib/scoring/confidence";
+import { calculateWaste, type WasteResult } from "@/lib/calculators/waste";
+import {
+  calculateIwsSteepPitch,
+  isSteepPitch,
+  type IwsResult,
+  type FacetInput,
+} from "@/lib/calculators/iws-steep";
+import { getRequirementsForXactimateCode } from "@/data/manufacturers";
+import { lookupCountyByZip } from "@/data/county-jurisdictions";
 
 export interface PipelineInput {
   supplementId: string;
@@ -141,6 +155,7 @@ export async function runSupplementPipeline(
       damageTypes: claim.damage_types || [],
       policyContext,
       propertyState: claim.property_state || null,
+      propertyZip: claim.property_zip || null,
       measurements: {
         measuredSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
         wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,
@@ -213,6 +228,123 @@ export async function runSupplementPipeline(
         console.error("[pipeline] Claim data backfill failed (non-blocking):", backfillErr);
         // Continue — backfill is best-effort, never blocks the pipeline
       }
+    }
+
+    // ── 4c. Confidence scoring — enrich each item with 4-dimension score ──
+    // Replaces the AI's raw confidence (0-1 gut feeling) with a structured
+    // score based on policy, code, manufacturer, and carrier data.
+    const countyInfo = claim.property_zip
+      ? lookupCountyByZip(claim.property_zip)
+      : null;
+
+    // Extract policy analysis for confidence scoring
+    const policyAnalysisObj = (existingPolicyAnalysis ||
+      (supplement.policy_analysis as Record<string, unknown> | null)) as Record<string, unknown> | null;
+
+    const hasOrdinanceLaw = policyAnalysisObj
+      ? Boolean(
+          Array.isArray(policyAnalysisObj.favorableProvisions) &&
+          (policyAnalysisObj.favorableProvisions as Array<{ name: string }>).some(
+            (p) => p.name?.toLowerCase().includes("ordinance")
+          )
+        )
+      : false;
+
+    const coverageType = ((): "RCV" | "ACV" | "MODIFIED_ACV" | "UNKNOWN" => {
+      if (!policyAnalysisObj) return "UNKNOWN";
+      const dep = String(policyAnalysisObj.depreciationMethod || "").toUpperCase();
+      if (dep.includes("RCV") || dep.includes("REPLACEMENT")) return "RCV";
+      if (dep.includes("MODIFIED")) return "MODIFIED_ACV";
+      if (dep.includes("ACV") || dep.includes("ACTUAL")) return "ACV";
+      return "UNKNOWN";
+    })();
+
+    const confidenceDetails: Array<{ xactimateCode: string; result: ConfidenceResult }> = [];
+
+    for (const item of analysisResult.items) {
+      // Check manufacturer requirements for this Xactimate code
+      const mfrMatches = getRequirementsForXactimateCode(item.xactimate_code);
+      const hasMfrReq = mfrMatches.length > 0;
+      const firstMatch = mfrMatches[0];
+
+      const confidenceInput: ConfidenceInput = {
+        policy: {
+          hasOrdinanceLaw,
+          coverageType,
+          relevantEndorsements: hasOrdinanceLaw ? ["Ordinance or Law"] : [],
+          policyExcludesItem: false,
+        },
+        code: {
+          isCodeRequired: item.irc_verified || false,
+          r9052_1Confirmed: item.irc_verified || false,
+          r9052_1Unverified: !item.irc_verified && !!item.irc_reference && item.irc_reference !== "N/A",
+          ircReferenced: !!item.irc_reference && item.irc_reference !== "N/A",
+          countyName: countyInfo?.county || null,
+          ircVersion: countyInfo?.state === "DE" ? "2021 IRC" : countyInfo?.state ? "2018 IRC" : null,
+          codeSection: item.irc_reference || null,
+        },
+        manufacturer: {
+          isRequired: hasMfrReq,
+          r9052_1Applies: hasMfrReq && item.irc_verified === true,
+          isWarrantyBasisOnly: hasMfrReq && !item.irc_verified,
+          isRecommendedNotRequired: false,
+          manufacturerName: firstMatch?.manufacturer || null,
+          productName: null,
+          warrantyVoidLanguage: firstMatch?.requirement?.rebuttal || null,
+        },
+        carrier: {
+          carrierName: null, // Carrier name not resolved in pipeline; historical data not populated yet
+          countyName: countyInfo?.county || null,
+          xactimateCode: item.xactimate_code,
+          historicalApprovalRate: null, // No historical data yet
+          sampleSize: 0,
+        },
+      };
+
+      const scored = scoreConfidence(confidenceInput);
+      // Replace AI's raw confidence with scored confidence (0-1 scale)
+      item.confidence = scored.totalScore / 100;
+      confidenceDetails.push({ xactimateCode: item.xactimate_code, result: scored });
+    }
+
+    console.log(`[pipeline] Confidence scoring complete: ${confidenceDetails.length} items scored`);
+
+    // ── 4d. Waste calculator ──
+    let wasteCalcResult: WasteResult | null = null;
+    if (claim.roof_squares && claim.waste_percent) {
+      wasteCalcResult = calculateWaste({
+        measuredSquares: Number(claim.roof_squares),
+        wastePercent: Number(claim.waste_percent),
+        suggestedSquares: claim.suggested_squares ? Number(claim.suggested_squares) : null,
+        structureComplexity: claim.structure_complexity || null,
+        numHips: claim.num_hips ? Number(claim.num_hips) : null,
+        numValleys: claim.num_valleys ? Number(claim.num_valleys) : null,
+        numDormers: null, // Not tracked separately yet
+        countyName: countyInfo?.county,
+      });
+      console.log(`[pipeline] Waste calculated: ${wasteCalcResult.adjustedSquares} SQ (${wasteCalcResult.wastePercent}% waste)`);
+    }
+
+    // ── 4e. IWS steep pitch calculator ──
+    let iwsCalcResult: IwsResult | null = null;
+    const pitchBreakdown = Array.isArray(claim.pitch_breakdown) ? claim.pitch_breakdown : [];
+    const hasSteep = pitchBreakdown.some((pb: { pitch: string }) => isSteepPitch(pb.pitch));
+
+    if (hasSteep && claim.ft_eaves) {
+      const totalEaveLf = Number(claim.ft_eaves);
+      const facets: FacetInput[] = pitchBreakdown.map((pb: { pitch: string; areaSqFt: number; percentOfRoof: number }, i: number) => ({
+        facetId: `Facet ${i + 1} (${pb.pitch})`,
+        pitchRatio: pb.pitch,
+        // Distribute eave LF proportionally by area percentage
+        eaveLf: Math.round(totalEaveLf * (Number(pb.percentOfRoof) / 100) * 100) / 100,
+      }));
+
+      iwsCalcResult = calculateIwsSteepPitch({
+        facets,
+        adjusterIwsSf: null, // Could be extracted from estimate in the future
+        minimumHorizontalCoverage: 24,
+      });
+      console.log(`[pipeline] IWS steep pitch: ${iwsCalcResult.totalDeltaSf.toFixed(1)} SF additional needed`);
     }
 
     // ── 5. Analyze photos (best-effort, non-blocking) ──
@@ -419,6 +551,33 @@ export async function runSupplementPipeline(
           item_count: analysisResult.items.length,
           photo_analyses: Object.fromEntries(photoAnalyses),
           debug_raw: analysisResult.debugRawResponse || null,
+          // Intelligence engine outputs
+          confidence_details: confidenceDetails.map((cd) => ({
+            code: cd.xactimateCode,
+            score: cd.result.totalScore,
+            tier: cd.result.tier,
+            summary: cd.result.summaryText,
+          })),
+          waste_calculation: wasteCalcResult
+            ? {
+                measuredSquares: wasteCalcResult.measuredSquares,
+                wastePercent: wasteCalcResult.wastePercent,
+                adjustedSquares: wasteCalcResult.adjustedSquares,
+                complexity: wasteCalcResult.complexityCategory,
+                formula: wasteCalcResult.formulaDisplay,
+              }
+            : null,
+          iws_calculation: iwsCalcResult
+            ? {
+                totalRequiredSf: iwsCalcResult.totalRequiredSf,
+                totalDeltaSf: iwsCalcResult.totalDeltaSf,
+                hasSteepFacets: iwsCalcResult.hasSteepFacets,
+                formula: iwsCalcResult.formulaDisplay,
+              }
+            : null,
+          county_info: countyInfo
+            ? { county: countyInfo.county, state: countyInfo.state }
+            : null,
         },
         // Weather verification data
         weather_data: weatherData,

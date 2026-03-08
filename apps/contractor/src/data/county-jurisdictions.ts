@@ -1,4 +1,4 @@
-// ── County-Level Jurisdiction Database — MD & PA ────────────────────────────
+// ── County-Level Jurisdiction Database — MD, PA & DE ────────────────────────
 //
 // County-granularity data for building code enforcement: climate zones,
 // design wind speeds, ice barrier scope, permit fees, and AHJ contacts.
@@ -11,14 +11,14 @@
 //   ASCE 7-16 Figure 26.5-1B — Basic Wind Speed Map
 //   County AHJ websites / permit fee schedules (2024-2025)
 //
-// PHASE 1: MD (all 24 jurisdictions) + PA (14 priority counties)
+// PHASE 1: MD (all 24 jurisdictions) + PA (16 counties) + DE (all 3 counties)
 // ────────────────────────────────────────────────────────────────────────────
 
 export interface CountyJurisdiction {
   /** County name (e.g., "Montgomery") */
   county: string;
   /** State abbreviation */
-  state: "MD" | "PA";
+  state: "MD" | "PA" | "DE";
   /** IECC Climate Zone — drives ice barrier scope */
   climateZone: "4A" | "5A" | "6A";
   /** Design wind speed in mph per ASCE 7-16 */
@@ -761,6 +761,110 @@ export const PA_COUNTIES: CountyJurisdiction[] = [
     localAmendments: [],
     fipsCode: "42133",
   },
+  {
+    county: "Bedford",
+    state: "PA",
+    climateZone: "5A",
+    designWindSpeed: 115,
+    highWindZone: false,
+    iceBarrierRequirement: "eaves_valleys_penetrations",
+    permit: {
+      required: true,
+      typicalFeeRange: "$50–$150",
+      ahjName: "Bedford County — Municipal code enforcement varies by township",
+      ahjPhone: null,
+      ahjUrl: null,
+      notes: "Climate Zone 5A — borders Allegany County MD. UCC enforced at municipal level.",
+    },
+    localAmendments: [
+      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+    ],
+    fipsCode: "42009",
+  },
+  {
+    county: "Fulton",
+    state: "PA",
+    climateZone: "5A",
+    designWindSpeed: 115,
+    highWindZone: false,
+    iceBarrierRequirement: "eaves_valleys_penetrations",
+    permit: {
+      required: true,
+      typicalFeeRange: "$50–$125",
+      ahjName: "Fulton County — Municipal code enforcement varies by township",
+      ahjPhone: null,
+      ahjUrl: null,
+      notes: "Climate Zone 5A — between Bedford and Franklin counties. Rural area, some townships use third-party inspectors.",
+    },
+    localAmendments: [
+      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+    ],
+    fipsCode: "42057",
+  },
+];
+
+// ── Delaware Counties (all 3) ─────────────────────────────────────────────
+
+export const DE_COUNTIES: CountyJurisdiction[] = [
+  {
+    county: "New Castle",
+    state: "DE",
+    climateZone: "4A",
+    designWindSpeed: 115,
+    highWindZone: false,
+    iceBarrierRequirement: "eaves_only",
+    permit: {
+      required: true,
+      typicalFeeRange: "$100–$250",
+      ahjName: "New Castle County Dept. of Land Use",
+      ahjPhone: "302-395-5400",
+      ahjUrl: "https://www.newcastlede.gov/507/Land-Use",
+      notes: "2021 IRC adopted effective January 1, 2024. Wilmington has separate permit office.",
+    },
+    localAmendments: [
+      "2021 IRC adopted (vs 2018 in MD/PA) — some section numbering differs but substance is the same for roofing",
+    ],
+    fipsCode: "10003",
+  },
+  {
+    county: "Kent",
+    state: "DE",
+    climateZone: "4A",
+    designWindSpeed: 115,
+    highWindZone: false,
+    iceBarrierRequirement: "eaves_only",
+    permit: {
+      required: true,
+      typicalFeeRange: "$75–$175",
+      ahjName: "Kent County Dept. of Planning Services",
+      ahjPhone: "302-744-2471",
+      ahjUrl: "https://www.co.kent.de.us/planning-services.aspx",
+      notes: "2021 IRC adopted. Dover has separate permit office.",
+    },
+    localAmendments: [],
+    fipsCode: "10001",
+  },
+  {
+    county: "Sussex",
+    state: "DE",
+    climateZone: "4A",
+    designWindSpeed: 120,
+    highWindZone: true,
+    iceBarrierRequirement: "eaves_valleys_penetrations",
+    permit: {
+      required: true,
+      typicalFeeRange: "$100–$200",
+      ahjName: "Sussex County Building Code Dept.",
+      ahjPhone: "302-855-7878",
+      ahjUrl: "https://sussexcountyde.gov/building-code",
+      notes: "2021 IRC Chapters 1-10 adopted effective January 1, 2023. Coastal areas have enhanced wind requirements.",
+    },
+    localAmendments: [
+      "Coastal Sussex County has design wind speeds of 120+ mph per ASCE 7-16 — 6-nail pattern required",
+      "Extended ice barrier required at eaves, valleys, and penetrations due to coastal wind-driven rain exposure",
+    ],
+    fipsCode: "10005",
+  },
 ];
 
 // ── All Counties Combined ────────────────────────────────────────────────
@@ -768,6 +872,7 @@ export const PA_COUNTIES: CountyJurisdiction[] = [
 export const ALL_COUNTIES: CountyJurisdiction[] = [
   ...MD_COUNTIES,
   ...PA_COUNTIES,
+  ...DE_COUNTIES,
 ];
 
 // ── ZIP-to-County Map ────────────────────────────────────────────────────
@@ -776,7 +881,7 @@ export const ALL_COUNTIES: CountyJurisdiction[] = [
 // For ZIPs that span counties, the primary (most-populated) county is used.
 // Source: USPS ZIP code assignments + Census Bureau ZCTA data
 
-export const ZIP_TO_COUNTY: Record<string, { county: string; state: "MD" | "PA" }> = {
+export const ZIP_TO_COUNTY: Record<string, { county: string; state: "MD" | "PA" | "DE" }> = {
   // ── Maryland ZIPs ──────────────────────────────────────────────────────
 
   // Allegany County (ZIP 215xx)
@@ -1490,20 +1595,13 @@ export const ZIP_TO_COUNTY: Record<string, { county: string; state: "MD" | "PA" 
   // Franklin County (ZIP 172xx)
   "17201": { county: "Franklin", state: "PA" },
   "17202": { county: "Franklin", state: "PA" },
-  "17210": { county: "Franklin", state: "PA" },
-  "17211": { county: "Franklin", state: "PA" },
-  "17212": { county: "Franklin", state: "PA" },
   "17214": { county: "Franklin", state: "PA" },
-  "17215": { county: "Franklin", state: "PA" },
   "17217": { county: "Franklin", state: "PA" },
   "17219": { county: "Franklin", state: "PA" },
   "17220": { county: "Franklin", state: "PA" },
   "17222": { county: "Franklin", state: "PA" },
   "17224": { county: "Franklin", state: "PA" },
   "17225": { county: "Franklin", state: "PA" },
-  "17228": { county: "Franklin", state: "PA" },
-  "17233": { county: "Franklin", state: "PA" },
-  "17236": { county: "Franklin", state: "PA" },
   "17261": { county: "Franklin", state: "PA" },
   "17263": { county: "Franklin", state: "PA" },
   "17265": { county: "Franklin", state: "PA" },
@@ -1713,6 +1811,137 @@ export const ZIP_TO_COUNTY: Record<string, { county: string; state: "MD" | "PA" 
   "17406": { county: "York", state: "PA" },
   "17407": { county: "York", state: "PA" },
   "17408": { county: "York", state: "PA" },
+
+  // ── Delaware ZIPs ──────────────────────────────────────────────────────
+
+  // New Castle County (ZIP 197xx, 198xx)
+  "19701": { county: "New Castle", state: "DE" },
+  "19702": { county: "New Castle", state: "DE" },
+  "19703": { county: "New Castle", state: "DE" },
+  "19706": { county: "New Castle", state: "DE" },
+  "19707": { county: "New Castle", state: "DE" },
+  "19708": { county: "New Castle", state: "DE" },
+  "19709": { county: "New Castle", state: "DE" },
+  "19710": { county: "New Castle", state: "DE" },
+  "19711": { county: "New Castle", state: "DE" },
+  "19713": { county: "New Castle", state: "DE" },
+  "19716": { county: "New Castle", state: "DE" },
+  "19717": { county: "New Castle", state: "DE" },
+  "19718": { county: "New Castle", state: "DE" },
+  "19720": { county: "New Castle", state: "DE" },
+  "19721": { county: "New Castle", state: "DE" },
+  "19725": { county: "New Castle", state: "DE" },
+  "19726": { county: "New Castle", state: "DE" },
+  "19730": { county: "New Castle", state: "DE" },
+  "19731": { county: "New Castle", state: "DE" },
+  "19732": { county: "New Castle", state: "DE" },
+  "19733": { county: "New Castle", state: "DE" },
+  "19734": { county: "New Castle", state: "DE" },
+  "19735": { county: "New Castle", state: "DE" },
+  "19736": { county: "New Castle", state: "DE" },
+  "19801": { county: "New Castle", state: "DE" },
+  "19802": { county: "New Castle", state: "DE" },
+  "19803": { county: "New Castle", state: "DE" },
+  "19804": { county: "New Castle", state: "DE" },
+  "19805": { county: "New Castle", state: "DE" },
+  "19806": { county: "New Castle", state: "DE" },
+  "19807": { county: "New Castle", state: "DE" },
+  "19808": { county: "New Castle", state: "DE" },
+  "19809": { county: "New Castle", state: "DE" },
+  "19810": { county: "New Castle", state: "DE" },
+  "19850": { county: "New Castle", state: "DE" },
+  "19880": { county: "New Castle", state: "DE" },
+  "19884": { county: "New Castle", state: "DE" },
+  "19890": { county: "New Castle", state: "DE" },
+  "19891": { county: "New Castle", state: "DE" },
+  "19893": { county: "New Castle", state: "DE" },
+  "19894": { county: "New Castle", state: "DE" },
+  "19895": { county: "New Castle", state: "DE" },
+  "19896": { county: "New Castle", state: "DE" },
+  "19897": { county: "New Castle", state: "DE" },
+  "19898": { county: "New Castle", state: "DE" },
+  "19899": { county: "New Castle", state: "DE" },
+
+  // Kent County (ZIP 199xx)
+  "19901": { county: "Kent", state: "DE" },
+  "19902": { county: "Kent", state: "DE" },
+  "19903": { county: "Kent", state: "DE" },
+  "19904": { county: "Kent", state: "DE" },
+  "19905": { county: "Kent", state: "DE" },
+  "19906": { county: "Kent", state: "DE" },
+  "19934": { county: "Kent", state: "DE" },
+  "19936": { county: "Kent", state: "DE" },
+  "19938": { county: "Kent", state: "DE" },
+  "19940": { county: "Kent", state: "DE" },
+  "19943": { county: "Kent", state: "DE" },
+  "19946": { county: "Kent", state: "DE" },
+  "19950": { county: "Kent", state: "DE" },
+  "19952": { county: "Kent", state: "DE" },
+  "19953": { county: "Kent", state: "DE" },
+  "19954": { county: "Kent", state: "DE" },
+  "19955": { county: "Kent", state: "DE" },
+  "19962": { county: "Kent", state: "DE" },
+  "19963": { county: "Kent", state: "DE" },
+  "19964": { county: "Kent", state: "DE" },
+
+  // Sussex County (ZIP 199xx southern)
+  "19930": { county: "Sussex", state: "DE" },
+  "19931": { county: "Sussex", state: "DE" },
+  "19933": { county: "Sussex", state: "DE" },
+  "19939": { county: "Sussex", state: "DE" },
+  "19941": { county: "Sussex", state: "DE" },
+  "19944": { county: "Sussex", state: "DE" },
+  "19945": { county: "Sussex", state: "DE" },
+  "19947": { county: "Sussex", state: "DE" },
+  "19948": { county: "Sussex", state: "DE" },
+  "19951": { county: "Sussex", state: "DE" },
+  "19956": { county: "Sussex", state: "DE" },
+  "19958": { county: "Sussex", state: "DE" },
+  "19960": { county: "Sussex", state: "DE" },
+  "19966": { county: "Sussex", state: "DE" },
+  "19967": { county: "Sussex", state: "DE" },
+  "19968": { county: "Sussex", state: "DE" },
+  "19969": { county: "Sussex", state: "DE" },
+  "19970": { county: "Sussex", state: "DE" },
+  "19971": { county: "Sussex", state: "DE" },
+  "19973": { county: "Sussex", state: "DE" },
+  "19975": { county: "Sussex", state: "DE" },
+
+  // Bedford County, PA (ZIP 155xx, 156xx)
+  "15501": { county: "Bedford", state: "PA" },
+  "15510": { county: "Bedford", state: "PA" },
+  "15521": { county: "Bedford", state: "PA" },
+  "15522": { county: "Bedford", state: "PA" },
+  "15530": { county: "Bedford", state: "PA" },
+  "15533": { county: "Bedford", state: "PA" },
+  "15534": { county: "Bedford", state: "PA" },
+  "15535": { county: "Bedford", state: "PA" },
+  "15536": { county: "Bedford", state: "PA" },
+  "15537": { county: "Bedford", state: "PA" },
+  "15538": { county: "Bedford", state: "PA" },
+  "15539": { county: "Bedford", state: "PA" },
+  "15540": { county: "Bedford", state: "PA" },
+  "15541": { county: "Bedford", state: "PA" },
+  "15542": { county: "Bedford", state: "PA" },
+  "15545": { county: "Bedford", state: "PA" },
+  "15550": { county: "Bedford", state: "PA" },
+  "15551": { county: "Bedford", state: "PA" },
+  "15554": { county: "Bedford", state: "PA" },
+  "15557": { county: "Bedford", state: "PA" },
+  "15558": { county: "Bedford", state: "PA" },
+  "15559": { county: "Bedford", state: "PA" },
+
+  // Fulton County, PA (ZIP 172xx)
+  "17210": { county: "Fulton", state: "PA" },
+  "17211": { county: "Fulton", state: "PA" },
+  "17212": { county: "Fulton", state: "PA" },
+  "17215": { county: "Fulton", state: "PA" },
+  "17228": { county: "Fulton", state: "PA" },
+  "17229": { county: "Fulton", state: "PA" },
+  "17233": { county: "Fulton", state: "PA" },
+  "17236": { county: "Fulton", state: "PA" },
+  "17239": { county: "Fulton", state: "PA" },
+  "17243": { county: "Fulton", state: "PA" },
 };
 
 // ── Resolver ─────────────────────────────────────────────────────────────
@@ -1745,7 +1974,7 @@ export function resolveCountyFromZip(
  */
 export function resolveCountyByName(
   countyName: string,
-  state: "MD" | "PA"
+  state: "MD" | "PA" | "DE"
 ): CountyJurisdiction | null {
   if (!countyName || !state) return null;
 
@@ -1824,4 +2053,16 @@ export function buildCountyContextForPrompt(
   );
 
   return lines.join("\n");
+}
+
+/**
+ * Look up county jurisdiction data from a ZIP code.
+ */
+export function lookupCountyByZip(zip: string): CountyJurisdiction | undefined {
+  const mapping = ZIP_TO_COUNTY[zip];
+  if (!mapping) return undefined;
+
+  return ALL_COUNTIES.find(
+    (c) => c.county === mapping.county && c.state === mapping.state
+  );
 }

@@ -22,6 +22,7 @@ interface KnowledgeBaseClientProps {
   buildingCodes: BuildingCode[];
   mdCounties: CountyJurisdiction[];
   paCounties: CountyJurisdiction[];
+  deCounties: CountyJurisdiction[];
   manufacturers: Record<string, Manufacturer>;
   coverageSections: CoverageSection[];
   depreciationMethods: Record<DepreciationMethod, DepreciationInfo>;
@@ -36,6 +37,7 @@ export function KnowledgeBaseClient({
   buildingCodes,
   mdCounties,
   paCounties,
+  deCounties,
   manufacturers,
   coverageSections,
   depreciationMethods,
@@ -95,6 +97,7 @@ export function KnowledgeBaseClient({
           <CodesTab
             mdCounties={mdCounties}
             paCounties={paCounties}
+            deCounties={deCounties}
             buildingCodes={buildingCodes}
           />
         </TabsContent>

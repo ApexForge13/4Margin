@@ -1,4 +1,4 @@
-// ── Building Code Verification Database — MD & PA ──────────────────────────
+// ── Building Code Verification Database — MD, PA & DE ──────────────────────
 //
 // Jurisdiction-verified building codes for roofing and exterior work.
 // Mapped to Xactimate codes for direct injection into supplement analysis.
@@ -6,8 +6,9 @@
 // Sources:
 //   Maryland: 2018 IRC adopted via COMAR 09.12.01 (MD Building Performance Standards)
 //   Pennsylvania: 2018 IRC w/ PA UCC amendments (Act 45 of 1999, 34 Pa. Code Ch. 403)
+//   Delaware: 2021 IRC adopted via Delaware Code Title 16, Chapter 76 (county-level)
 //
-// PHASE 1: MD + PA (target markets)
+// PHASE 1: MD + PA + DE (target markets)
 // ──────────────────────────────────────────────────────────────────────────────
 
 export interface BuildingCode {
@@ -36,7 +37,7 @@ export interface BuildingCode {
 
 export interface JurisdictionCode {
   /** State abbreviation */
-  state: "MD" | "PA";
+  state: "MD" | "PA" | "DE";
   /** IRC edition adopted */
   ircEdition: string;
   /** Whether the state has a local amendment that differs from base IRC */
@@ -76,6 +77,22 @@ export const PA_JURISDICTION = {
   ],
 };
 
+// ── Delaware Jurisdiction Info ────────────────────────────────────────────
+
+export const DE_JURISDICTION = {
+  state: "DE" as const,
+  ircEdition: "2021 IRC",
+  adoptionRef: "Delaware Code Title 16, Chapter 76 — county-level adoption of 2021 IRC",
+  notes: [
+    "Delaware adopts building codes at the county level, not statewide",
+    "New Castle County: 2021 IRC effective January 1, 2024",
+    "Kent County: 2021 IRC adopted",
+    "Sussex County: 2021 IRC effective January 1, 2023 (Chapters 1-10)",
+    "All three counties are in IECC Climate Zone 4A",
+    "Coastal Sussex County has enhanced wind requirements",
+  ],
+};
+
 // ── Building Codes Database ───────────────────────────────────────────────
 
 export const BUILDING_CODES: BuildingCode[] = [
@@ -105,6 +122,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.1",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.1",
       },
     ],
     carrierObjectionRate: "medium",
@@ -139,6 +163,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.2",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.2",
+      },
     ],
     carrierObjectionRate: "low",
     typicalObjection: "Standard underlayment is sufficient.",
@@ -170,6 +201,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.3",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.3",
       },
     ],
     carrierObjectionRate: "medium",
@@ -204,6 +242,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.5",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.5",
+      },
     ],
     carrierObjectionRate: "low",
     typicalObjection: "4 nails per shingle is standard.",
@@ -237,6 +282,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.8.2",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.8.2",
       },
     ],
     carrierObjectionRate: "high",
@@ -273,6 +325,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.8.3",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.8.3",
+      },
     ],
     carrierObjectionRate: "medium",
     typicalObjection: "Ridge cap is included in the shingle square.",
@@ -306,6 +365,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.8.5",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.8.5",
       },
     ],
     carrierObjectionRate: "high",
@@ -344,6 +410,14 @@ export const BUILDING_CODES: BuildingCode[] = [
           "All of Pennsylvania is in Climate Zone 4A, 5A, or 6A — ice barrier is required statewide at eaves. Northern PA (Climate Zone 6A) has the strictest requirements: ice barrier required extending minimum 24 inches past the interior wall line.",
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.7.1; IECC Figure R301.1",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "All of Delaware is in Climate Zone 4A. Coastal Sussex County has additional wind-driven rain exposure requiring extended ice barrier at eaves and valleys.",
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.7.1; IECC Figure R301.1",
+      },
     ],
     carrierObjectionRate: "high",
     typicalObjection:
@@ -379,6 +453,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R903.2.1",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R903.2.1",
+      },
     ],
     carrierObjectionRate: "medium",
     typicalObjection: "Flashing is reusable and does not need replacement.",
@@ -410,6 +491,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R903.2.2",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R903.2.2",
       },
     ],
     carrierObjectionRate: "medium",
@@ -445,6 +533,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R806.1",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R806.1",
+      },
     ],
     carrierObjectionRate: "high",
     typicalObjection:
@@ -479,6 +574,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R903.4",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R903.4",
       },
     ],
     carrierObjectionRate: "medium",
@@ -516,6 +618,14 @@ export const BUILDING_CODES: BuildingCode[] = [
           "Pennsylvania UCC (34 Pa. Code §403.42) requires building permits for roof replacement statewide. Third-party agencies may perform plan review and inspection.",
         sourceRef: "34 Pa. Code §403.42; 2018 IRC R105.1",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "Delaware requires building permits at the county level. All three counties (New Castle, Kent, Sussex) require permits for roof replacement under their adopted building codes.",
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R105.1",
+      },
     ],
     carrierObjectionRate: "high",
     typicalObjection: "Code upgrade items are the homeowner's responsibility.",
@@ -549,6 +659,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "2018 IRC R905.2.2; OSHA 1926.501(b)(13)",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "2021 IRC R905.2.2; OSHA 1926.501(b)(13)",
       },
     ],
     carrierObjectionRate: "high",
@@ -584,6 +701,13 @@ export const BUILDING_CODES: BuildingCode[] = [
         amendmentNote: null,
         sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.8.4",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.8.4",
+      },
     ],
     carrierObjectionRate: "medium",
     typicalObjection: "Valley metal is reusable / ice & water in valleys is an upgrade.",
@@ -614,6 +738,13 @@ export const BUILDING_CODES: BuildingCode[] = [
       {
         state: "PA",
         ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Xactimate Industry Standards; HAAG Engineering Residential Roof Manual",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
         hasAmendment: false,
         amendmentNote: null,
         sourceRef: "Xactimate Industry Standards; HAAG Engineering Residential Roof Manual",
@@ -654,11 +785,315 @@ export const BUILDING_CODES: BuildingCode[] = [
           "Permit fees vary by municipality. Typical range: $50-$250 for residential roof replacement.",
         sourceRef: "34 Pa. Code §403.42; Local AHJ fee schedules",
       },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "Permit fees vary by county. Typical range: $50-$200 for residential roof replacement.",
+        sourceRef: "Delaware Code Title 16 Ch. 76; Local county fee schedules",
+      },
     ],
     carrierObjectionRate: "medium",
     typicalObjection: "Permit fees are the contractor's overhead.",
     rebuttal:
       "Building permits are a direct cost of the code-compliant roof replacement, required by law (IRC R105.1, MD COMAR 09.12.01, PA UCC 34 Pa. Code §403.42). This is not a general overhead item — it is a job-specific regulatory cost that the contractor pays to the local government on behalf of the project. Xactimate includes permit fees as a separate line item (GEN PRMT) because they are a direct project expense.",
+  },
+
+  // ─── RE-ROOFING / TEAR-OFF ─────────────────────────────────────────────
+
+  {
+    id: "IRC-R908.3",
+    section: "R908.3",
+    title: "Re-Roofing Limitations",
+    requirement:
+      "Not more than two layers of roofing shall be installed on a roof. Where existing roofing exceeds one layer, complete removal is required before new roof installation. Reroofing is not permitted where the existing roof or covering is water-soaked or deteriorated.",
+    justificationText:
+      "IRC R908.3 limits roof coverings to two layers maximum. When the existing roof already has two or more layers, complete tear-off to the deck is required by code — not optional. Additionally, any water-soaked or deteriorated roofing must be removed regardless of layer count.",
+    category: "roofing",
+    xactimateCodes: ["RFG TEAR", "RFG REMV"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R908.3",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R908.3",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R908.3",
+      },
+    ],
+    carrierObjectionRate: "medium",
+    typicalObjection:
+      "Only one layer exists, full tear-off is not required.",
+    rebuttal:
+      "IRC R908.3 mandates complete tear-off when existing roofing exceeds one layer or when existing materials are water-soaked or deteriorated. Inspection of the existing roof revealed [condition], requiring full removal to the deck per code. Additionally, all major manufacturers (GAF, CertainTeed, Owens Corning, IKO) recommend or require installation over a single layer only for warranty coverage.",
+  },
+
+  // ─── WIND RESISTANCE ───────────────────────────────────────────────────
+
+  {
+    id: "IRC-R905.2.7",
+    section: "R905.2.7",
+    title: "Wind Resistance of Asphalt Shingles",
+    requirement:
+      "Asphalt shingles shall be tested in accordance with ASTM D7158 and classified as Class D, G, or H. In high-wind regions (Vasd per ASCE 7 ≥ 110 mph), shingles must meet ASTM D7158 Class G or H. Enhanced fastening patterns and high-wind accessories may be required.",
+    justificationText:
+      "IRC R905.2.7 requires asphalt shingles to meet wind resistance testing per ASTM D7158. In areas with design wind speeds ≥ 110 mph (per ASCE 7-16), shingles must be rated Class G or Class H, and enhanced 6-nail fastening patterns are required for code compliance.",
+    category: "roofing",
+    xactimateCodes: ["RFG STRSA"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R905.2.7",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.7",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.7",
+      },
+    ],
+    carrierObjectionRate: "medium",
+    typicalObjection:
+      "Standard shingles meet wind requirements.",
+    rebuttal:
+      "IRC R905.2.7 requires shingles meeting ASTM D7158 classification appropriate for the design wind speed. In areas with Vasd ≥ 110 mph, Class G or H is required — standard Class D shingles do not meet code. Additionally, enhanced 6-nail fastening per R905.2.5 is required in these wind zones, increasing material and labor costs.",
+  },
+
+  // ─── PRODUCT STANDARDS ─────────────────────────────────────────────────
+
+  {
+    id: "IRC-R905.2.4",
+    section: "R905.2.4",
+    title: "Asphalt Shingle Product Standards",
+    requirement:
+      "Asphalt shingles shall comply with ASTM D3462 for fiberglass-based asphalt shingles. Replacement shingles must meet current ASTM standards and provide like-kind-and-quality coverage.",
+    justificationText:
+      "IRC R905.2.4 mandates that asphalt shingles meet ASTM D3462 standards. When a roof is replaced, the replacement shingles must be of like kind and quality to the damaged material. If the original shingles were architectural/dimensional, the replacement must also be architectural/dimensional — not 3-tab.",
+    category: "roofing",
+    xactimateCodes: ["RFG SHGL"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R905.2.4",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.2.4",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.4",
+      },
+    ],
+    carrierObjectionRate: "high",
+    typicalObjection:
+      "3-tab shingles are an acceptable replacement for architectural shingles.",
+    rebuttal:
+      "Like-kind-and-quality replacement is an insurance principle reinforced by code. IRC R905.2.4 requires ASTM D3462 compliance, and the replacement must match the quality of the damaged material. Architectural shingles have a different wind resistance class, aesthetic profile, and warranty duration than 3-tab. Downgrading the replacement does not constitute like-kind-and-quality.",
+  },
+
+  // ─── CHIMNEY CRICKET ───────────────────────────────────────────────────
+
+  {
+    id: "IRC-R903.2.2-CRICKET",
+    section: "R903.2.2",
+    title: "Chimney Cricket / Saddle Requirement",
+    requirement:
+      "A cricket or saddle shall be installed on the ridge side of any chimney or penetration more than 30 inches wide as measured perpendicular to the slope. The cricket shall divert water around the chimney to prevent ponding and ice dam formation.",
+    justificationText:
+      "IRC R903.2.2 requires a cricket (saddle) on the ridge side of chimneys wider than 30 inches. This is a code-mandated component — not an optional upgrade. The cricket must be properly flashed and integrated with the new roofing system.",
+    category: "flashing",
+    xactimateCodes: ["RFG CRKT", "RFG FLCR"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R903.2.2",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R903.2.2",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R903.2.2",
+      },
+    ],
+    carrierObjectionRate: "high",
+    typicalObjection:
+      "Cricket is existing and does not need replacement / cricket is not storm-damaged.",
+    rebuttal:
+      "During re-roofing, chimney cricket flashing must be replaced to properly integrate with the new roofing system. IRC R903.2.2 requires crickets on chimneys wider than 30 inches. The existing cricket flashing cannot be properly resealed to new shingles — it must be replaced for a watertight installation. All major manufacturers require new cricket flashing during re-roofing for warranty compliance.",
+  },
+
+  // ─── MINIMUM VENT AREA ─────────────────────────────────────────────────
+
+  {
+    id: "IRC-R806.2",
+    section: "R806.2",
+    title: "Minimum Vent Area Calculations",
+    requirement:
+      "The minimum net free ventilating area shall be 1/150 of the area of the vented space. A reduction to 1/300 is permitted when a Class I or II vapor retarder is installed on the warm side of the ceiling, or when at least 40% and not more than 50% of the required ventilation is provided by ventilators located in the upper portion of the attic space.",
+    justificationText:
+      "IRC R806.2 establishes the minimum net free ventilation area calculation. When re-roofing reveals inadequate ventilation, additional intake (soffit vents) or exhaust (ridge vent) must be added to meet the 1:150 or 1:300 ratio. This includes soffit vent installation, attic baffles to maintain airflow at eaves, and adequate ridge vent length.",
+    category: "ventilation",
+    xactimateCodes: ["RFG SOFV", "RFG BFFL", "RFG RDGV"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R806.2",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R806.2",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R806.2",
+      },
+    ],
+    carrierObjectionRate: "high",
+    typicalObjection:
+      "Ventilation is adequate / ventilation upgrades are not storm-related.",
+    rebuttal:
+      "IRC R806.2 specifies minimum ventilation ratios that must be met during re-roofing per R105.1. If the existing ventilation does not meet the 1:150 (or 1:300 with balanced intake/exhaust) requirement, additional ventilation components are code-required — not optional upgrades. Soffit intake vents and attic baffles are necessary to maintain airflow at the eave-to-ridge path. Manufacturers also require adequate ventilation for warranty coverage.",
+  },
+
+  // ─── WIND DESIGN CRITERIA ──────────────────────────────────────────────
+
+  {
+    id: "IRC-R301.2.1",
+    section: "R301.2.1",
+    title: "Wind Design Criteria",
+    requirement:
+      "Buildings and structures shall be designed and constructed to resist wind loads as determined by ASCE 7-16. The basic wind speed (Vasd) is determined from ASCE 7 Figure 26.5-1B. High-wind zones require enhanced fastening, underlayment, and product selection.",
+    justificationText:
+      "IRC R301.2.1 references ASCE 7-16 for wind load design. The design wind speed for the property location determines fastener patterns (4 vs 6 nails), underlayment requirements, and product wind resistance class. Properties in zones with Vasd ≥ 110 mph require enhanced materials and installation methods that increase project cost.",
+    category: "general",
+    xactimateCodes: [],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "MD coastal counties (Worcester, Wicomico, Somerset, Dorchester) have design wind speeds approaching or exceeding 120 mph per ASCE 7-16, requiring enhanced fastening and wind-rated products.",
+        sourceRef: "COMAR 09.12.01; 2018 IRC R301.2.1; ASCE 7-16 Figure 26.5-1B",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R301.2.1",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "Coastal Sussex County has design wind speeds of 120-130 mph per ASCE 7-16. Kent and New Castle Counties are 115 mph.",
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R301.2.1; ASCE 7-16 Figure 26.5-1B",
+      },
+    ],
+    carrierObjectionRate: "low",
+    typicalObjection:
+      "Standard installation methods are adequate.",
+    rebuttal:
+      "IRC R301.2.1 requires construction to resist wind loads per ASCE 7-16. The design wind speed for this property is [X] mph per ASCE 7 Figure 26.5-1B, which triggers enhanced requirements including 6-nail fastening patterns, Class G/H wind-rated shingles, and enhanced underlayment attachment. These are not upgrades — they are code-mandated for this wind zone.",
+  },
+
+  // ─── FIRE CLASSIFICATION ───────────────────────────────────────────────
+
+  {
+    id: "IRC-R905.1.1",
+    section: "R905.1.1",
+    title: "Fire Classification of Roofing",
+    requirement:
+      "Roofing assemblies shall have a fire classification of Class A, B, or C as determined by testing per ASTM E108 or UL 790. The class of roofing required is based on the type of construction and proximity to lot lines or other structures.",
+    justificationText:
+      "IRC R905.1.1 requires roofing to meet fire classification standards. Most residential asphalt shingles are UL Class A rated. When replacing a roof, the replacement must maintain the same or better fire classification. This may affect product selection and cost.",
+    category: "roofing",
+    xactimateCodes: ["RFG SHGL"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R905.1.1",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.1.1",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.1.1",
+      },
+    ],
+    carrierObjectionRate: "low",
+    typicalObjection:
+      "All shingles meet fire requirements.",
+    rebuttal:
+      "While most modern asphalt shingles are UL Class A rated, the complete roofing assembly (including underlayment and deck) must maintain the fire classification per IRC R905.1.1. This requires proper underlayment (contributing to the fire-rated assembly) and may require specific product combinations to maintain the UL listing.",
   },
 ];
 
@@ -708,7 +1143,9 @@ export function buildCodeContextForPrompt(state: string): string {
   if (codes.length === 0) return "";
 
   const jurisdiction =
-    state.toUpperCase() === "MD" ? MD_JURISDICTION : PA_JURISDICTION;
+    state.toUpperCase() === "MD" ? MD_JURISDICTION
+    : state.toUpperCase() === "DE" ? DE_JURISDICTION
+    : PA_JURISDICTION;
 
   const lines: string[] = [
     `## JURISDICTION-VERIFIED BUILDING CODES (${jurisdiction.state})`,

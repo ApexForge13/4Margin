@@ -9,8 +9,21 @@ import type { BuildingCode } from "@/data/building-codes";
 interface CodesTabProps {
   mdCounties: CountyJurisdiction[];
   paCounties: CountyJurisdiction[];
+  deCounties: CountyJurisdiction[];
   buildingCodes: BuildingCode[];
 }
+
+const STATE_LABELS: Record<string, string> = {
+  MD: "Maryland",
+  PA: "Pennsylvania",
+  DE: "Delaware",
+};
+
+const IRC_VERSION: Record<string, string> = {
+  MD: "2018 IRC",
+  PA: "2018 IRC",
+  DE: "2021 IRC",
+};
 
 const ICE_BARRIER_LABELS: Record<string, string> = {
   eaves_only: "Eaves Only",
@@ -24,8 +37,8 @@ const OBJECTION_COLORS: Record<string, string> = {
   low: "bg-emerald-100 text-emerald-700",
 };
 
-export function CodesTab({ mdCounties, paCounties, buildingCodes }: CodesTabProps) {
-  const allCounties = useMemo(() => [...mdCounties, ...paCounties], [mdCounties, paCounties]);
+export function CodesTab({ mdCounties, paCounties, deCounties, buildingCodes }: CodesTabProps) {
+  const allCounties = useMemo(() => [...mdCounties, ...paCounties, ...deCounties], [mdCounties, paCounties, deCounties]);
   const [selectedCounty, setSelectedCounty] = useState<CountyJurisdiction>(
     mdCounties.find((c) => c.county === "Baltimore County") ?? mdCounties[0]
   );
@@ -46,6 +59,14 @@ export function CodesTab({ mdCounties, paCounties, buildingCodes }: CodesTabProp
         c.county.toLowerCase().includes(search.toLowerCase())
       ),
     [paCounties, search]
+  );
+
+  const filteredDe = useMemo(
+    () =>
+      deCounties.filter((c) =>
+        c.county.toLowerCase().includes(search.toLowerCase())
+      ),
+    [deCounties, search]
   );
 
   const applicableCodes = useMemo(
@@ -104,7 +125,7 @@ export function CodesTab({ mdCounties, paCounties, buildingCodes }: CodesTabProp
                     </div>
                   </div>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-[#344767]/50 font-medium shrink-0">
-                    2018 IRC
+                    {IRC_VERSION[county.state] || "2018 IRC"}
                   </span>
                 </button>
               ))}
@@ -143,14 +164,53 @@ export function CodesTab({ mdCounties, paCounties, buildingCodes }: CodesTabProp
                     </div>
                   </div>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-[#344767]/50 font-medium shrink-0">
-                    2018 IRC
+                    {IRC_VERSION[county.state] || "2018 IRC"}
                   </span>
                 </button>
               ))}
             </div>
           )}
 
-          {filteredMd.length === 0 && filteredPa.length === 0 && (
+          {/* Delaware */}
+          {filteredDe.length > 0 && (
+            <div>
+              <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#344767]/40 bg-gray-50/50">
+                Delaware ({filteredDe.length})
+              </div>
+              {filteredDe.map((county) => (
+                <button
+                  key={county.fipsCode}
+                  onClick={() => setSelectedCounty(county)}
+                  className={`w-full text-left px-4 py-3 flex items-center justify-between transition-all duration-100 border-l-[3px] ${
+                    selectedCounty.fipsCode === county.fipsCode
+                      ? "border-l-[#00BFFF] bg-[#00BFFF]/[0.04]"
+                      : "border-l-transparent hover:bg-gray-50"
+                  }`}
+                >
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      selectedCounty.fipsCode === county.fipsCode
+                        ? "text-[#344767]"
+                        : "text-[#344767]/80"
+                    }`}>
+                      {county.county}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] text-[#344767]/40">Zone {county.climateZone}</span>
+                      {county.highWindZone && (
+                        <span className="text-[10px] font-medium text-amber-600">High Wind</span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-[#344767]/50 font-medium shrink-0">
+                    {IRC_VERSION[county.state] || "2021 IRC"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {filteredMd.length === 0 && filteredPa.length === 0 && filteredDe.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-[#344767]/40">
               No counties match your search.
             </div>
@@ -170,12 +230,12 @@ export function CodesTab({ mdCounties, paCounties, buildingCodes }: CodesTabProp
                 {selectedCounty.county}
               </h3>
               <p className="text-sm text-[#344767]/50">
-                {selectedCounty.state === "MD" ? "Maryland" : "Pennsylvania"}
+                {STATE_LABELS[selectedCounty.state] || selectedCounty.state}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <Badge className="bg-[#00BFFF]/10 text-[#00BFFF] border-0 text-xs font-medium">
-                2018 IRC
+                {IRC_VERSION[selectedCounty.state] || "2018 IRC"}
               </Badge>
               <Badge className="bg-gray-100 text-[#344767]/60 border-0 text-xs font-medium">
                 Zone {selectedCounty.climateZone}
@@ -406,9 +466,22 @@ export function CodesTab({ mdCounties, paCounties, buildingCodes }: CodesTabProp
                                 <p className="text-[11px] font-semibold uppercase text-[#344767]/40 mb-1">
                                   Source Reference
                                 </p>
-                                <p className="text-xs font-mono text-[#344767]/50">
+                                <p className="text-xs font-mono text-[#344767]/60 bg-white rounded px-2 py-1.5 border border-gray-100 inline-block">
                                   {jurisdictionInfo?.sourceRef}
                                 </p>
+                                {selectedCounty.permit.ahjUrl && (
+                                  <a
+                                    href={selectedCounty.permit.ahjUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[#00BFFF] hover:underline"
+                                  >
+                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                                    </svg>
+                                    View Code Authority Website ({selectedCounty.permit.ahjName})
+                                  </a>
+                                )}
                               </div>
                             </div>
                           </td>

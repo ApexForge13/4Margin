@@ -10,6 +10,7 @@ import {
   generateCoverLetter,
   type CoverLetterData,
 } from "@/lib/pdf/generate-cover-letter";
+import { calculateOhp, type OhpResult } from "@/lib/calculators/ohp";
 
 export async function POST(
   request: NextRequest,
@@ -147,6 +148,29 @@ export async function POST(
       0
     );
 
+    // ── O&P Calculation ──
+    // Calculate on FULL scope (adjuster base + supplement), credit what's already paid
+    const adjusterBase = supplement.adjuster_total
+      ? Number(supplement.adjuster_total)
+      : 0;
+
+    const tradeCategories = [...new Set(
+      items.map((i) => (i.category || "ROOFING").toUpperCase())
+    )];
+
+    const ohpResult: OhpResult = calculateOhp({
+      adjusterEstimateBase: adjusterBase,
+      supplementBase: supplementTotal,
+      ohpAlreadyPaid: 0, // TODO: extract from adjuster estimate if available
+      tradeCategories,
+      competitiveMarket: false,
+    });
+
+    console.log(
+      `[finalize] O&P calculated: ${ohpResult.tradeCount} trades, ` +
+      `supplemental O&P = $${ohpResult.supplementalOhp.toFixed(2)}`
+    );
+
     // Build PDF data
     const pdfData: SupplementPdfData = {
       companyName: company?.name || "",
@@ -265,13 +289,33 @@ export async function POST(
       // Non-fatal: continue even if cover letter upload fails
     }
 
-    // Update supplement record
+    // Merge O&P calculation into existing adjuster_estimate_parsed JSONB
+    const existingParsed = (supplement.adjuster_estimate_parsed || {}) as Record<string, unknown>;
+    const updatedParsed = {
+      ...existingParsed,
+      ohp_calculation: {
+        overheadRate: ohpResult.overheadRate,
+        profitRate: ohpResult.profitRate,
+        effectiveRate: ohpResult.effectiveRate,
+        combinedScopeBase: ohpResult.combinedScopeBase,
+        fullOhp: ohpResult.fullOhp,
+        ohpAlreadyPaid: ohpResult.ohpAlreadyPaid,
+        supplementalOhp: ohpResult.supplementalOhp,
+        tradeCount: ohpResult.tradeCount,
+        tradeNames: ohpResult.tradeNames,
+        justification: ohpResult.multiTradeJustification,
+        formula: ohpResult.formulaDisplay,
+      },
+    };
+
+    // Update supplement record with PDF paths and O&P data
     await admin
       .from("supplements")
       .update({
         generated_pdf_url: pdfPath,
         cover_letter_pdf_url: coverLetterUploadError ? null : coverLetterPath,
         supplement_total: supplementTotal,
+        adjuster_estimate_parsed: updatedParsed,
       })
       .eq("id", supplementId);
 
@@ -281,6 +325,11 @@ export async function POST(
       coverLetterPath: coverLetterUploadError ? null : coverLetterPath,
       supplementTotal,
       itemCount: items.length,
+      ohp: {
+        supplementalOhp: ohpResult.supplementalOhp,
+        tradeCount: ohpResult.tradeCount,
+        effectiveRate: ohpResult.effectiveRate,
+      },
     });
   } catch (err) {
     console.error("[finalize] Error:", err);
