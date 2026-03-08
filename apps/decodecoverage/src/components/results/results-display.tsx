@@ -317,7 +317,7 @@ export function ResultsDisplay({
               <ScrollText size={16} />
               Policy Details
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+            <div className="policy-details-grid" style={{ display: "grid", gap: 12, marginTop: 8 }}>
               {[
                 ["Policy #", analysis.policyNumber],
                 ["Named Insured", analysis.namedInsured],

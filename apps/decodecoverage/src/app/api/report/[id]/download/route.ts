@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase";
 import { generateDecoderPdf } from "@4margin/pdf";
 import type { DecoderPdfData } from "@4margin/pdf";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { sendReportEvent } from "@/lib/meta-capi";
 
 export async function GET(
   _request: NextRequest,
@@ -22,7 +23,7 @@ export async function GET(
 
   const { data: lead } = await supabase
     .from("consumer_leads")
-    .select("policy_analysis, first_name, last_name")
+    .select("policy_analysis, first_name, last_name, email, policy_score")
     .eq("id", id)
     .eq("status", "complete")
     .single();
@@ -62,6 +63,13 @@ export async function GET(
   };
 
   const buffer = generateDecoderPdf(pdfData);
+
+  // CAPI: track download (fire-and-forget)
+  sendReportEvent("PolicyDownloaded", {
+    leadId: id,
+    email: lead.email,
+    policyScore: lead.policy_score,
+  }).catch(() => {});
 
   const name = `${lead.first_name || "Policy"}-${lead.last_name || "Report"}`;
   const filename = `DecodeCoverage-${name}.pdf`;

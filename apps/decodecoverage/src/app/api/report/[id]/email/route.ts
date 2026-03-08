@@ -4,6 +4,7 @@ import { generateDecoderPdf } from "@4margin/pdf";
 import type { DecoderPdfData } from "@4margin/pdf";
 import { sendPolicyReport } from "@/lib/email";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { sendReportEvent } from "@/lib/meta-capi";
 
 export async function POST(
   _request: NextRequest,
@@ -23,7 +24,7 @@ export async function POST(
 
   const { data: lead } = await supabase
     .from("consumer_leads")
-    .select("policy_analysis, first_name, last_name, email")
+    .select("policy_analysis, first_name, last_name, email, policy_score")
     .eq("id", id)
     .eq("status", "complete")
     .single();
@@ -75,6 +76,13 @@ export async function POST(
   if (!result.success) {
     return NextResponse.json({ error: "Failed to send email" }, { status: 500 });
   }
+
+  // CAPI: track email report (fire-and-forget)
+  sendReportEvent("ReportEmailed", {
+    leadId: id,
+    email: lead.email,
+    policyScore: lead.policy_score,
+  }).catch(() => {});
 
   return NextResponse.json({ success: true });
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 import { parsePolicyPdfV2 } from "@4margin/policy-engine";
 import { checkRateLimit, getClientIp, RATE_LIMITS } from "@/lib/rate-limit";
+import { sendLeadEvent, sendCompleteRegistrationEvent } from "@/lib/meta-capi";
 
 export const maxDuration = 300;
 
@@ -100,6 +101,20 @@ export async function POST(request: NextRequest) {
 
     const leadId = lead.id;
 
+    // CAPI: send Lead event (fire-and-forget)
+    sendLeadEvent({
+      leadId,
+      email,
+      phone,
+      firstName,
+      lastName,
+      carrier,
+      utmSource,
+      ip: ipAddress,
+      userAgent,
+      sourceUrl: consentPageUrl || "https://decodecoverage.com",
+    }).catch(() => {});
+
     // 2. Upload PDF to storage if provided
     let policyPdfUrl: string | null = null;
     let originalFilename: string | null = null;
@@ -151,10 +166,22 @@ export async function POST(request: NextRequest) {
         console.log(`[analyze] Parse complete in ${elapsed}s for lead ${leadId}`);
 
         // 4. Store results — parsePolicyPdfV2 returns PolicyAnalysis directly
+        // Compute score for CAPI event
+        let policyScore: number | null = null;
+        let policyGrade: string | null = null;
+        try {
+          const { calculatePolicyScore } = await import("@/lib/policy-score");
+          const scoreResult = calculatePolicyScore(result);
+          policyScore = scoreResult.score;
+          policyGrade = scoreResult.grade;
+        } catch { /* non-blocking */ }
+
         await supabase
           .from("consumer_leads")
           .update({
             policy_analysis: result,
+            policy_score: policyScore,
+            policy_grade: policyGrade,
             document_meta: {
               documentType: result.documentType,
               scanQuality: result.scanQuality,
@@ -163,6 +190,14 @@ export async function POST(request: NextRequest) {
             status: "complete",
           })
           .eq("id", leadId);
+
+        // CAPI: send CompleteRegistration event (fire-and-forget)
+        sendCompleteRegistrationEvent({
+          leadId,
+          email,
+          policyScore,
+          policyGrade,
+        }).catch(() => {});
       } catch (parseErr) {
         console.error("[analyze] Parse error:", parseErr);
         await supabase
