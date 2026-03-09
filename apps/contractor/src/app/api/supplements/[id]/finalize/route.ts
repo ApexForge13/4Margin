@@ -361,7 +361,6 @@ export async function POST(
         .from("supplements")
         .update({
           generated_pdf_url: pdfPath,
-          cover_letter_pdf_url: coverLetterUploadError ? null : coverLetterPath,
           supplement_total: supplementTotal,
           adjuster_estimate_parsed: updatedParsed,
         })
@@ -371,10 +370,15 @@ export async function POST(
         throw dbUpdateError;
       }
       console.log("[finalize] DB updated successfully");
-    } catch (dbErr) {
+    } catch (dbErr: unknown) {
       console.error("[finalize] DB update failed:", dbErr);
+      const errMsg = dbErr instanceof Error
+        ? dbErr.message
+        : typeof dbErr === "object" && dbErr !== null && "message" in dbErr
+          ? String((dbErr as Record<string, unknown>).message)
+          : JSON.stringify(dbErr);
       return NextResponse.json(
-        { error: "Failed to update supplement record: " + (dbErr instanceof Error ? dbErr.message : String(dbErr)) },
+        { error: "Failed to update supplement record: " + errMsg },
         { status: 500 }
       );
     }

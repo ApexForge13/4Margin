@@ -433,12 +433,13 @@ Note: You may also use valid Xactimate codes from your training knowledge if app
 4. For solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician)
 
 ## CRITICAL RULES
-- NEVER return an empty missing_items array. Every roofing estimate has missing items.
-- If you cannot read the PDF clearly, state that in the summary AND still return common missing items based on measurements (starter strip, drip edge, ice & water, ridge cap, etc.)
-- For each contractor-flagged item, create a line item even at lower confidence
+- Only return items that are genuinely missing or underpaid based on evidence (measurements, code requirements, manufacturer specs, policy coverage). Do NOT fabricate or pad items.
+- If the estimate is thorough and nothing is missing, return an empty missing_items array with a summary noting the estimate appears complete.
+- If you cannot read the PDF clearly, state that in the summary. Only return items you have reasonable evidence for — do not guess.
+- For each contractor-flagged item, create a line item but assign appropriate confidence (lower if evidence is weak).
 - Use measurements for quantities (ridge LF for ridge cap, valley LF for ice & water, etc.)
 - Cite IRC codes or manufacturer specs in justifications
-- Minimum 5 items for any roofing claim — adjusters routinely miss common items
+- Quality over quantity — 1 well-justified item beats 10 weak ones
 
 Return ONLY JSON — no markdown, no code fences:
 {
