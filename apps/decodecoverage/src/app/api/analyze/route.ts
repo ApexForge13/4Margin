@@ -119,10 +119,17 @@ export async function POST(request: NextRequest) {
     let policyPdfUrl: string | null = null;
     let originalFilename: string | null = null;
 
-    if (policyFile && policyFile.size > 0) {
+    // Read the file buffer once here so both the upload and AI parse steps can reuse it.
+    // A File/Blob body can only be consumed once — calling arrayBuffer() twice returns empty on the second call.
+    const policyBuffer =
+      policyFile && policyFile.size > 0
+        ? Buffer.from(await policyFile.arrayBuffer())
+        : null;
+
+    if (policyFile && policyFile.size > 0 && policyBuffer) {
       originalFilename = policyFile.name;
       const storagePath = `consumer-policies/${leadId}/${policyFile.name}`;
-      const buffer = Buffer.from(await policyFile.arrayBuffer());
+      const buffer = policyBuffer;
 
       const { error: uploadErr } = await supabase.storage
         .from("consumer-policies")
@@ -152,9 +159,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Parse policy with AI
-    if (policyFile && policyFile.size > 0) {
+    if (policyFile && policyFile.size > 0 && policyBuffer) {
       try {
-        const base64 = Buffer.from(await policyFile.arrayBuffer()).toString("base64");
+        const base64 = policyBuffer.toString("base64");
 
         console.log(`[analyze] Starting parse for lead ${leadId}`);
         const startTime = Date.now();
