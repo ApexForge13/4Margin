@@ -4,8 +4,8 @@
 // supplement justification. Sourced from public installation manuals and
 // warranty documents.
 //
-// PHASE 1: GAF + CertainTeed (roofing)
-// TODO Phase 1: Owens Corning, IKO, Tamko, James Hardie, CertainTeed Siding, LP SmartSide
+// Phase 1 Complete: GAF, CertainTeed (this file), Owens Corning, IKO, Atlas, TAMKO (see ./manufacturers/)
+// Phase 2 Planned: James Hardie (siding), CertainTeed Siding, LP SmartSide
 
 export interface ManufacturerRequirement {
   id: string;

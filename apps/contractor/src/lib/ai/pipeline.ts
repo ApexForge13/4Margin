@@ -35,6 +35,7 @@ import {
 import { getRequirementsForXactimateCode } from "@/data/manufacturers";
 import { lookupCountyByZip, resolveCountyByName } from "@/data/county-jurisdictions";
 import { geocodeAddress } from "@/lib/geocode";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface PipelineInput {
   supplementId: string;
@@ -48,6 +49,36 @@ export interface PipelineResult {
   itemCount: number;
   supplementTotal: number;
   error?: string;
+}
+
+/**
+ * Update the pipeline stage in the supplement's JSONB field.
+ * The frontend polls every 5s and reads this to drive the progress bar.
+ * Wrapped in try/catch internally — a failed stage update must never crash the pipeline.
+ */
+async function updatePipelineStage(
+  admin: SupabaseClient,
+  supplementId: string,
+  stage: string
+) {
+  try {
+    const { data } = await admin
+      .from("supplements")
+      .select("adjuster_estimate_parsed")
+      .eq("id", supplementId)
+      .single();
+
+    const parsed = (data?.adjuster_estimate_parsed as Record<string, unknown>) || {};
+    parsed.pipeline_stage = stage;
+    parsed.pipeline_stage_updated_at = new Date().toISOString();
+
+    await admin
+      .from("supplements")
+      .update({ adjuster_estimate_parsed: parsed })
+      .eq("id", supplementId);
+  } catch (err) {
+    console.warn(`[pipeline] Failed to update stage to "${stage}" (non-blocking):`, err);
+  }
 }
 
 export async function runSupplementPipeline(
@@ -89,6 +120,7 @@ export async function runSupplementPipeline(
     // ── 3. Download estimate PDF as base64 ──
     // We send the PDF inline (base64) to Claude instead of a signed URL
     // because Claude's servers may not be able to reach Supabase storage URLs.
+    await updatePipelineStage(supabase, supplementId, "downloading");
     const { data: estimateBlob, error: estimateDownloadError } = await supabase.storage
       .from("estimates")
       .download(supplement.adjuster_estimate_url);
@@ -105,6 +137,7 @@ export async function runSupplementPipeline(
     // ── 4. Parse policy PDF with full claim context (deferred from wizard) ──
     // Policy PDF is stored during wizard upload but parsed HERE so the AI
     // has access to claim description, damage types, etc. for better analysis.
+    await updatePipelineStage(supabase, supplementId, "parsing_policy");
     let policyContext: string | null = null;
     const policyPdfUrl = (supplement as Record<string, unknown>).policy_pdf_url as string | null;
     const existingPolicyAnalysis = supplement.policy_analysis as Record<string, unknown> | null;
@@ -146,6 +179,8 @@ export async function runSupplementPipeline(
       // Backward compatibility: use pre-existing policy_analysis (old supplements or retry)
       policyContext = buildPolicyContextString(existingPolicyAnalysis);
     }
+
+    await updatePipelineStage(supabase, supplementId, "detecting_items");
 
     const analysisInput: AnalysisInput = {
       supplementId,
@@ -234,6 +269,7 @@ export async function runSupplementPipeline(
     // ── 4c. Confidence scoring — enrich each item with 4-dimension score ──
     // Replaces the AI's raw confidence (0-1 gut feeling) with a structured
     // score based on policy, code, manufacturer, and carrier data.
+    await updatePipelineStage(supabase, supplementId, "scoring");
 
     // Resolve county: try Census geocoding first (accurate), fall back to ZIP lookup
     let countyInfo = claim.property_zip
@@ -349,6 +385,8 @@ export async function runSupplementPipeline(
 
     console.log(`[pipeline] Confidence scoring complete: ${confidenceDetails.length} items scored`);
 
+    await updatePipelineStage(supabase, supplementId, "calculating");
+
     // ── 4d. Waste calculator ──
     let wasteCalcResult: WasteResult | null = null;
     if (claim.roof_squares && claim.waste_percent) {
@@ -390,6 +428,7 @@ export async function runSupplementPipeline(
     // ── 5. Analyze photos (best-effort, non-blocking) ──
     // Photo analysis is supplementary — don't let it block or timeout the pipeline.
     // Skip if we've already used >90s to leave time for weather + DB writes.
+    await updatePipelineStage(supabase, supplementId, "analyzing_photos");
     let photoAnalyses = new Map<string, PhotoAnalysisResult>();
     const elapsedMs = Date.now() - pipelineStartMs;
 
@@ -503,6 +542,8 @@ export async function runSupplementPipeline(
     // select/deselect line items first, then trigger PDF generation
     // via the /api/supplements/[id]/finalize endpoint.
 
+    await updatePipelineStage(supabase, supplementId, "fetching_weather");
+
     // ── 8. Fetch weather data & generate weather report PDF (non-blocking) ──
     let weatherData: WeatherData | null = null;
     let weatherPdfPath: string | null = null;
@@ -570,6 +611,8 @@ export async function runSupplementPipeline(
         // Continue — weather is supplementary, never blocks the pipeline
       }
     }
+
+    await updatePipelineStage(supabase, supplementId, "finalizing");
 
     // ── 9. Update supplement record ──
     // Note: paid_at is already set by checkout route (free) or Stripe webhook (paid)

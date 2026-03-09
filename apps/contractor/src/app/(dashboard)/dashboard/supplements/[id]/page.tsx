@@ -24,6 +24,7 @@ import { DownloadButton } from "@/components/supplements/download-button";
 import { PolicyAnalysisCard } from "@/components/supplements/policy-analysis-card";
 import { NoItemsCard } from "@/components/supplements/no-items-card";
 import { GenerationTimeoutCard } from "@/components/supplements/generation-timeout-card";
+import { PipelineProgress } from "@/components/supplements/pipeline-progress";
 
 export default async function SupplementDetailPage({
   params,
@@ -101,6 +102,8 @@ export default async function SupplementDetailPage({
   const pipelineError = parsedData?.error_type === "pipeline_failure"
     ? (parsedData.error as string)
     : null;
+  const pipelineStage = (parsedData?.pipeline_stage as string) || null;
+  const pipelineStageUpdatedAt = (parsedData?.pipeline_stage_updated_at as string) || null;
 
   // Policy analysis (from policy decoder)
   const policyAnalysis = supplement.policy_analysis as Record<string, unknown> | null;
@@ -193,15 +196,10 @@ export default async function SupplementDetailPage({
         isStuckGenerating ? (
           <GenerationTimeoutCard supplementId={id} />
         ) : (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="flex items-center gap-3 py-6">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-              <div>
-                <p className="font-medium text-blue-900">Analyzing your estimate...</p>
-                <p className="text-sm text-blue-700">Our AI is reviewing the adjuster&apos;s scope, identifying missing items, and generating your supplement. This usually takes 1-2 minutes.</p>
-              </div>
-            </CardContent>
-          </Card>
+          <PipelineProgress
+            currentStage={pipelineStage}
+            startedAt={pipelineStageUpdatedAt || supplement.created_at}
+          />
         )
       )}
 

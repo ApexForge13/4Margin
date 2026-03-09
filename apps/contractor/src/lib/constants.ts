@@ -68,6 +68,21 @@ export function formatDamageTypes(types: string[]): string {
   return types.map((t) => DAMAGE_TYPE_LABELS[t] || t).join(", ");
 }
 
+// --- Pipeline stage definitions (for progress bar during generation) ---
+
+export const PIPELINE_STAGES = [
+  { key: "downloading", label: "Downloading Estimate", icon: "download" },
+  { key: "parsing_policy", label: "Parsing Policy", icon: "file-search" },
+  { key: "detecting_items", label: "Detecting Missing Items", icon: "search" },
+  { key: "scoring", label: "Scoring Confidence", icon: "bar-chart" },
+  { key: "calculating", label: "Running Calculations", icon: "calculator" },
+  { key: "analyzing_photos", label: "Analyzing Photos", icon: "camera" },
+  { key: "fetching_weather", label: "Fetching Weather Data", icon: "cloud" },
+  { key: "finalizing", label: "Saving Results", icon: "check" },
+] as const;
+
+export type PipelineStageKey = (typeof PIPELINE_STAGES)[number]["key"];
+
 // --- Policy Decoder status types ---
 
 export type DecoderStatus = "draft" | "processing" | "complete" | "failed";

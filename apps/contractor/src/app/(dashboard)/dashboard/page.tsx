@@ -14,6 +14,7 @@ interface SupplementRow {
   created_at: string;
   updated_at: string;
   paid_at: string | null;
+  generated_pdf_url: string | null;
   claims: {
     claim_number: string | null;
     property_address: string | null;
@@ -221,6 +222,7 @@ export default async function DashboardPage() {
       created_at,
       updated_at,
       paid_at,
+      generated_pdf_url,
       claims (
         claim_number,
         property_address
@@ -239,7 +241,8 @@ export default async function DashboardPage() {
     .in(
       "supplement_id",
       supplements.map((s) => s.id)
-    );
+    )
+    .eq("status", "detected");
 
   const itemsPerSupplement: Record<string, number> = {};
   for (const row of itemCountsRaw ?? []) {
@@ -272,7 +275,9 @@ export default async function DashboardPage() {
   const needsReview = supplements
     .filter(
       (s) =>
-        s.status === "complete" && (itemsPerSupplement[s.id] ?? 0) > 0
+        s.status === "complete" &&
+        !s.generated_pdf_url &&
+        (itemsPerSupplement[s.id] ?? 0) > 0
     )
     .slice(0, 5)
     .map((s) => ({

@@ -7,7 +7,7 @@ import {
   PA_COUNTIES,
   DE_COUNTIES,
 } from "@/data/county-jurisdictions";
-import { MANUFACTURERS } from "@/data/manufacturer-requirements";
+import { ALL_MANUFACTURERS } from "@/data/manufacturers";
 import {
   COVERAGE_SECTIONS,
   DEPRECIATION_METHODS,
@@ -131,7 +131,7 @@ export default async function KnowledgeBasePage() {
     <KnowledgeBaseClient
       counties={counties}
       buildingCodes={codes}
-      manufacturers={MANUFACTURERS}
+      manufacturers={ALL_MANUFACTURERS}
       coverageSections={COVERAGE_SECTIONS}
       depreciationMethods={DEPRECIATION_METHODS}
       landmineRules={LANDMINE_RULES}
