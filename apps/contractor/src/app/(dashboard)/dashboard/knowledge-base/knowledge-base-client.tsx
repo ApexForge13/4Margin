@@ -5,8 +5,7 @@ import { CodesTab } from "./codes-tab";
 import { ManufacturersTab } from "./manufacturers-tab";
 import { PolicyTab } from "./policy-tab";
 
-import type { BuildingCode } from "@/data/building-codes";
-import type { CountyJurisdiction } from "@/data/county-jurisdictions";
+import type { KbCounty, KbBuildingCode } from "./types";
 import type { Manufacturer } from "@/data/manufacturer-requirements";
 import type {
   CoverageSection,
@@ -19,10 +18,8 @@ import type {
 } from "@4margin/policy-engine";
 
 interface KnowledgeBaseClientProps {
-  buildingCodes: BuildingCode[];
-  mdCounties: CountyJurisdiction[];
-  paCounties: CountyJurisdiction[];
-  deCounties: CountyJurisdiction[];
+  counties: KbCounty[];
+  buildingCodes: KbBuildingCode[];
   manufacturers: Record<string, Manufacturer>;
   coverageSections: CoverageSection[];
   depreciationMethods: Record<DepreciationMethod, DepreciationInfo>;
@@ -31,13 +28,12 @@ interface KnowledgeBaseClientProps {
   claimTypePolicySections: Record<string, string[]>;
   baseFormExclusions: BaseFormExclusion[];
   carrierEndorsementForms: CarrierEndorsementForm[];
+  isAdmin?: boolean;
 }
 
 export function KnowledgeBaseClient({
+  counties,
   buildingCodes,
-  mdCounties,
-  paCounties,
-  deCounties,
   manufacturers,
   coverageSections,
   depreciationMethods,
@@ -46,6 +42,7 @@ export function KnowledgeBaseClient({
   claimTypePolicySections,
   baseFormExclusions,
   carrierEndorsementForms,
+  isAdmin = false,
 }: KnowledgeBaseClientProps) {
   return (
     <div className="space-y-6">
@@ -95,10 +92,9 @@ export function KnowledgeBaseClient({
 
         <TabsContent value="codes" className="mt-6">
           <CodesTab
-            mdCounties={mdCounties}
-            paCounties={paCounties}
-            deCounties={deCounties}
+            counties={counties}
             buildingCodes={buildingCodes}
+            isAdmin={isAdmin}
           />
         </TabsContent>
 
