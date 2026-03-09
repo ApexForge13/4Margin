@@ -330,8 +330,20 @@ export async function runSupplementPipeline(
       };
 
       const scored = scoreConfidence(confidenceInput);
-      // Replace AI's raw confidence with scored confidence (0-1 scale)
+      // Replace AI's raw confidence with scored confidence (0-1 scale for legacy column)
       item.confidence = scored.totalScore / 100;
+      // Populate new migration 034 columns for UI/PDF display
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const itemAny = item as any;
+      itemAny.confidence_score = scored.totalScore;
+      itemAny.confidence_tier = scored.tier;
+      itemAny.confidence_details = {
+        policy: scored.dimensions.find(d => d.dimension === "Policy Support"),
+        code: scored.dimensions.find(d => d.dimension === "Code Authority"),
+        manufacturer: scored.dimensions.find(d => d.dimension === "Manufacturer Requirement"),
+        carrier: scored.dimensions.find(d => d.dimension === "Carrier Approval History"),
+        summary: scored.summaryText,
+      };
       confidenceDetails.push({ xactimateCode: item.xactimate_code, result: scored });
     }
 

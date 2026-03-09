@@ -74,6 +74,8 @@ export interface SupplementPdfData {
     acv?: number;              // ACV = RCV - |depreciation|; defaults to total_price
     justification: string;
     irc_reference: string;
+    confidence_score?: number;  // 0-100 score from confidence scorer
+    confidence_tier?: string;   // "high" | "good" | "moderate" | "low"
   }>;
 
   // Generated date
@@ -273,10 +275,11 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
     doc.text("No line items detected.", margin, y);
     y += 20;
   } else {
-    // 8 column definitions — #, Description, Qty, Unit, Unit Price, RCV, Deprec., ACV
+    // 9 column definitions — #, Code, Description, Qty, Unit, Unit Price, RCV, Deprec., ACV
     const cols = [
-      { label: "#",          x: margin,       w: 20,  align: "left"  as const },
-      { label: "Description", x: margin + 20,  w: 200, align: "left"  as const },
+      { label: "#",          x: margin,       w: 18,  align: "left"  as const },
+      { label: "Code",       x: margin + 18,  w: 52,  align: "left"  as const },
+      { label: "Description", x: margin + 70,  w: 150, align: "left"  as const },
       { label: "Qty",         x: margin + 220, w: 36,  align: "left"  as const },
       { label: "Unit",        x: margin + 256, w: 32,  align: "left"  as const },
       { label: "Unit Price",  x: margin + 288, w: 56,  align: "right" as const },
@@ -371,38 +374,46 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
         setColor(BRAND.textMuted);
         doc.text(String(lineNum), cols[0].x + 3, y);
 
-        // Description — truncate to fit 200pt column
+        // Code (Xactimate code in courier-style)
+        doc.setFont("courier", "normal");
+        setColor(BRAND.primaryDark);
+        const codeStr = item.xactimate_code.length > 12
+          ? item.xactimate_code.substring(0, 11) + "…"
+          : item.xactimate_code;
+        doc.text(codeStr, cols[1].x + 3, y);
+
+        // Description — truncate to fit 150pt column
         doc.setFont("helvetica", "normal");
         setColor(BRAND.text);
-        const desc = item.description.length > 48
-          ? item.description.substring(0, 46) + "..."
+        const desc = item.description.length > 36
+          ? item.description.substring(0, 34) + "..."
           : item.description;
-        doc.text(desc, cols[1].x + 3, y);
+        doc.text(desc, cols[2].x + 3, y);
 
         // Qty
-        doc.text(String(item.quantity), cols[2].x + 3, y);
+        doc.text(String(item.quantity), cols[3].x + 3, y);
 
         // Unit
         setColor(BRAND.textMuted);
-        doc.text(item.unit, cols[3].x + 3, y);
+        doc.text(item.unit, cols[4].x + 3, y);
 
         // Unit Price (right aligned)
         setColor(BRAND.text);
-        doc.text(fmt(item.unit_price), cols[4].x + cols[4].w - 4, y, { align: "right" });
+        doc.text(fmt(item.unit_price), cols[5].x + cols[5].w - 4, y, { align: "right" });
 
         // RCV (right aligned, bold)
         doc.setFont("helvetica", "bold");
-        doc.text(fmt(item.total_price), cols[5].x + cols[5].w - 4, y, { align: "right" });
+        doc.text(fmt(item.total_price), cols[6].x + cols[6].w - 4, y, { align: "right" });
 
         // Deprec. (right aligned, parentheses)
         doc.setFont("helvetica", "normal");
         setColor(BRAND.textMuted);
-        doc.text(fmtDeprec(deprec), cols[6].x + cols[6].w - 4, y, { align: "right" });
+        doc.text(fmtDeprec(deprec), cols[7].x + cols[7].w - 4, y, { align: "right" });
 
         // ACV (right aligned, bold)
         doc.setFont("helvetica", "bold");
         setColor(BRAND.text);
-        doc.text(fmt(acv), cols[7].x + cols[7].w - 4, y, { align: "right" });
+        doc.text(fmt(acv), cols[8].x + cols[8].w - 4, y, { align: "right" });
         doc.setFont("helvetica", "normal");
 
         y += 14;
@@ -423,16 +434,16 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
       doc.setFontSize(7);
       doc.setFont("helvetica", "bold");
       setColor(BRAND.primaryDark);
-      doc.text(`${category} Subtotal`, cols[1].x + 3, y);
+      doc.text(`${category} Subtotal`, cols[2].x + 3, y);
 
       // RCV subtotal
-      doc.text(fmt(catRcv), cols[5].x + cols[5].w - 4, y, { align: "right" });
+      doc.text(fmt(catRcv), cols[6].x + cols[6].w - 4, y, { align: "right" });
       // Deprec. subtotal
       setColor(BRAND.textMuted);
-      doc.text(fmtDeprec(catDeprec), cols[6].x + cols[6].w - 4, y, { align: "right" });
+      doc.text(fmtDeprec(catDeprec), cols[7].x + cols[7].w - 4, y, { align: "right" });
       // ACV subtotal
       setColor(BRAND.primaryDark);
-      doc.text(fmt(catAcv), cols[7].x + cols[7].w - 4, y, { align: "right" });
+      doc.text(fmt(catAcv), cols[8].x + cols[8].w - 4, y, { align: "right" });
 
       y += 16;
     });
@@ -452,11 +463,11 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
     doc.text("SUPPLEMENT TOTAL", margin + 6, y + 1);
 
     // Grand RCV
-    doc.text(fmt(grandRcv), cols[5].x + cols[5].w - 4, y + 1, { align: "right" });
+    doc.text(fmt(grandRcv), cols[6].x + cols[6].w - 4, y + 1, { align: "right" });
     // Grand Deprec.
-    doc.text(fmtDeprec(grandDeprec), cols[6].x + cols[6].w - 4, y + 1, { align: "right" });
+    doc.text(fmtDeprec(grandDeprec), cols[7].x + cols[7].w - 4, y + 1, { align: "right" });
     // Grand ACV
-    doc.text(fmt(grandAcv), cols[7].x + cols[7].w - 4, y + 1, { align: "right" });
+    doc.text(fmt(grandAcv), cols[8].x + cols[8].w - 4, y + 1, { align: "right" });
 
     y += 20;
   }
@@ -524,6 +535,31 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
       doc.setFont("helvetica", "normal");
       setColor(BRAND.text);
       doc.text(`— ${item.description}`, margin + 22 + doc.getTextWidth(item.xactimate_code) + 6, y + 2);
+
+      // Confidence tier badge (right of description, before price)
+      if (item.confidence_tier) {
+        const tierColors: Record<string, [number, number, number]> = {
+          high: [22, 163, 74],     // green-600
+          good: [37, 99, 235],     // blue-600
+          moderate: [202, 138, 4], // yellow-600
+          low: [220, 38, 38],      // red-600
+        };
+        const tierLabels: Record<string, string> = {
+          high: "HIGH",
+          good: "GOOD",
+          moderate: "MOD",
+          low: "LOW",
+        };
+        const tierColor = tierColors[item.confidence_tier] || BRAND.textMuted;
+        const tierLabel = tierLabels[item.confidence_tier] || "—";
+        const score = item.confidence_score || 0;
+
+        // Small badge before price
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "bold");
+        setColor(tierColor as [number, number, number]);
+        doc.text(`${tierLabel} ${score}`, pageWidth - margin - 60, y + 2, { align: "right" });
+      }
 
       // Price on right
       doc.setFont("helvetica", "bold");

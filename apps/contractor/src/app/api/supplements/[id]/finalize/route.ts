@@ -146,8 +146,8 @@ export async function POST(
       if (carrier) carrierName = carrier.name;
     }
 
-    // Calculate supplement total from accepted items
-    const supplementTotal = items.reduce(
+    // Calculate supplement total from accepted items (before O&P)
+    let supplementTotal = items.reduce(
       (sum, item) => sum + Number(item.total_price || 0),
       0
     );
@@ -185,6 +185,29 @@ export async function POST(
         tradeCategories: ["ROOFING"],
         competitiveMarket: false,
       });
+    }
+
+    // ── Insert O&P as a line item ──
+    if (ohpResult.supplementalOhp > 0) {
+      const ohpItem = {
+        supplement_id: supplementId,
+        xactimate_code: "GEN OHP",
+        description: `Overhead & Profit — ${ohpResult.tradeCount} trades (${ohpResult.tradeNames.join(", ")})`,
+        category: "General",
+        quantity: 1,
+        unit: "LS",
+        unit_price: ohpResult.supplementalOhp,
+        total_price: ohpResult.supplementalOhp,
+        justification: ohpResult.multiTradeJustification,
+        irc_reference: "N/A",
+        confidence: ohpResult.tradeCount >= 3 ? 0.9 : 0.7,
+        detection_source: "calculator_ohp",
+        status: "accepted",
+      };
+      await admin.from("supplement_items").insert(ohpItem);
+      items.push(ohpItem as typeof items[number]);
+      supplementTotal += ohpResult.supplementalOhp;
+      console.log(`[finalize] O&P line item inserted: $${ohpResult.supplementalOhp.toFixed(2)}`);
     }
 
     // Build PDF data
@@ -231,6 +254,8 @@ export async function POST(
         total_price: Number(item.total_price),
         justification: item.justification || "",
         irc_reference: item.irc_reference || "",
+        confidence_score: item.confidence_score || Math.round((Number(item.confidence) || 0) * 100),
+        confidence_tier: item.confidence_tier || "moderate",
       })),
       generatedDate: new Date().toLocaleDateString("en-US", {
         month: "long",

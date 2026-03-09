@@ -530,6 +530,8 @@ Extract ALL deductibles — this is critical, do not miss any:
 If percentage-based, note the percentage AND calculate the dollar amount using Coverage A limit.
 If you find an endorsement that modifies the deductible, note both the original and modified amounts.
 
+CRITICAL: If the policy mentions deductibles specific to a geographic area (e.g., "Worcester County", "Coastal Zone", "Tier 1 area"), report them with needsVerification=true and note the geographic scope in the description. Do NOT state they apply to this specific property — the property's county may differ from the deductible's geographic scope.
+
 ### 4. Depreciation Method
 Determine: RCV (Replacement Cost Value) or ACV (Actual Cash Value)
 - RCV = depreciation is recoverable after repairs
@@ -1132,6 +1134,78 @@ function enrichLandmines(detected: DetectedLandmine[]): DetectedLandmine[] {
   });
 }
 
+/**
+ * Suppress landmines that conflict with detected favorable provisions or endorsements.
+ * E.g., "No L&O Coverage" should be suppressed if the policy HAS an L&O endorsement.
+ */
+function suppressConflictingLandmines(
+  analysis: PolicyAnalysis
+): PolicyAnalysis {
+  const favorableIds = new Set(analysis.favorableProvisions.map(f => f.provisionId));
+  const endorsementNames = analysis.endorsements.map(e => (e.name || "").toLowerCase());
+
+  const filtered = analysis.landmines.filter(lm => {
+    // Suppress "No L&O Coverage" if policy HAS code_upgrade_coverage or L&O endorsement
+    if (lm.ruleId === "no_law_ordinance") {
+      const hasCodeCoverage = favorableIds.has("code_upgrade_coverage");
+      const hasLOEndorsement = endorsementNames.some(n =>
+        n.includes("ordinance") || n.includes("law & ordinance") || n.includes("code upgrade")
+      );
+      if (hasCodeCoverage || hasLOEndorsement) {
+        console.log(`[policy-parser] Suppressed "no_law_ordinance" landmine — L&O coverage found`);
+        return false;
+      }
+    }
+
+    // Suppress roof_age_schedule if we know the roof is relatively new
+    // (extract from endorsement data or policy notes)
+    if (lm.ruleId === "roof_age_schedule") {
+      const roofYear = extractRoofYear(analysis);
+      if (roofYear && (new Date().getFullYear() - roofYear) < 10) {
+        console.log(`[policy-parser] Suppressed "roof_age_schedule" landmine — roof year ${roofYear} (< 10 years old)`);
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Recalculate risk level after filtering
+  const hasCritical = filtered.some(l => l.severity === "critical");
+  const hasWarning = filtered.some(l => l.severity === "warning");
+  const riskLevel = hasCritical ? "high" : hasWarning ? "medium" : "low";
+
+  return { ...analysis, landmines: filtered, riskLevel: riskLevel as PolicyAnalysis["riskLevel"] };
+}
+
+/**
+ * Extract roof installation year from policy data (endorsements, notes).
+ * Returns null if not found.
+ */
+function extractRoofYear(analysis: PolicyAnalysis): number | null {
+  // Check endorsements for roof year mentions
+  for (const endorsement of analysis.endorsements) {
+    const text = `${endorsement.name || ""} ${endorsement.description || ""} ${endorsement.impact || ""}`.toLowerCase();
+    // Look for patterns like "roof installed 2019", "roof year: 2020", "new roof 2018"
+    const yearMatch = text.match(/roof\s+(?:installed|year|replaced|age|built|new)\s*:?\s*(\d{4})/i);
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1]);
+      if (year > 1990 && year <= new Date().getFullYear()) return year;
+    }
+  }
+
+  // Check parse notes
+  if (analysis.parseNotes) {
+    const yearMatch = analysis.parseNotes.match(/roof\s+(?:installed|year|replaced|age|built|new)\s*:?\s*(\d{4})/i);
+    if (yearMatch) {
+      const year = parseInt(yearMatch[1]);
+      if (year > 1990 && year <= new Date().getFullYear()) return year;
+    }
+  }
+
+  return null;
+}
+
 // ── Percentage Deductible Calculator ────────────────────────────────────────
 
 function sanitizeFavorableProvisions(
@@ -1296,6 +1370,9 @@ export async function parsePolicyPdfV2(
 
     // Post-processing: remove inconsistent favorable provisions
     verified = sanitizeFavorableProvisions(verified);
+
+    // Post-processing: suppress landmines that conflict with detected endorsements/favorable provisions
+    verified = suppressConflictingLandmines(verified);
 
     console.log(
       `[policy-parser] Pipeline complete. Final confidence: ${verified.confidence.toFixed(2)}, Risk: ${verified.riskLevel}, Deductibles: ${verified.deductibles.length}, Endorsements: ${verified.endorsements.length}, Exclusions: ${verified.exclusions.length}`

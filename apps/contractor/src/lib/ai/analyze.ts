@@ -370,7 +370,10 @@ function buildMeasurementsContext(m: AnalysisInput["measurements"]): string {
   // Linear measurements with counts
   if (m.ftRidges) lines.push(`Ridges: ${m.ftRidges} LF${m.numRidges ? ` (${m.numRidges} segments)` : ""}`);
   if (m.ftHips) lines.push(`Hips: ${m.ftHips} LF${m.numHips ? ` (${m.numHips} segments)` : ""}`);
-  if (m.ftValleys) lines.push(`Valleys: ${m.ftValleys} LF${m.numValleys ? ` (${m.numValleys} segments)` : ""}`);
+  if (m.ftValleys) {
+    lines.push(`Valleys: ${m.ftValleys} LF${m.numValleys ? ` (${m.numValleys} segments)` : ""}`);
+    lines.push(`  >> VALLEY IWS AREA: ${m.ftValleys * 3} SF (${m.ftValleys} LF × 3 ft width)`);
+  }
   if (m.ftRakes) lines.push(`Rakes: ${m.ftRakes} LF${m.numRakes ? ` (${m.numRakes} segments)` : ""}`);
   if (m.ftEaves) lines.push(`Eaves: ${m.ftEaves} LF${m.numEaves ? ` (${m.numEaves} segments)` : ""}`);
   if (m.ftDripEdge) lines.push(`Drip Edge: ${m.ftDripEdge} LF`);
@@ -417,6 +420,7 @@ ${ctx.measurementsContext}
 ${ctx.policyContext ? `\n## POLICY CONTEXT\n${ctx.policyContext}` : ""}
 ${ctx.buildingCodeContext ? `\n${ctx.buildingCodeContext}` : ""}
 ${ctx.manufacturerContext ? `\n${ctx.manufacturerContext}` : ""}
+${buildJustificationStrategy(ctx.policyContext)}
 ## COMMONLY MISSED XACTIMATE CODES
 ${ctx.codesContext}
 Note: You may also use valid Xactimate codes from your training knowledge if applicable.
@@ -429,8 +433,30 @@ Note: You may also use valid Xactimate codes from your training knowledge if app
    - Starter strip, drip edge, ice & water shield, ridge/hip cap
    - Step flashing, underlayment, steep pitch charges, high roof charges
    - Waste % adjustment, permit fees, haul away
-   - O&P (10%+10%) if 3+ trades involved
 4. For solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician)
+
+## QUANTITY CALCULATION RULES
+Follow these formulas exactly — do NOT estimate or approximate:
+
+### Underlayment / Felt (RFG FELT, RFG FELT+, synthetic underlayment)
+- Underlayment covers the area NOT covered by ice & water shield (IWS).
+- Formula: Additional Underlayment SQ = ((TotalRoofArea_SF - IWS_SF) / 100) - AdjusterFeltSQ
+- This is COMPLETELY INDEPENDENT of shingle quantities. Never reuse the shingle shortage.
+- Example: 2,900 SF roof, 1,038 SF IWS, adjuster has 10.97 SQ felt → (2900-1038)/100 - 10.97 = 7.65 SQ additional
+
+### Ice & Water Shield in Valleys
+- IWS is a SHEET material measured in SF, not LF.
+- Valley IWS SF = Valley_LF × 3 (standard 36-inch wide roll)
+- Price per SF — match the adjuster's estimate IWS price (typically $1.50-$2.50/SF)
+- NEVER price per LF at a low rate — this drastically undervalues the material.
+
+### Shingle Shortage
+- Shingle shortage = (Measured_SQ × (1 + waste%)) - Adjuster_Shingle_SQ
+- Completely separate from underlayment.
+
+### D&R of Accessories (Solar, HVAC, Satellite Dishes, etc.)
+- Satellite dishes: include BOTH removal/reinstallation AND recalibration/realignment as separate line items.
+- Solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician required).
 
 ## CRITICAL RULES
 - Only return items that are genuinely missing or underpaid based on evidence (measurements, code requirements, manufacturer specs, policy coverage). Do NOT fabricate or pad items.
@@ -439,6 +465,7 @@ Note: You may also use valid Xactimate codes from your training knowledge if app
 - For each contractor-flagged item, create a line item but assign appropriate confidence (lower if evidence is weak).
 - Use measurements for quantities (ridge LF for ridge cap, valley LF for ice & water, etc.)
 - Cite IRC codes or manufacturer specs in justifications
+- Do NOT include Overhead & Profit (O&P) — it is calculated separately by our system after you return items
 - Quality over quantity — 1 well-justified item beats 10 weak ones
 
 Return ONLY JSON — no markdown, no code fences:
@@ -473,4 +500,37 @@ Return ONLY JSON — no markdown, no code fences:
     }
   ]
 }`;
+}
+
+function buildJustificationStrategy(policyContext: string | null): string {
+  const hasLOCoverage = policyContext?.toLowerCase().includes("code_upgrade_coverage") ||
+    policyContext?.toLowerCase().includes("law & ordinance") ||
+    policyContext?.toLowerCase().includes("ordinance or law");
+
+  const baseRequirements = `
+## JUSTIFICATION REQUIREMENTS
+- Each justification MUST include at least 2 of these 3 evidence pillars:
+  1. POLICY/INDUSTRY: Reference the Xactimate line item description as industry-standard scope
+  2. CODE AUTHORITY: Cite the specific IRC section AND the jurisdiction's AHJ name/website (if provided above)
+  3. MANUFACTURER: Reference the manufacturer's installation requirement and warranty impact
+- Write justifications in professional third-person language for carrier correspondence`;
+
+  if (hasLOCoverage) {
+    return `${baseRequirements}
+
+## JUSTIFICATION STRATEGY
+Policy HAS Law & Ordinance coverage. For each item use this priority:
+1. IRC code reference (primary) — the policy covers code compliance
+2. Manufacturer installation requirement (supporting)
+3. Xactimate line description (industry standard scope)`;
+  }
+
+  return `${baseRequirements}
+
+## JUSTIFICATION STRATEGY
+Policy does NOT have Law & Ordinance coverage. For each item:
+1. Xactimate line description — frame as industry-standard scope of work
+2. Manufacturer requirement — cite warranty void language as primary basis
+3. IRC code — mention for context but note the policy may not cover code upgrades
+If an item has ONLY a building code justification and no manufacturer/industry basis, set confidence below 0.4 and note the coverage gap.`;
 }

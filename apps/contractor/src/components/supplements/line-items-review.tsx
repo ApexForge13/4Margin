@@ -29,6 +29,24 @@ interface LineItem {
   irc_reference: string | null;
   status: string;
   confidence?: number;
+  confidence_score?: number;
+  confidence_tier?: string;
+  confidence_details?: Record<string, unknown> | null;
+}
+
+function getConfidenceBadge(item: LineItem) {
+  const score = item.confidence_score || Math.round((item.confidence || 0) * 100);
+  const tier = item.confidence_tier || (score >= 85 ? "high" : score >= 60 ? "good" : score >= 35 ? "moderate" : "low");
+
+  const tierConfig: Record<string, { label: string; color: string; bg: string; desc: string }> = {
+    high: { label: "High", color: "text-green-700", bg: "bg-green-50 border-green-200", desc: "Strong three-pillar support" },
+    good: { label: "Good", color: "text-blue-700", bg: "bg-blue-50 border-blue-200", desc: "Include — may need rebuttal" },
+    moderate: { label: "Moderate", color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200", desc: "Include with documentation" },
+    low: { label: "Low", color: "text-red-700", bg: "bg-red-50 border-red-200", desc: "Optional — contractor decides" },
+  };
+
+  const config = tierConfig[tier] || tierConfig.moderate;
+  return { score, tier, ...config };
 }
 
 interface LineItemsReviewProps {
@@ -274,6 +292,17 @@ export function LineItemsReview({
                               : "Detected"}
                         </Badge>
                       )}
+                      {(() => {
+                        const badge = getConfidenceBadge(item);
+                        return badge.score > 0 ? (
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded border ${badge.bg} ${badge.color}`}
+                            title={badge.desc}
+                          >
+                            {badge.label} {badge.score}/100
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                     <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                       <span>{item.quantity} {item.unit} @ ${Number(item.unit_price).toFixed(2)}</span>
@@ -308,17 +337,62 @@ export function LineItemsReview({
                   )}
                 </div>
 
-                {/* Supporting argument — expanded view */}
-                {item.justification && isExpanded && (
+                {/* Supporting argument + confidence — expanded view */}
+                {isExpanded && (item.justification || item.confidence_details) && (
                   <div className="px-3 pb-3 pt-0">
                     <Separator className="mb-3" />
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Supporting Argument
-                      </p>
-                      <div className="text-sm bg-gray-50 rounded-md p-3 whitespace-pre-wrap leading-relaxed">
-                        {item.justification}
-                      </div>
+                    <div className="space-y-3">
+                      {/* Confidence breakdown */}
+                      {(() => {
+                        const badge = getConfidenceBadge(item);
+                        const details = item.confidence_details as Record<string, { dimension?: string; score?: number; maxScore?: number; reasoning?: string }> | null;
+                        return badge.score > 0 ? (
+                          <div className={`rounded-md border p-2.5 ${badge.bg}`}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <p className="text-xs font-semibold uppercase tracking-wide">
+                                Confidence: <span className={badge.color}>{badge.label} ({badge.score}/100)</span>
+                              </p>
+                              <p className="text-xs text-muted-foreground">{badge.desc}</p>
+                            </div>
+                            {details && (
+                              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                                {["policy", "code", "manufacturer", "carrier"].map((key) => {
+                                  const dim = details[key];
+                                  if (!dim || typeof dim !== "object") return null;
+                                  return (
+                                    <div key={key} className="flex items-center gap-1.5">
+                                      <span className="font-medium text-muted-foreground w-24 shrink-0">
+                                        {dim.dimension || key}:
+                                      </span>
+                                      <span className="font-semibold">{dim.score}/{dim.maxScore}</span>
+                                      {dim.reasoning && (
+                                        <span className="text-muted-foreground truncate" title={dim.reasoning}>
+                                          — {dim.reasoning}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {details?.summary && typeof details.summary === "string" && (
+                              <p className="text-xs text-muted-foreground mt-1.5 italic">{details.summary as string}</p>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
+
+                      {/* Supporting argument text */}
+                      {item.justification && (
+                        <>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Supporting Argument
+                          </p>
+                          <div className="text-sm bg-gray-50 rounded-md p-3 whitespace-pre-wrap leading-relaxed">
+                            {item.justification}
+                          </div>
+                        </>
+                      )}
                       {item.irc_reference && (
                         <p className="text-xs text-blue-600">
                           Code Reference: {item.irc_reference}

@@ -301,13 +301,15 @@ function splitIntoPoints(text: string): string[] {
     return text.split(/\n?\s*\d+[\.\)]\s*/).filter((s) => s.trim().length > 0);
   }
 
-  if (text.includes("•") || text.includes("-  ") || text.includes("- ")) {
-    return text.split(/[•\-]\s+/).filter((s) => s.trim().length > 0);
+  if (text.includes("\u2022") || text.includes("-  ") || text.includes("- ")) {
+    return text.split(/[\u2022\-]\s+/).filter((s) => s.trim().length > 0);
   }
 
-  const sentences = text.match(/[^.!?]+[.!?]+/g);
-  if (sentences && sentences.length > 1) {
-    return sentences.map((s) => s.trim()).filter((s) => s.length > 0);
+  // Split by sentence boundaries — period followed by space + uppercase letter
+  // Protects decimals ($2,153.62), code refs (R905.2.8.4), abbreviations
+  const sentenceParts = text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+  if (sentenceParts.length > 1) {
+    return sentenceParts.map((s) => s.trim()).filter((s) => s.length > 0);
   }
 
   return [text];

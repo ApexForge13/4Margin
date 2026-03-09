@@ -165,6 +165,8 @@ export async function GET(
           total_price: Number(item.total_price),
           justification: item.justification || "",
           irc_reference: item.irc_reference || "",
+          confidence_score: item.confidence_score || Math.round((Number(item.confidence) || 0) * 100),
+          confidence_tier: item.confidence_tier || "moderate",
         })),
         generatedDate,
       };
@@ -202,6 +204,16 @@ export async function GET(
       // Skip
     }
   }
+
+  // ── 2b. Cover Letter PDF ──────────────────────────────────
+  const coverLetterPath = `${supplement.company_id}/${id}/cover-letter.pdf`;
+  try {
+    const { data: clBlob } = await admin.storage.from("supplements").download(coverLetterPath);
+    if (clBlob) {
+      const buffer = await clBlob.arrayBuffer();
+      zip.file("Cover_Letter.pdf", buffer);
+    }
+  } catch { /* Cover letter may not exist for older supplements */ }
 
   // ── 3. Weather Verification Report PDF ──────────────────
   if (supplement.weather_pdf_url) {

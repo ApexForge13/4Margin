@@ -115,7 +115,7 @@ export function shouldIncludeWeatherReport(weather: WeatherData): boolean {
 
   // Check specific thresholds
   const hasHail = weather.hailDetected === true;
-  const hasHighWind = weather.maxWindGust >= 50;
+  const hasHighWind = weather.maxWindGust >= 40;
   const hasHeavyPrecip = weather.precip >= 1.0;
   const hasSevereRisk = weather.severerisk > 30;
 
@@ -377,8 +377,8 @@ function parseWeatherResponse(raw: any, dateOfLoss: string): WeatherData {
   // Storm window: hours with elevated conditions
   const stormWindow = hours.filter(
     (h) =>
-      h.severerisk > 30 ||
-      (h.windgust ?? 0) > 40 ||
+      h.severerisk > 25 ||
+      (h.windgust ?? 0) > 35 ||
       (h.preciptype?.includes("hail") ?? false)
   );
 
@@ -464,7 +464,7 @@ function computeVerdict(input: {
     const windMatch = desc.match(/(\d+)\s*mph\s*wind/i) || desc.match(/wind\s*(?:gusts?\s*(?:of|up to|to))?\s*(\d+)\s*mph/i);
     if (windMatch) {
       const speed = parseInt(windMatch[1]);
-      return speed >= 58;
+      return speed >= 50;
     }
     return false;
   });
@@ -485,13 +485,13 @@ function computeVerdict(input: {
   // Use NWS data if station data is weak but NWS issued severe warnings
   const hasNwsSevere = severeAlerts.length > 0;
   const hasNwsHail = hailAlerts.length > 0;
-  const hasNwsWind = windAlerts.length > 0 || nwsMaxWind >= 58;
+  const hasNwsWind = windAlerts.length > 0 || nwsMaxWind >= 50;
   const effectiveHail = hailDetected || hasNwsHail;
   const effectiveMaxGust = Math.max(maxWindGust, nwsMaxWind);
   const nwsAlertUsed = hasNwsSevere || hasNwsHail || hasNwsWind;
 
-  // SEVERE: hail detected, or wind gusts >= 58 mph, or severe risk > 50, or NWS severe alert
-  if (effectiveHail || effectiveMaxGust >= 58 || severerisk > 50 || hasNwsSevere) {
+  // SEVERE: hail detected, or wind gusts >= 50 mph, or severe risk > 50, or NWS severe alert
+  if (effectiveHail || effectiveMaxGust >= 50 || severerisk > 50 || hasNwsSevere) {
     const parts: string[] = [];
 
     if (effectiveHail) {
@@ -501,18 +501,18 @@ function computeVerdict(input: {
           : "hail activity"
       );
     }
-    if (effectiveMaxGust >= 58) {
-      if (nwsMaxWind >= 58 && maxWindGust < 58) {
+    if (effectiveMaxGust >= 50) {
+      if (nwsMaxWind >= 50 && maxWindGust < 50) {
         parts.push(`wind gusts of ${Math.round(nwsMaxWind)} mph (per NWS warning)`);
       } else {
         parts.push(`wind gusts of ${Math.round(effectiveMaxGust)} mph`);
       }
     }
-    if (hasNwsSevere && !effectiveHail && effectiveMaxGust < 58) {
+    if (hasNwsSevere && !effectiveHail && effectiveMaxGust < 50) {
       const alertNames = severeAlerts.map((a) => a.event).join(", ");
       parts.push(`NWS issued: ${alertNames}`);
     }
-    if (severerisk > 50 && !effectiveHail && effectiveMaxGust < 58 && !hasNwsSevere) {
+    if (severerisk > 50 && !effectiveHail && effectiveMaxGust < 50 && !hasNwsSevere) {
       parts.push(`elevated severe weather risk index (${Math.round(severerisk)}/100)`);
     }
 
@@ -526,19 +526,19 @@ function computeVerdict(input: {
     return { verdict: "severe_confirmed", verdictText: text, nwsAlertUsed };
   }
 
-  // MODERATE: wind gusts 40-58 mph, or severe risk 30-50
-  if (maxWindGust >= 40 || severerisk > 30) {
+  // MODERATE: wind gusts 35-50 mph, or severe risk 25-50
+  if (maxWindGust >= 35 || severerisk > 25) {
     const parts: string[] = [];
-    if (maxWindGust >= 40) {
+    if (maxWindGust >= 35) {
       parts.push(`wind gusts up to ${Math.round(maxWindGust)} mph`);
     }
-    if (severerisk > 30) {
-      parts.push(`moderate severe weather risk (${Math.round(severerisk)}/100)`);
+    if (severerisk > 25) {
+      parts.push(`elevated severe weather risk (${Math.round(severerisk)}/100)`);
     }
 
     return {
       verdict: "moderate_weather",
-      verdictText: `MODERATE WEATHER DETECTED — Weather records indicate ${parts.join(" and ")} at this location on the date of loss (${input.dateOfLoss}). These conditions may have contributed to property damage.`,
+      verdictText: `WEATHER EVENT CONFIRMED — Historical records show ${parts.join(" and ")} at this location on the date of loss (${input.dateOfLoss}). Wind gusts above 35 mph exceed the uplift resistance threshold for aged asphalt shingles and are consistent with conditions known to cause roof damage.`,
       nwsAlertUsed: false,
     };
   }
@@ -546,8 +546,9 @@ function computeVerdict(input: {
   // NO SIGNIFICANT WEATHER
   let noWeatherText = `No significant severe weather events were recorded at this location on the date of loss (${input.dateOfLoss}). Wind gusts reached ${Math.round(maxWindGust)} mph with a severe risk index of ${Math.round(severerisk)}/100.`;
 
-  // Add station data disclaimer
+  // Add station data disclaimer + contractor documentation note
   noWeatherText += " Note: Weather station data may not capture localized storm events. If NWS warnings or storm reports exist for this area and date, please reference them separately.";
+  noWeatherText += " If a field inspection or contractor report confirms storm damage on this date, include that documentation. Local storm conditions can vary significantly from the nearest weather station.";
 
   return {
     verdict: "no_significant_weather",
