@@ -13,11 +13,11 @@ interface ChecklistItem {
 export function OnboardingChecklist({
   hasCompany,
   hasSupplements,
+  hasDecodes,
 }: {
   hasCompany: boolean;
   hasSupplements: boolean;
-  hasCarriers?: boolean;
-  hasCodes?: boolean;
+  hasDecodes?: boolean;
 }) {
   const items: ChecklistItem[] = [
     {
@@ -31,6 +31,18 @@ export function OnboardingChecklist({
       description: "Upload an adjuster estimate and inspection photos to generate a supplement",
       href: "/dashboard/upload",
       done: hasSupplements,
+    },
+    {
+      label: "Run a policy decode",
+      description: "Upload an insurance policy to decode coverage details and identify opportunities",
+      href: "/dashboard/policy-decoder",
+      done: hasDecodes ?? false,
+    },
+    {
+      label: "Explore the Knowledge Base",
+      description: "Browse jurisdiction-verified building codes, manufacturer requirements, and policy knowledge",
+      href: "/dashboard/knowledge-base",
+      done: false, // Always available to revisit
     },
   ];
 

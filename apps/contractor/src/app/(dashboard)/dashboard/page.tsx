@@ -15,8 +15,8 @@ interface SupplementRow {
   updated_at: string;
   paid_at: string | null;
   claims: {
-    claim_name: string | null;
     claim_number: string | null;
+    property_address: string | null;
   } | null;
 }
 
@@ -176,8 +176,8 @@ function buildRecoveryData(
 }
 
 function claimName(s: SupplementRow): string {
-  if (s.claims?.claim_name) return s.claims.claim_name;
   if (s.claims?.claim_number) return `Claim #${s.claims.claim_number}`;
+  if (s.claims?.property_address) return s.claims.property_address;
   return `Supplement ${s.id.slice(0, 6)}`;
 }
 
@@ -222,8 +222,8 @@ export default async function DashboardPage() {
       updated_at,
       paid_at,
       claims (
-        claim_name,
-        claim_number
+        claim_number,
+        property_address
       )
     `
     )
@@ -368,7 +368,8 @@ export default async function DashboardPage() {
   // ── Onboarding check ─────────────────────────────────────────────────────
 
   const hasSupplements = supplements.length > 0;
-  const showChecklist = !hasCompany || !hasSupplements;
+  const hasDecodes = decodings.length > 0;
+  const showChecklist = !hasCompany || !hasSupplements || !hasDecodes;
 
   return (
     <div className="space-y-6">
@@ -376,6 +377,7 @@ export default async function DashboardPage() {
         <OnboardingChecklist
           hasCompany={hasCompany}
           hasSupplements={hasSupplements}
+          hasDecodes={hasDecodes}
         />
       )}
 

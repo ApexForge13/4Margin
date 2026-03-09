@@ -55,7 +55,7 @@ async function seedCounties() {
       ahj_phone: c.permit.ahjPhone,
       ahj_url: c.permit.ahjUrl,
       permit_notes: c.permit.notes,
-      local_amendments: JSON.stringify(c.localAmendments),
+      local_amendments: c.localAmendments,
       fips_code: c.fipsCode,
     };
 

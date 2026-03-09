@@ -334,8 +334,15 @@ export function CodesTab({
         </div>
 
         {/* Local Amendments */}
-        {selectedCounty.local_amendments &&
-          selectedCounty.local_amendments.length > 0 && (
+        {(() => {
+          const raw = selectedCounty.local_amendments;
+          const amendments: string[] = Array.isArray(raw)
+            ? raw
+            : typeof raw === "string"
+              ? (() => { try { return JSON.parse(raw); } catch { return []; } })()
+              : [];
+          if (amendments.length === 0) return null;
+          return (
             <div
               className="rounded-2xl bg-amber-50 border border-amber-100 p-6"
               style={{ boxShadow: "0 4px 14px rgba(0,0,0,0.02)" }}
@@ -344,7 +351,7 @@ export function CodesTab({
                 Local Amendments
               </h4>
               <ul className="space-y-2">
-                {selectedCounty.local_amendments.map(
+                {amendments.map(
                   (amendment: string, i: number) => (
                     <li key={i} className="flex items-start gap-2">
                       <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
@@ -356,7 +363,8 @@ export function CodesTab({
                 )}
               </ul>
             </div>
-          )}
+          );
+        })()}
 
         {/* Applicable Building Codes */}
         <div
