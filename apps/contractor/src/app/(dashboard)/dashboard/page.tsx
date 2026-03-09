@@ -1,17 +1,198 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingChecklist } from "@/components/dashboard/onboarding-checklist";
+import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import type { Period } from "@/components/dashboard/dashboard-client";
+import type { DashboardStatsProps } from "@/components/dashboard/dashboard-stats";
+import type { ActivityItem } from "@/components/dashboard/activity-feed";
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface SupplementRow {
+  id: string;
+  status: string;
+  supplement_total: number | null;
+  created_at: string;
+  updated_at: string;
+  paid_at: string | null;
+  claims: {
+    claim_name: string | null;
+    claim_number: string | null;
+  } | null;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function periodStart(period: Period): Date {
+  const now = new Date();
+  if (period === "month") {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  if (period === "quarter") {
+    const q = Math.floor(now.getMonth() / 3);
+    return new Date(now.getFullYear(), q * 3, 1);
+  }
+  if (period === "year") {
+    return new Date(now.getFullYear(), 0, 1);
+  }
+  return new Date(0);
+}
+
+function prevPeriodStart(period: Period): Date {
+  const now = new Date();
+  if (period === "month") {
+    return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  }
+  if (period === "quarter") {
+    const q = Math.floor(now.getMonth() / 3);
+    return new Date(now.getFullYear(), q * 3 - 3, 1);
+  }
+  if (period === "year") {
+    return new Date(now.getFullYear() - 1, 0, 1);
+  }
+  return new Date(0);
+}
+
+function trendPct(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 100);
+}
+
+function supplementsInRange(
+  supplements: SupplementRow[],
+  start: Date,
+  end: Date
+): SupplementRow[] {
+  return supplements.filter((s) => {
+    const d = new Date(s.created_at);
+    return d >= start && d < end;
+  });
+}
+
+function computeStats(
+  current: SupplementRow[],
+  previous: SupplementRow[],
+  currentDecodes: number,
+  previousDecodes: number
+): DashboardStatsProps {
+  const totalSupplements = current.length;
+  const prevTotal = previous.length;
+
+  const totalRecovery = current.reduce(
+    (sum, s) => sum + (s.supplement_total ?? 0),
+    0
+  );
+  const prevRecovery = previous.reduce(
+    (sum, s) => sum + (s.supplement_total ?? 0),
+    0
+  );
+
+  const approved = current.filter((s) =>
+    ["approved", "partially_approved"].includes(s.status)
+  ).length;
+  const decided = current.filter((s) =>
+    ["approved", "partially_approved", "denied"].includes(s.status)
+  ).length;
+  const approvalRate = decided > 0 ? (approved / decided) * 100 : 0;
+
+  const prevApproved = previous.filter((s) =>
+    ["approved", "partially_approved"].includes(s.status)
+  ).length;
+  const prevDecided = previous.filter((s) =>
+    ["approved", "partially_approved", "denied"].includes(s.status)
+  ).length;
+  const prevApprovalRate = prevDecided > 0 ? (prevApproved / prevDecided) * 100 : 0;
+
+  return {
+    totalSupplements,
+    supplementsTrend: trendPct(totalSupplements, prevTotal),
+    totalRecovery,
+    recoveryTrend: trendPct(totalRecovery, prevRecovery),
+    approvalRate,
+    approvalTrend: trendPct(approvalRate, prevApprovalRate),
+    totalDecodes: currentDecodes,
+    decodesTrend: trendPct(currentDecodes, previousDecodes),
+  };
+}
+
+function buildPipelineData(
+  supplements: SupplementRow[]
+): { status: string; count: number; color: string }[] {
+  const STATUS_COLORS: Record<string, string> = {
+    draft: "#94a3b8",
+    generating: "#00BFFF",
+    complete: "#3b82f6",
+    approved: "#10b981",
+    partially_approved: "#f59e0b",
+    denied: "#ef4444",
+  };
+
+  const counts: Record<string, number> = {};
+  for (const s of supplements) {
+    counts[s.status] = (counts[s.status] ?? 0) + 1;
+  }
+
+  const ORDER = [
+    "draft",
+    "generating",
+    "complete",
+    "approved",
+    "partially_approved",
+    "denied",
+  ];
+
+  return ORDER.map((status) => ({
+    status,
+    count: counts[status] ?? 0,
+    color: STATUS_COLORS[status] ?? "#94a3b8",
+  }));
+}
+
+function buildRecoveryData(
+  supplements: SupplementRow[]
+): { month: string; amount: number; count: number }[] {
+  const now = new Date();
+  // Build last 6 months
+  const months: { month: string; amount: number; count: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      month: d.toLocaleDateString("en-US", { month: "short" }),
+      amount: 0,
+      count: 0,
+    });
+  }
+
+  for (const s of supplements) {
+    const d = new Date(s.created_at);
+    const monthLabel = d.toLocaleDateString("en-US", { month: "short" });
+    const bucket = months.find((m) => m.month === monthLabel);
+    if (bucket) {
+      bucket.amount += s.supplement_total ?? 0;
+      bucket.count += 1;
+    }
+  }
+
+  return months;
+}
+
+function claimName(s: SupplementRow): string {
+  if (s.claims?.claim_name) return s.claims.claim_name;
+  if (s.claims?.claim_number) return `Claim #${s.claims.claim_number}`;
+  return `Supplement ${s.id.slice(0, 6)}`;
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  // Get current user's company
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) return null;
 
+  // Fetch profile + company
   const { data: profile } = await supabase
     .from("users")
     .select("company_id, companies(name, phone, address)")
@@ -20,6 +201,7 @@ export default async function DashboardPage() {
 
   if (!profile) return null;
 
+  const companyId: string = profile.company_id;
   const company = profile.companies as unknown as {
     name: string;
     phone: string | null;
@@ -28,104 +210,183 @@ export default async function DashboardPage() {
 
   const hasCompany = !!(company?.name && (company?.phone || company?.address));
 
-  // Fetch policy decodings count
-  const { count: totalDecodings } = await supabase
+  // Fetch all supplements for this company
+  const { data: supplementsRaw } = await supabase
+    .from("supplements")
+    .select(
+      `
+      id,
+      status,
+      supplement_total,
+      created_at,
+      updated_at,
+      paid_at,
+      claims (
+        claim_name,
+        claim_number
+      )
+    `
+    )
+    .eq("company_id", companyId)
+    .order("updated_at", { ascending: false });
+
+  const supplements = (supplementsRaw ?? []) as unknown as SupplementRow[];
+
+  // Fetch supplement item counts for "ready to review" detection
+  const { data: itemCountsRaw } = await supabase
+    .from("supplement_items")
+    .select("supplement_id")
+    .in(
+      "supplement_id",
+      supplements.map((s) => s.id)
+    );
+
+  const itemsPerSupplement: Record<string, number> = {};
+  for (const row of itemCountsRaw ?? []) {
+    const r = row as { supplement_id: string };
+    itemsPerSupplement[r.supplement_id] =
+      (itemsPerSupplement[r.supplement_id] ?? 0) + 1;
+  }
+
+  // Fetch policy decodings count (all time + period-aware)
+  const { data: decodingsRaw } = await supabase
     .from("policy_decodings")
-    .select("*", { count: "exact", head: true })
-    .eq("company_id", profile.company_id);
+    .select("id, created_at")
+    .eq("company_id", companyId);
 
-  const { count: completedDecodings } = await supabase
-    .from("policy_decodings")
-    .select("*", { count: "exact", head: true })
-    .eq("company_id", profile.company_id)
-    .eq("status", "complete");
+  const decodings = (decodingsRaw ?? []) as { id: string; created_at: string }[];
 
-  const { count: processingDecodings } = await supabase
-    .from("policy_decodings")
-    .select("*", { count: "exact", head: true })
-    .eq("company_id", profile.company_id)
-    .in("status", ["pending", "processing"]);
+  // ── Build action items ────────────────────────────────────────────────────
 
-  const total = totalDecodings ?? 0;
-  const completed = completedDecodings ?? 0;
-  const processing = processingDecodings ?? 0;
+  const THREE_MIN_AGO = new Date(Date.now() - 3 * 60 * 1000).toISOString();
 
-  const hasDecodings = total > 0;
-  const showChecklist = !hasCompany || !hasDecodings;
+  const stuckGenerating = supplements
+    .filter((s) => s.status === "generating" && s.created_at < THREE_MIN_AGO)
+    .slice(0, 5)
+    .map((s) => ({
+      id: s.id,
+      claimName: claimName(s),
+      createdAt: s.created_at,
+    }));
+
+  const needsReview = supplements
+    .filter(
+      (s) =>
+        s.status === "complete" && (itemsPerSupplement[s.id] ?? 0) > 0
+    )
+    .slice(0, 5)
+    .map((s) => ({
+      id: s.id,
+      claimName: claimName(s),
+      itemCount: itemsPerSupplement[s.id] ?? 0,
+    }));
+
+  const pendingPayment = supplements
+    .filter((s) => s.status === "draft" && s.paid_at === null)
+    .slice(0, 5)
+    .map((s) => ({
+      id: s.id,
+      claimName: claimName(s),
+      total: s.supplement_total ?? 0,
+    }));
+
+  // ── Build activity feed ───────────────────────────────────────────────────
+
+  const activity: ActivityItem[] = supplements.slice(0, 15).map((s) => {
+    let type: ActivityItem["type"] = "created";
+    if (s.status === "approved" || s.status === "partially_approved") {
+      type = "approved";
+    } else if (s.status === "denied") {
+      type = "denied";
+    } else if (s.status === "complete" || s.status === "generating") {
+      type = "finalized";
+    }
+    return {
+      id: s.id,
+      type,
+      claimName: claimName(s),
+      timestamp: s.updated_at,
+      amount: s.supplement_total ?? undefined,
+    };
+  });
+
+  // ── Build pipeline chart (all time) ──────────────────────────────────────
+
+  const allPipeline = buildPipelineData(supplements);
+
+  // ── Build recovery chart (last 6 months) ─────────────────────────────────
+
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const recentSupplements = supplements.filter(
+    (s) => new Date(s.created_at) >= sixMonthsAgo
+  );
+  const allRecovery = buildRecoveryData(recentSupplements);
+
+  // ── Compute per-period stats ──────────────────────────────────────────────
+
+  const now = new Date();
+
+  const periodStats: Record<Period, DashboardStatsProps> = {} as Record<
+    Period,
+    DashboardStatsProps
+  >;
+
+  for (const period of ["month", "quarter", "year", "all"] as Period[]) {
+    const start = periodStart(period);
+    const prevStart = prevPeriodStart(period);
+
+    const current = period === "all"
+      ? supplements
+      : supplementsInRange(supplements, start, now);
+
+    const previous = period === "all"
+      ? []
+      : supplementsInRange(supplements, prevStart, start);
+
+    const currentDecodes =
+      period === "all"
+        ? decodings.length
+        : decodings.filter((d) => new Date(d.created_at) >= start).length;
+
+    const previousDecodes =
+      period === "all"
+        ? 0
+        : decodings.filter((d) => {
+            const d2 = new Date(d.created_at);
+            return d2 >= prevStart && d2 < start;
+          }).length;
+
+    periodStats[period] = computeStats(
+      current,
+      previous,
+      currentDecodes,
+      previousDecodes
+    );
+  }
+
+  // ── Onboarding check ─────────────────────────────────────────────────────
+
+  const hasSupplements = supplements.length > 0;
+  const showChecklist = !hasCompany || !hasSupplements;
 
   return (
     <div className="space-y-6">
-      {/* Onboarding checklist — shown until all steps are done */}
       {showChecklist && (
         <OnboardingChecklist
           hasCompany={hasCompany}
-          hasSupplements={hasDecodings}
+          hasSupplements={hasSupplements}
         />
       )}
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard title="Total Decodes" value={String(total)} description="All time" />
-        <StatCard title="Completed" value={String(completed)} description="Ready to review" />
-        <StatCard title="Processing" value={String(processing)} description="In progress" />
-      </div>
-
-      {/* Quick action */}
-      {!hasDecodings ? (
-        <div className="rounded-xl border bg-card p-12 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-            <svg className="h-8 w-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold">Decode your first policy</h3>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            Upload a homeowner&apos;s insurance policy and get a full breakdown of
-            coverages, deductibles, endorsements, and gaps — in minutes.
-          </p>
-          <Link
-            href="/dashboard/policy-decoder"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Policy Decode
-          </Link>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between rounded-lg border bg-card p-6">
-          <div>
-            <h3 className="font-semibold">Policy Decoder</h3>
-            <p className="text-sm text-muted-foreground">
-              View all your decoded policies or start a new decode.
-            </p>
-          </div>
-          <Link
-            href="/dashboard/policy-decoder"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-          >
-            View Decodings
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-  description,
-}: {
-  title: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-      <div className="text-sm font-medium text-muted-foreground">{title}</div>
-      <div className="mt-1 text-2xl font-bold">{value}</div>
-      <div className="text-xs text-muted-foreground">{description}</div>
+      <DashboardClient
+        allStats={periodStats.all}
+        allPipeline={allPipeline}
+        allRecovery={allRecovery}
+        allActionItems={{ stuckGenerating, needsReview, pendingPayment }}
+        allActivity={activity}
+        periodStats={periodStats}
+      />
     </div>
   );
 }
