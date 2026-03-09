@@ -77,7 +77,7 @@ export const PIPELINE_STAGES = [
   { key: "scoring", label: "Scoring Confidence", icon: "bar-chart" },
   { key: "calculating", label: "Running Calculations", icon: "calculator" },
   { key: "analyzing_photos", label: "Analyzing Photos", icon: "camera" },
-  { key: "fetching_weather", label: "Fetching Weather Data", icon: "cloud" },
+  { key: "fetching_weather", label: "Verifying Weather & Storm Reports", icon: "cloud" },
   { key: "finalizing", label: "Saving Results", icon: "check" },
 ] as const;
 

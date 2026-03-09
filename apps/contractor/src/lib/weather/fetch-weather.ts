@@ -13,6 +13,7 @@
  */
 
 import { withRetry } from "@/lib/ai/retry";
+import { fetchStormReports, type StormReportData } from "./fetch-storm-reports";
 
 /* ─────── Types ─────── */
 
@@ -101,6 +102,8 @@ export interface WeatherData {
   verdictText: string;
   /** Whether NWS alerts contributed to the verdict */
   nwsAlertUsed: boolean;
+  /** NOAA/SPC local storm reports near the property on the date of loss */
+  stormReports: StormReportData | null;
   fetchedAt: string; // ISO timestamp
 }
 
@@ -110,6 +113,11 @@ export interface WeatherData {
 export function shouldIncludeWeatherReport(weather: WeatherData): boolean {
   // Always include if verdict says severe or moderate
   if (weather.verdict === "severe_confirmed" || weather.verdict === "moderate_weather") {
+    return true;
+  }
+
+  // Any confirmed SPC storm reports nearby → include the weather report
+  if (weather.stormReports && weather.stormReports.totalReportsNearby > 0) {
     return true;
   }
 
@@ -224,6 +232,36 @@ export async function fetchWeatherData(
     console.warn("[weather] NWS alert fetch failed (non-blocking):", nwsErr);
     // Continue — NWS data is supplementary
   }
+
+  // ── Fetch SPC/NOAA storm reports ──
+  let stormReports: StormReportData | null = null;
+  try {
+    stormReports = await fetchStormReports(
+      weatherData.latitude,
+      weatherData.longitude,
+      dateOfLoss
+    );
+  } catch {
+    // Non-blocking — storm reports are supplementary
+  }
+
+  // Recompute verdict with storm report data if we have reports
+  if (stormReports && stormReports.reports.length > 0) {
+    const updatedVerdict = computeVerdict({
+      hailDetected: weatherData.hailDetected,
+      hailSizeMax: weatherData.hailSizeMax,
+      maxWindGust: weatherData.maxWindGust,
+      severerisk: weatherData.severerisk,
+      conditions: weatherData.conditions,
+      dateOfLoss,
+      nwsAlerts: weatherData.nwsAlerts,
+      stormReports,
+    });
+    weatherData.verdict = updatedVerdict.verdict;
+    weatherData.verdictText = updatedVerdict.verdictText;
+    weatherData.nwsAlertUsed = updatedVerdict.nwsAlertUsed;
+  }
+  weatherData.stormReports = stormReports;
 
   return weatherData;
 }
@@ -424,6 +462,7 @@ function parseWeatherResponse(raw: any, dateOfLoss: string): WeatherData {
     verdict,
     verdictText,
     nwsAlertUsed,
+    stormReports: null,
     fetchedAt: new Date().toISOString(),
   };
 }
@@ -438,8 +477,66 @@ function computeVerdict(input: {
   conditions: string;
   dateOfLoss: string;
   nwsAlerts: NwsAlert[];
+  stormReports?: StormReportData | null;
 }): { verdict: WeatherVerdict; verdictText: string; nwsAlertUsed: boolean } {
-  const { hailDetected, hailSizeMax, maxWindGust, severerisk, nwsAlerts } = input;
+  const { hailDetected, hailSizeMax, maxWindGust, severerisk, nwsAlerts, stormReports } = input;
+
+  // ── Check SPC/NOAA Local Storm Reports (ground-truth data) ──
+  const spcHailNearby = stormReports?.hailReports.filter(
+    (r) => r.distanceMiles <= 25
+  ) ?? [];
+  const spcWindNearby = stormReports?.windReports.filter(
+    (r) => r.distanceMiles <= 25
+  ) ?? [];
+  const spcTornadoNearby = stormReports?.tornadoReports.filter(
+    (r) => r.distanceMiles <= 25
+  ) ?? [];
+  const spcAnyNearby50 = stormReports?.reports.filter(
+    (r) => r.distanceMiles <= 50
+  ) ?? [];
+  const spcHailClose = stormReports?.hailReports.filter(
+    (r) => r.distanceMiles <= 10
+  ) ?? [];
+
+  // SPC severity checks
+  const spcLargeHail = spcHailNearby.some(
+    (r) => r.magnitude !== null && r.magnitude >= 1.0
+  );
+  const spcAnyHailClose = spcHailClose.length > 0;
+  const spcHighWind = spcWindNearby.some(
+    (r) => r.magnitude !== null && r.magnitude > 50
+  );
+  const spcTornado = spcTornadoNearby.length > 0;
+  const spcSmallHail = spcHailNearby.some(
+    (r) => r.magnitude !== null && r.magnitude < 1.0
+  );
+
+  // Build SPC verdict text suffix
+  function buildSpcSuffix(): string {
+    if (!stormReports || stormReports.reports.length === 0) return "";
+
+    const parts: string[] = [];
+    const hailCount = stormReports.hailReports.length;
+    const windCount = stormReports.windReports.length;
+
+    if (hailCount > 0) parts.push(`${hailCount} hail`);
+    if (windCount > 0) {
+      const maxWind = stormReports.maxWindSpeed;
+      parts.push(`${maxWind ? maxWind + " mph" : ""} winds`.trim());
+    }
+    if (stormReports.tornadoReports.length > 0) {
+      parts.push(`${stormReports.tornadoReports.length} tornado`);
+    }
+
+    const nearest = stormReports.nearestHailReport;
+    let suffix = ` NOAA/SPC Local Storm Reports confirm ${parts.join(" / ")} reports within ${stormReports.searchRadiusMiles} miles of the property on the date of loss.`;
+
+    if (nearest) {
+      suffix += ` Nearest hail report: ${nearest.magnitude ?? "unknown"}" at ${nearest.distanceMiles} miles (${nearest.city || nearest.county}, ${nearest.state}).`;
+    }
+
+    return suffix;
+  }
 
   // ── Check NWS alerts for severe weather warnings ──
   const severeAlerts = nwsAlerts.filter((a) => {
@@ -490,7 +587,53 @@ function computeVerdict(input: {
   const effectiveMaxGust = Math.max(maxWindGust, nwsMaxWind);
   const nwsAlertUsed = hasNwsSevere || hasNwsHail || hasNwsWind;
 
-  // SEVERE: hail detected, or wind gusts >= 50 mph, or severe risk > 50, or NWS severe alert
+  // ── SEVERE triggers from SPC ground-truth (checked first) ──
+  if (spcLargeHail || spcAnyHailClose || spcHighWind || spcTornado) {
+    const parts: string[] = [];
+
+    if (spcLargeHail || spcAnyHailClose) {
+      const maxSize = stormReports?.maxHailSize;
+      parts.push(
+        maxSize
+          ? `SPC-confirmed hail up to ${maxSize}" in diameter`
+          : "SPC-confirmed hail activity"
+      );
+    }
+    if (spcHighWind) {
+      const maxSpd = stormReports?.maxWindSpeed;
+      parts.push(
+        maxSpd
+          ? `SPC-confirmed wind gusts of ${maxSpd} mph`
+          : "SPC-confirmed severe wind"
+      );
+    }
+    if (spcTornado) {
+      parts.push(
+        `${spcTornadoNearby.length} SPC-confirmed tornado report(s) within 25 miles`
+      );
+    }
+    if (effectiveHail && !spcLargeHail && !spcAnyHailClose) {
+      parts.push(
+        hailSizeMax ? `station hail up to ${hailSizeMax}"` : "station hail activity"
+      );
+    }
+    if (effectiveMaxGust >= 50 && !spcHighWind) {
+      parts.push(`wind gusts of ${Math.round(effectiveMaxGust)} mph`);
+    }
+
+    let text = `SEVERE WEATHER CONFIRMED — Historical weather records and NOAA/SPC Local Storm Reports show ${parts.join(" and ")} at or near this location on the date of loss (${input.dateOfLoss}). These conditions are consistent with the reported property damage.`;
+
+    // Add NWS alert details if also present
+    if (nwsAlertUsed && severeAlerts.length > 0) {
+      text += ` NWS Alert: ${severeAlerts[0].headline || severeAlerts[0].event}.`;
+    }
+
+    text += buildSpcSuffix();
+
+    return { verdict: "severe_confirmed", verdictText: text, nwsAlertUsed: nwsAlertUsed || true };
+  }
+
+  // ── SEVERE triggers from station data + NWS alerts (existing logic) ──
   if (effectiveHail || effectiveMaxGust >= 50 || severerisk > 50 || hasNwsSevere) {
     const parts: string[] = [];
 
@@ -523,10 +666,44 @@ function computeVerdict(input: {
       text += ` NWS Alert: ${severeAlerts[0].headline || severeAlerts[0].event}.`;
     }
 
+    // Append SPC data if available
+    text += buildSpcSuffix();
+
     return { verdict: "severe_confirmed", verdictText: text, nwsAlertUsed };
   }
 
-  // MODERATE: wind gusts 35-50 mph, or severe risk 25-50
+  // ── MODERATE triggers from SPC (any reports within 50mi, or small hail within 25mi) ──
+  if (spcAnyNearby50.length > 0 || spcSmallHail) {
+    const parts: string[] = [];
+
+    if (spcSmallHail) {
+      const maxSize = stormReports?.maxHailSize;
+      parts.push(
+        maxSize
+          ? `SPC-reported hail (${maxSize}") within 25 miles`
+          : "SPC-reported hail within 25 miles"
+      );
+    } else if (spcAnyNearby50.length > 0) {
+      parts.push(`${spcAnyNearby50.length} SPC storm report(s) within 50 miles`);
+    }
+    if (maxWindGust >= 35) {
+      parts.push(`wind gusts up to ${Math.round(maxWindGust)} mph`);
+    }
+    if (severerisk > 25) {
+      parts.push(`elevated severe weather risk (${Math.round(severerisk)}/100)`);
+    }
+
+    let text = `WEATHER EVENT CONFIRMED — Historical records and NOAA/SPC Local Storm Reports show ${parts.join(" and ")} at this location on the date of loss (${input.dateOfLoss}). Storm conditions in the area are consistent with conditions known to cause roof damage.`;
+    text += buildSpcSuffix();
+
+    return {
+      verdict: "moderate_weather",
+      verdictText: text,
+      nwsAlertUsed: false,
+    };
+  }
+
+  // ── MODERATE triggers from station data (existing logic) ──
   if (maxWindGust >= 35 || severerisk > 25) {
     const parts: string[] = [];
     if (maxWindGust >= 35) {

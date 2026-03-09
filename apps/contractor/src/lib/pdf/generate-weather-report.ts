@@ -15,6 +15,7 @@
 
 import { jsPDF } from "jspdf";
 import type { WeatherData, HourlyWeather, WeatherEvent } from "@/lib/weather/fetch-weather";
+import type { StormReportData } from "@/lib/weather/fetch-storm-reports";
 
 /* ─────── Types ─────── */
 
@@ -163,6 +164,21 @@ export function generateWeatherReportPdf(
 
   doc.setTextColor(0, 0, 0);
   y += bannerHeight + 16;
+
+  // NOAA/SPC verification tag below verdict banner
+  if (w.verdict === "severe_confirmed" && w.verdictText.includes("NOAA/SPC")) {
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 100, 100);
+    doc.text("(Verified by NOAA/SPC Local Storm Reports)", margin + 16, y - 6);
+    doc.setTextColor(0, 0, 0);
+    y += 6;
+  }
+
+  // ══════════════════════════════════════════════
+  // NOAA/SPC CONFIRMED STORM REPORTS
+  // ══════════════════════════════════════════════
+  y = renderSpcSection(doc, w.stormReports, data.dateOfLoss, margin, contentWidth, pageWidth, y, checkPage);
 
   // ══════════════════════════════════════════════
   // DAILY CONDITIONS SUMMARY
@@ -320,7 +336,8 @@ export function generateWeatherReportPdf(
   doc.setFont("helvetica", "italic");
   doc.setTextColor(120, 120, 120);
   const disclaimer =
-    "Weather data sourced from Visual Crossing Historical Weather API (visualcrossing.com). " +
+    "Weather station data from Visual Crossing. Storm reports from NOAA Storm Prediction Center " +
+    "via Iowa Environmental Mesonet (mesonet.agron.iastate.edu). " +
     "Data reflects conditions recorded at the nearest weather station to the property address. " +
     "For official NOAA/NWS storm reports in this area, visit https://www.spc.noaa.gov/climo/reports/";
   const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth);
@@ -434,6 +451,284 @@ function renderEventsTable(
     doc.setLineWidth(0.3);
     doc.line(margin, y - 6, margin + contentWidth, y - 6);
   });
+}
+
+/* ─────── NOAA/SPC Storm Reports Section ─────── */
+
+function renderSpcSection(
+  doc: jsPDF,
+  stormReports: StormReportData | null,
+  dateOfLoss: string,
+  margin: number,
+  contentWidth: number,
+  pageWidth: number,
+  startY: number,
+  checkPage: (n: number) => void
+): number {
+  let y = startY;
+
+  // Section header bar — dark blue
+  const headerBarHeight = 22;
+  checkPage(headerBarHeight + 80);
+
+  doc.setFillColor(12, 45, 72); // #0C2D48
+  doc.rect(margin, y, contentWidth, headerBarHeight, "F");
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  doc.text("NOAA/SPC CONFIRMED STORM REPORTS", margin + 10, y + 14);
+  doc.setTextColor(0, 0, 0);
+  y += headerBarHeight + 4;
+
+  // Source attribution
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    "Source: NOAA Storm Prediction Center via Iowa Environmental Mesonet",
+    margin,
+    y + 8
+  );
+  doc.setTextColor(0, 0, 0);
+  y += 16;
+
+  const hasReports =
+    stormReports && stormReports.reports && stormReports.reports.length > 0;
+
+  if (!hasReports) {
+    // ── No reports: muted box ──
+    checkPage(50);
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(margin, y, contentWidth, 38, 3, 3, "F");
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 100, 100);
+    const noDataText =
+      "No NOAA/SPC storm reports found within 50 miles of the property for this date. " +
+      "This does not rule out localized storm activity — field inspection and contractor " +
+      "documentation may provide additional evidence.";
+    const noDataLines = doc.splitTextToSize(noDataText, contentWidth - 20);
+    doc.text(noDataLines, margin + 10, y + 12);
+    doc.setTextColor(0, 0, 0);
+    y += 46;
+    return y;
+  }
+
+  // ── Reports exist ──
+  const reports = stormReports!.reports;
+  const hailReports = stormReports!.hailReports;
+  const windReports = stormReports!.windReports;
+  const tornadoReports = stormReports!.tornadoReports;
+
+  // Summary line
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text(
+    `${reports.length} confirmed storm report${reports.length !== 1 ? "s" : ""} within ${stormReports!.searchRadiusMiles} miles of the property on ${dateOfLoss}`,
+    margin,
+    y
+  );
+  y += 14;
+
+  // Sub-summary: key findings
+  doc.setFontSize(8.5);
+
+  // Largest hail
+  if (hailReports.length > 0) {
+    const nearest = stormReports!.nearestHailReport;
+    const maxHail = stormReports!.maxHailSize;
+    if (maxHail !== null && nearest) {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 38, 38); // red
+      const hailText = `Largest confirmed hail: ${maxHail.toFixed(2)}" within ${nearest.distanceMiles} mi (${nearest.city}, ${nearest.county} ${nearest.state})`;
+      doc.text(hailText, margin + 8, y);
+      y += 12;
+    }
+  }
+
+  // Maximum wind
+  if (windReports.length > 0) {
+    const nearest = stormReports!.nearestWindReport;
+    const maxWind = stormReports!.maxWindSpeed;
+    if (maxWind !== null && nearest) {
+      doc.setFont("helvetica", "bold");
+      if (maxWind >= 58) {
+        doc.setTextColor(220, 38, 38); // red for severe
+      } else {
+        doc.setTextColor(0, 0, 0);
+      }
+      doc.text(
+        `Maximum confirmed wind: ${maxWind} mph within ${nearest.distanceMiles} mi`,
+        margin + 8,
+        y
+      );
+      y += 12;
+    }
+  }
+
+  // Tornado
+  if (tornadoReports.length > 0) {
+    const nearest = tornadoReports[0]; // sorted by distance
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(220, 38, 38);
+    doc.text(
+      `TORNADO CONFIRMED within ${nearest.distanceMiles} mi`,
+      margin + 8,
+      y
+    );
+    y += 12;
+  }
+
+  doc.setTextColor(0, 0, 0);
+  y += 6;
+
+  // ── Storm reports table ──
+  const displayReports = reports.slice(0, 15); // max 15 rows
+
+  const cols = [
+    { label: "Type", x: margin, w: 62 },
+    { label: "Size/Speed", x: margin + 62, w: 62 },
+    { label: "Distance", x: margin + 124, w: 50 },
+    { label: "Location", x: margin + 174, w: 135 },
+    { label: "Time", x: margin + 309, w: 48 },
+    { label: "Source", x: margin + 357, w: contentWidth - 357 + margin },
+  ];
+
+  // Table header
+  checkPage(30);
+  doc.setFillColor(12, 45, 72); // match section header
+  doc.rect(margin, y - 10, contentWidth, 16, "F");
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(255, 255, 255);
+  cols.forEach((col) => doc.text(col.label, col.x + 3, y));
+  doc.setTextColor(0, 0, 0);
+  y += 12;
+
+  // Table rows
+  doc.setFontSize(7.5);
+
+  displayReports.forEach((report, idx) => {
+    checkPage(18);
+
+    // Alternate row background
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 248, 248);
+      doc.rect(margin, y - 9, contentWidth, 14, "F");
+    }
+
+    const isHail = report.type === "HAIL";
+    const isWind = report.type === "TSTM_WND";
+    const isTornado = report.type === "TORNADO";
+
+    // Determine if this row should be red
+    const isSevere =
+      isTornado ||
+      (isHail && report.magnitude !== null && report.magnitude >= 1.0) ||
+      (isWind && report.magnitude !== null && report.magnitude >= 58);
+
+    // Type column
+    const typeLabel = isTornado
+      ? "TORNADO"
+      : isHail
+        ? "HAIL"
+        : isWind
+          ? "TSTM WND"
+          : report.typeText || report.type;
+
+    if (isSevere) {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 38, 38);
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+    }
+    doc.text(typeLabel, cols[0].x + 3, y);
+
+    // Size/Speed column
+    let sizeStr = "—";
+    if (isHail && report.magnitude !== null) {
+      sizeStr = `${report.magnitude.toFixed(2)} in`;
+    } else if (isWind && report.magnitude !== null) {
+      sizeStr = `${report.magnitude} mph`;
+    } else if (isTornado) {
+      sizeStr = "—";
+    }
+
+    if (isSevere) {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 38, 38);
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+    }
+    doc.text(sizeStr, cols[1].x + 3, y);
+
+    // Distance column
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text(`${report.distanceMiles.toFixed(1)} mi`, cols[2].x + 3, y);
+
+    // Location column
+    const locationParts: string[] = [];
+    if (report.city) locationParts.push(report.city);
+    if (report.county) locationParts.push(report.county);
+    if (report.state) locationParts.push(report.state);
+    let location = locationParts.join(", ");
+    if (location.length > 28) location = location.substring(0, 26) + "...";
+    doc.text(location, cols[3].x + 3, y);
+
+    // Time column — format ISO to HH:MM
+    let timeStr = "—";
+    if (report.timestamp) {
+      try {
+        const d = new Date(report.timestamp);
+        const hh = d.getUTCHours().toString().padStart(2, "0");
+        const mm = d.getUTCMinutes().toString().padStart(2, "0");
+        timeStr = `${hh}:${mm}`;
+      } catch {
+        timeStr = "—";
+      }
+    }
+    doc.text(timeStr, cols[4].x + 3, y);
+
+    // Source column
+    let sourceStr = report.source || "—";
+    if (sourceStr.length > 18) sourceStr = sourceStr.substring(0, 16) + "...";
+    doc.setFontSize(7);
+    doc.text(sourceStr, cols[5].x + 3, y);
+    doc.setFontSize(7.5);
+
+    // Reset
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+
+    y += 14;
+
+    // Row divider
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y - 4, margin + contentWidth, y - 4);
+  });
+
+  // If more than 15, note the truncation
+  if (reports.length > 15) {
+    y += 4;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 100, 100);
+    doc.text(
+      `Showing 15 of ${reports.length} reports (sorted by proximity to property).`,
+      margin,
+      y
+    );
+    doc.setTextColor(0, 0, 0);
+    y += 10;
+  }
+
+  y += 10;
+  return y;
 }
 
 /* ─────── Hourly Table ─────── */
