@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWizard } from "./wizard-context";
 import { parseEstimatePdf } from "@/lib/parsers/stub";
 import { lookupCountyByZip } from "@/data/county-jurisdictions";
@@ -20,18 +20,85 @@ export function StepEstimate() {
 
   const [resolvedCounty, setResolvedCounty] = useState<CountyJurisdiction | null>(null);
   const [zipChecked, setZipChecked] = useState(false);
+  const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [geocodeCountyName, setGeocodeCountyName] = useState<string | null>(null);
+  const geocodeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Geocode with Census API when we have a full address, debounced 800ms
   useEffect(() => {
+    // Clear any pending timer
+    if (geocodeTimerRef.current) {
+      clearTimeout(geocodeTimerRef.current);
+      geocodeTimerRef.current = null;
+    }
+
+    const street = claimDetails.propertyAddress?.trim();
+    const city = claimDetails.propertyCity?.trim();
+    const stateVal = claimDetails.propertyState?.trim();
     const zip = claimDetails.propertyZip?.trim();
+
+    // Need at least street + city + state for geocoding
+    if (street && street.length >= 3 && city && city.length >= 2 && stateVal && stateVal.length === 2) {
+      geocodeTimerRef.current = setTimeout(async () => {
+        setGeocodeStatus("loading");
+        try {
+          const res = await fetch("/api/geocode", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ street, city, state: stateVal, zip }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.countyJurisdiction) {
+              // We have full jurisdiction data from our database
+              setResolvedCounty(data.countyJurisdiction);
+              setGeocodeCountyName(null);
+            } else {
+              // Census found the county but it's outside our coverage
+              setResolvedCounty(null);
+              setGeocodeCountyName(`${data.county}, ${data.state}`);
+            }
+            setZipChecked(true);
+            setGeocodeStatus("done");
+          } else {
+            // API error — fall back to ZIP lookup
+            fallbackToZipLookup(zip);
+            setGeocodeStatus("error");
+          }
+        } catch {
+          // Network error — fall back to ZIP lookup
+          fallbackToZipLookup(zip);
+          setGeocodeStatus("error");
+        }
+      }, 800);
+    } else {
+      // Not enough address data — fall back to ZIP-only lookup
+      fallbackToZipLookup(zip);
+      setGeocodeStatus("idle");
+    }
+
+    return () => {
+      if (geocodeTimerRef.current) {
+        clearTimeout(geocodeTimerRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claimDetails.propertyAddress, claimDetails.propertyCity, claimDetails.propertyState, claimDetails.propertyZip]);
+
+  /** Fall back to static ZIP-to-county lookup */
+  function fallbackToZipLookup(zip: string | undefined) {
     if (zip && zip.length === 5 && /^\d{5}$/.test(zip)) {
       const county = lookupCountyByZip(zip) || null;
       setResolvedCounty(county);
+      setGeocodeCountyName(null);
       setZipChecked(true);
     } else {
       setResolvedCounty(null);
+      setGeocodeCountyName(null);
       setZipChecked(false);
     }
-  }, [claimDetails.propertyZip]);
+  }
 
   const handleEstimateFiles = useCallback(
     async (files: File[]) => {
@@ -366,7 +433,18 @@ export function StepEstimate() {
           </div>
         </div>
 
-        {zipChecked && (
+        {/* County verification status */}
+        {geocodeStatus === "loading" && (
+          <div className="mt-2 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200">
+            <svg className="h-4 w-4 animate-spin text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Verifying address...
+          </div>
+        )}
+
+        {zipChecked && geocodeStatus !== "loading" && (
           <div className={`mt-2 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 ${
             resolvedCounty
               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -377,7 +455,14 @@ export function StepEstimate() {
                 <svg className="h-4 w-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                {resolvedCounty.county}, {resolvedCounty.state} — Zone {resolvedCounty.climateZone} — {resolvedCounty.state === "DE" ? "2021 IRC" : "2018 IRC"}
+                ✓ {resolvedCounty.county} County, {resolvedCounty.state} — Zone {resolvedCounty.climateZone} — {resolvedCounty.state === "DE" ? "2021 IRC" : "2018 IRC"}
+              </>
+            ) : geocodeCountyName ? (
+              <>
+                <svg className="h-4 w-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                {geocodeCountyName} — outside coverage area (MD/PA/DE). Supplement will generate without jurisdiction-specific code authority.
               </>
             ) : (
               <>

@@ -33,7 +33,8 @@ import {
   type FacetInput,
 } from "@/lib/calculators/iws-steep";
 import { getRequirementsForXactimateCode } from "@/data/manufacturers";
-import { lookupCountyByZip } from "@/data/county-jurisdictions";
+import { lookupCountyByZip, resolveCountyByName } from "@/data/county-jurisdictions";
+import { geocodeAddress } from "@/lib/geocode";
 
 export interface PipelineInput {
   supplementId: string;
@@ -233,9 +234,36 @@ export async function runSupplementPipeline(
     // ── 4c. Confidence scoring — enrich each item with 4-dimension score ──
     // Replaces the AI's raw confidence (0-1 gut feeling) with a structured
     // score based on policy, code, manufacturer, and carrier data.
-    const countyInfo = claim.property_zip
+
+    // Resolve county: try Census geocoding first (accurate), fall back to ZIP lookup
+    let countyInfo = claim.property_zip
       ? lookupCountyByZip(claim.property_zip)
       : null;
+
+    if (claim.property_address && claim.property_city && claim.property_state) {
+      try {
+        const geocodeResult = await geocodeAddress(
+          claim.property_address,
+          claim.property_city,
+          claim.property_state,
+          claim.property_zip || undefined
+        );
+        if (geocodeResult.success) {
+          const { county, state: geoState } = geocodeResult.data;
+          // Try to match against our jurisdiction database
+          if (geoState === "MD" || geoState === "PA" || geoState === "DE") {
+            const geoCounty = resolveCountyByName(county, geoState);
+            if (geoCounty) {
+              countyInfo = geoCounty;
+              console.log(`[pipeline] Geocoded county: ${county}, ${geoState} (FIPS: ${geocodeResult.data.fipsCode})`);
+            }
+          }
+        }
+      } catch (geoErr) {
+        console.warn("[pipeline] Geocoding failed (using ZIP fallback):", geoErr);
+        // Continue with ZIP-based lookup
+      }
+    }
 
     // Extract policy analysis for confidence scoring
     const policyAnalysisObj = (existingPolicyAnalysis ||
