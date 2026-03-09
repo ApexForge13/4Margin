@@ -65,6 +65,8 @@ export async function POST(
       );
     }
 
+    console.log(`[finalize] Starting finalization for supplement ${supplementId}`);
+
     const claim = supplement.claims as Record<string, unknown>;
     const admin = createAdminClient();
 
@@ -88,6 +90,8 @@ export async function POST(
     const rejectedIds = allItems
       .filter((i) => !selectedSet.has(i.id))
       .map((i) => i.id);
+
+    console.log(`[finalize] Marking ${acceptedIds.length} items accepted, ${rejectedIds.length} rejected`);
 
     if (acceptedIds.length > 0) {
       await admin
@@ -158,20 +162,33 @@ export async function POST(
       items.map((i) => (i.category || "ROOFING").toUpperCase())
     )];
 
-    const ohpResult: OhpResult = calculateOhp({
-      adjusterEstimateBase: adjusterBase,
-      supplementBase: supplementTotal,
-      ohpAlreadyPaid: 0, // TODO: extract from adjuster estimate if available
-      tradeCategories,
-      competitiveMarket: false,
-    });
-
-    console.log(
-      `[finalize] O&P calculated: ${ohpResult.tradeCount} trades, ` +
-      `supplemental O&P = $${ohpResult.supplementalOhp.toFixed(2)}`
-    );
+    let ohpResult: OhpResult;
+    try {
+      ohpResult = calculateOhp({
+        adjusterEstimateBase: adjusterBase,
+        supplementBase: supplementTotal,
+        ohpAlreadyPaid: 0, // TODO: extract from adjuster estimate if available
+        tradeCategories,
+        competitiveMarket: false,
+      });
+      console.log(
+        `[finalize] O&P calculated: ${ohpResult.tradeCount} trades, ` +
+        `supplemental O&P = $${ohpResult.supplementalOhp.toFixed(2)}`
+      );
+    } catch (ohpErr) {
+      console.warn("[finalize] O&P calculation failed (non-fatal):", ohpErr);
+      // Fall back to zero O&P so finalization can still complete
+      ohpResult = calculateOhp({
+        adjusterEstimateBase: 0,
+        supplementBase: 0,
+        ohpAlreadyPaid: 0,
+        tradeCategories: ["ROOFING"],
+        competitiveMarket: false,
+      });
+    }
 
     // Build PDF data
+    console.log("[finalize] Building PDF data...");
     const pdfData: SupplementPdfData = {
       companyName: company?.name || "",
       companyPhone: company?.phone || "",
@@ -223,23 +240,38 @@ export async function POST(
     };
 
     // Generate PDF
-    const pdfBuffer = generateSupplementPdf(pdfData);
+    let pdfBuffer: ArrayBuffer;
+    try {
+      pdfBuffer = generateSupplementPdf(pdfData);
+      console.log(`[finalize] Supplement PDF generated: ${pdfBuffer.byteLength} bytes`);
+    } catch (pdfErr) {
+      console.error("[finalize] PDF generation failed:", pdfErr);
+      return NextResponse.json(
+        { error: "PDF generation failed: " + (pdfErr instanceof Error ? pdfErr.message : String(pdfErr)) },
+        { status: 500 }
+      );
+    }
 
     // Upload to storage
     const pdfPath = `${supplement.company_id}/${supplementId}/supplement.pdf`;
     const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
 
-    const { error: uploadError } = await admin.storage
-      .from("supplements")
-      .upload(pdfPath, pdfBlob, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
+    try {
+      const { error: uploadError } = await admin.storage
+        .from("supplements")
+        .upload(pdfPath, pdfBlob, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
 
-    if (uploadError) {
-      console.error("Failed to upload supplement PDF:", uploadError);
+      if (uploadError) {
+        throw uploadError;
+      }
+      console.log(`[finalize] PDF uploaded to: ${pdfPath}`);
+    } catch (uploadErr) {
+      console.error("[finalize] Storage upload failed:", uploadErr);
       return NextResponse.json(
-        { error: "Failed to upload PDF" },
+        { error: "Failed to upload PDF to storage: " + (uploadErr instanceof Error ? uploadErr.message : String(uploadErr)) },
         { status: 500 }
       );
     }
@@ -273,20 +305,35 @@ export async function POST(
       generatedDate: pdfData.generatedDate,
     };
 
-    const coverLetterBuffer = generateCoverLetter(coverLetterData);
+    let coverLetterBuffer: ArrayBuffer | null = null;
+    try {
+      coverLetterBuffer = generateCoverLetter(coverLetterData);
+      console.log(`[finalize] Cover letter generated: ${coverLetterBuffer.byteLength} bytes`);
+    } catch (clErr) {
+      console.error("[finalize] Cover letter generation failed (non-fatal):", clErr);
+    }
+
     const coverLetterPath = `${supplement.company_id}/${supplementId}/cover-letter.pdf`;
-    const coverLetterBlob = new Blob([coverLetterBuffer], { type: "application/pdf" });
+    let coverLetterUploadError = true; // default to failed unless upload succeeds
 
-    const { error: coverLetterUploadError } = await admin.storage
-      .from("supplements")
-      .upload(coverLetterPath, coverLetterBlob, {
-        contentType: "application/pdf",
-        upsert: true,
-      });
+    if (coverLetterBuffer) {
+      const coverLetterBlob = new Blob([coverLetterBuffer], { type: "application/pdf" });
+      try {
+        const { error: clUploadErr } = await admin.storage
+          .from("supplements")
+          .upload(coverLetterPath, coverLetterBlob, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
 
-    if (coverLetterUploadError) {
-      console.error("Failed to upload cover letter PDF:", coverLetterUploadError);
-      // Non-fatal: continue even if cover letter upload fails
+        if (clUploadErr) {
+          throw clUploadErr;
+        }
+        coverLetterUploadError = false;
+        console.log(`[finalize] Cover letter uploaded to: ${coverLetterPath}`);
+      } catch (clUploadErr) {
+        console.error("[finalize] Cover letter upload failed (non-fatal):", clUploadErr);
+      }
     }
 
     // Merge O&P calculation into existing adjuster_estimate_parsed JSONB
@@ -309,15 +356,30 @@ export async function POST(
     };
 
     // Update supplement record with PDF paths and O&P data
-    await admin
-      .from("supplements")
-      .update({
-        generated_pdf_url: pdfPath,
-        cover_letter_pdf_url: coverLetterUploadError ? null : coverLetterPath,
-        supplement_total: supplementTotal,
-        adjuster_estimate_parsed: updatedParsed,
-      })
-      .eq("id", supplementId);
+    try {
+      const { error: dbUpdateError } = await admin
+        .from("supplements")
+        .update({
+          generated_pdf_url: pdfPath,
+          cover_letter_pdf_url: coverLetterUploadError ? null : coverLetterPath,
+          supplement_total: supplementTotal,
+          adjuster_estimate_parsed: updatedParsed,
+        })
+        .eq("id", supplementId);
+
+      if (dbUpdateError) {
+        throw dbUpdateError;
+      }
+      console.log("[finalize] DB updated successfully");
+    } catch (dbErr) {
+      console.error("[finalize] DB update failed:", dbErr);
+      return NextResponse.json(
+        { error: "Failed to update supplement record: " + (dbErr instanceof Error ? dbErr.message : String(dbErr)) },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[finalize] Complete — ${items.length} items, $${supplementTotal.toFixed(2)}`);
 
     return NextResponse.json({
       success: true,

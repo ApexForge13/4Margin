@@ -132,12 +132,15 @@ export function LineItemsReview({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to generate supplement");
+        console.error("[finalize] Server error:", data);
+        toast.error(data.error || "Failed to generate supplement");
+        return;
       }
 
       toast.success("Supplement PDF generated successfully!");
       router.refresh();
     } catch (err) {
+      console.error("[finalize] Network or unexpected error:", err);
       toast.error(
         err instanceof Error ? err.message : "Failed to generate supplement"
       );
