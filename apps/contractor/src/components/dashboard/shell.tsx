@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 interface UserProfile {
@@ -73,6 +72,11 @@ const NAV_ICONS = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
     </svg>
   ),
+  newDecoder: (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  ),
   enterprise: (
     <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -93,7 +97,6 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -141,6 +144,7 @@ export function DashboardShell({
     { label: "Supplements", href: "/dashboard/supplements", icon: NAV_ICONS.supplements },
     { label: "New Supplement", href: "/dashboard/upload", icon: NAV_ICONS.upload },
     { label: "Policy Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.decoder },
+    { label: "New Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.newDecoder },
     { label: "Knowledge Base", href: "/dashboard/knowledge-base", icon: NAV_ICONS.knowledgeBase },
     { label: "Settings", href: "/dashboard/settings", icon: NAV_ICONS.settings },
     ...(isEnterpriseOwner
@@ -160,13 +164,6 @@ export function DashboardShell({
     window.location.href = "/login";
   };
 
-  const initials = user.full_name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
   /* ─── Sidebar content (shared between mobile + desktop) ─── */
   const sidebarContent = (
     <>
@@ -185,69 +182,16 @@ export function DashboardShell({
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          {/* Profile avatar — click to open dropdown */}
-          <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => setProfileOpen((prev) => !prev)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#00BFFF]/20 to-[#0090cc]/20 border border-white/10 hover:border-white/25 transition-all duration-200 group"
-              aria-label="Profile menu"
-            >
-              {/* Abstract person icon */}
-              <svg className="h-[18px] w-[18px] text-white/60 group-hover:text-white/90 transition-colors" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-            </button>
-
-            {/* Profile dropdown */}
-            {profileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-[#1e2a42] border border-white/10 shadow-xl shadow-black/30 z-50 overflow-hidden">
-                {/* User info */}
-                <div className="px-4 py-3 border-b border-white/[0.06]">
-                  <p className="text-sm font-medium text-white/90 truncate">{user.full_name}</p>
-                  <p className="text-[11px] text-white/40 truncate">{user.email}</p>
-                  {user.companies?.name && (
-                    <p className="text-[11px] text-[#00BFFF]/60 truncate mt-0.5">{user.companies.name}</p>
-                  )}
-                </div>
-                {/* Actions */}
-                <div className="py-1.5">
-                  <Link
-                    href="/dashboard/settings"
-                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-white/60 hover:text-white hover:bg-white/[0.06] transition-colors"
-                    onClick={() => setProfileOpen(false)}
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Settings
-                  </Link>
-                  <button
-                    className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] text-red-400/70 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
-                    onClick={handleSignOut}
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Close button — mobile only */}
-          <button
-            className="md:hidden rounded-lg p-1.5 text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
-            onClick={() => setSidebarOpen(false)}
-            aria-label="Close sidebar"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+        {/* Close button — mobile only */}
+        <button
+          className="md:hidden rounded-lg p-1.5 text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
+          onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       {/* Divider */}
@@ -261,7 +205,7 @@ export function DashboardShell({
             (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-150 ${
                 isActive
@@ -344,30 +288,54 @@ export function DashboardShell({
               <h1 className="text-base font-bold text-[#344767]">{pageTitle}</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              asChild
-              size="sm"
-              className="rounded-lg bg-gradient-to-br from-[#00BFFF] to-[#0090cc] text-white border-0 shadow-[0_3px_6px_rgba(0,191,255,0.25)] hover:shadow-[0_5px_12px_rgba(0,191,255,0.35)] hover:from-[#00BFFF] hover:to-[#007db8] transition-all duration-200"
+          {/* Profile avatar + dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => setProfileOpen((prev) => !prev)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#00BFFF]/20 to-[#0090cc]/20 border border-[#344767]/10 hover:border-[#344767]/25 transition-all duration-200 group"
+              aria-label="Profile menu"
             >
-              <Link href="/dashboard/policy-decoder">
-                <svg
-                  className="mr-1.5 h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                <span className="hidden sm:inline">New Decode</span>
-                <span className="sm:hidden">New</span>
-              </Link>
-            </Button>
+              <svg className="h-[18px] w-[18px] text-[#344767]/50 group-hover:text-[#344767]/80 transition-colors" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+            </button>
+
+            {/* Profile dropdown */}
+            {profileOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-white border border-[#344767]/10 shadow-xl shadow-black/10 z-50 overflow-hidden">
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-[#344767]/[0.06]">
+                  <p className="text-sm font-medium text-[#344767] truncate">{user.full_name}</p>
+                  <p className="text-[11px] text-[#344767]/40 truncate">{user.email}</p>
+                  {user.companies?.name && (
+                    <p className="text-[11px] text-[#00BFFF]/80 truncate mt-0.5">{user.companies.name}</p>
+                  )}
+                </div>
+                {/* Actions */}
+                <div className="py-1.5">
+                  <Link
+                    href="/dashboard/settings"
+                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-[#344767]/60 hover:text-[#344767] hover:bg-[#344767]/[0.04] transition-colors"
+                    onClick={() => setProfileOpen(false)}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Settings
+                  </Link>
+                  <button
+                    className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] text-red-400/70 hover:text-red-500 hover:bg-red-50/50 transition-colors"
+                    onClick={handleSignOut}
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Sign out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
