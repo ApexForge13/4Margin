@@ -14,7 +14,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { detectMissingItems, type AnalysisInput, type DetectedItem } from "./analyze";
+import { detectMissingItems, type AnalysisInput, type DetectedItem, type AdjusterItem } from "./analyze";
 import { analyzePhotos, type PhotoAnalysisResult } from "./photos";
 import { parsePolicyPdfV2 } from "@/lib/ai/policy-parser";
 import { generateWeatherReportPdf } from "@/lib/pdf/generate-weather-report";
@@ -25,6 +25,7 @@ import {
   type ConfidenceInput,
   type ConfidenceResult,
   type PhysicalPresenceContext,
+  type MeasurementContext,
 } from "@/lib/scoring/confidence";
 import { calculateWaste, type WasteResult } from "@/lib/calculators/waste";
 import {
@@ -267,9 +268,24 @@ export async function runSupplementPipeline(
       }
     }
 
-    // ── 4c. Confidence scoring — enrich each item with 3+1 dimension score ──
+    // ── 4b2. Extract adjuster line items for delta math ──
+    const adjusterItems: AdjusterItem[] = analysisResult.adjusterItems || [];
+    console.log(`[pipeline] Adjuster items available for delta math: ${adjusterItems.length}`);
+
+    // Helper: find adjuster item by code pattern
+    function findAdjusterItem(codePattern: string, descPattern?: string): AdjusterItem | undefined {
+      return adjusterItems.find(ai => {
+        const code = (ai.xactimate_code || "").toUpperCase();
+        const desc = (ai.description || "").toLowerCase();
+        if (code.includes(codePattern.toUpperCase())) return true;
+        if (descPattern && desc.includes(descPattern.toLowerCase())) return true;
+        return false;
+      });
+    }
+
+    // ── 4c. Confidence scoring — enrich each item with 5-dimension score ──
     // Replaces the AI's raw confidence (0-1 gut feeling) with a structured
-    // score based on policy, code, manufacturer, and physical presence data.
+    // score based on policy, code, manufacturer, physical presence, and measurement evidence.
     await updatePipelineStage(supabase, supplementId, "scoring");
 
     // Resolve county: try Census geocoding first (accurate), fall back to ZIP lookup
@@ -354,6 +370,26 @@ export async function runSupplementPipeline(
       return undefined;
     }
 
+    // Measurement classification helper: is this item's quantity backed by measurement data?
+    const hasMeasurements = !!(claim.roof_squares || claim.total_roof_area || claim.ft_valleys);
+    function classifyMeasurementEvidence(item: { xactimate_code?: string; description?: string }): MeasurementContext {
+      const code = (item.xactimate_code || "").toUpperCase();
+      const desc = (item.description || "").toLowerCase();
+
+      // Items whose quantities are directly derived from measurements
+      const isMeasurementDerived =
+        code.includes("FELT") || desc.includes("underlayment") || desc.includes("felt") ||  // felt = totalArea - IWS
+        code.includes("IWS") || desc.includes("ice & water") || desc.includes("ice and water") ||  // IWS = valley LF × 3
+        code.includes("SHGL") || desc.includes("waste") || desc.includes("shortage") ||  // waste = measuredSQ × waste%
+        code.includes("STPCH") || desc.includes("steep pitch") || desc.includes("steep charge");  // steep = pitch breakdown area
+
+      return {
+        isQuantityMeasurementDerived: isMeasurementDerived && hasMeasurements,
+        hasMeasurementsOnFile: hasMeasurements,
+        measurementSource: "Contractor-confirmed",
+      };
+    }
+
     for (const item of analysisResult.items) {
       // Check manufacturer requirements for this Xactimate code
       const mfrMatches = getRequirementsForXactimateCode(item.xactimate_code);
@@ -386,6 +422,7 @@ export async function runSupplementPipeline(
           warrantyVoidLanguage: firstMatch?.requirement?.rebuttal || null,
         },
         physical: classifyItemPresence(item),
+        measurement: classifyMeasurementEvidence(item),
       };
 
       const scored = scoreConfidence(confidenceInput);
@@ -401,6 +438,11 @@ export async function runSupplementPipeline(
       }
       const isPermit = (item.xactimate_code || "").includes("PRMT") || (item.description || "").toLowerCase().includes("permit");
       if (isPermit) {
+        scored.totalScore = Math.max(scored.totalScore, 65);
+      }
+      // Measurement-backed roofing items get floor of 65
+      const measCtx = classifyMeasurementEvidence(item);
+      if (measCtx.isQuantityMeasurementDerived) {
         scored.totalScore = Math.max(scored.totalScore, 65);
       }
       // Re-determine tier based on floored score
@@ -420,6 +462,7 @@ export async function runSupplementPipeline(
         code: scored.dimensions.find(d => d.dimension === "Code Authority"),
         manufacturer: scored.dimensions.find(d => d.dimension === "Manufacturer Requirement"),
         physical: scored.dimensions.find(d => d.dimension === "Physical Presence"),
+        measurement: scored.dimensions.find(d => d.dimension === "Measurement Evidence"),
         summary: scored.summaryText,
       };
       confidenceDetails.push({ xactimateCode: item.xactimate_code, result: scored });
@@ -431,6 +474,12 @@ export async function runSupplementPipeline(
 
     // ── 4d. Waste calculator ──
     let wasteCalcResult: WasteResult | null = null;
+    const adjusterShingleItem = findAdjusterItem("SHGL", "shingle");
+    const adjusterShingleSQ = adjusterShingleItem?.quantity ?? null;
+    if (adjusterShingleSQ != null) {
+      console.log(`[pipeline] Adjuster scoped ${adjusterShingleSQ} SQ shingles — will compute delta`);
+    }
+
     if (claim.roof_squares && claim.waste_percent) {
       wasteCalcResult = calculateWaste({
         measuredSquares: Number(claim.roof_squares),
@@ -441,22 +490,96 @@ export async function runSupplementPipeline(
         numValleys: claim.num_valleys ? Number(claim.num_valleys) : null,
         numDormers: null, // Not tracked separately yet
         countyName: countyInfo?.county,
+        adjusterShingleSQ,
       });
-      console.log(`[pipeline] Waste calculated: ${wasteCalcResult.adjustedSquares} SQ (${wasteCalcResult.wastePercent}% waste)`);
+      console.log(`[pipeline] Waste calculated: ${wasteCalcResult.adjustedSquares} SQ (${wasteCalcResult.wastePercent}% waste)${wasteCalcResult.supplementShingleSQ != null ? `, supplement delta: ${wasteCalcResult.supplementShingleSQ} SQ` : ""}`);
     }
 
-    // After waste calculation, override AI-generated waste item with calculator output
+    // After waste calculation, override AI-generated waste item with calculator delta output
     if (wasteCalcResult) {
       const wasteItem = analysisResult.items.find(i =>
         (i.xactimate_code || "").toUpperCase().includes("WASTE") ||
+        (i.xactimate_code || "").toUpperCase().includes("SHGL") ||
         (i.description || "").toLowerCase().includes("waste factor") ||
-        (i.description || "").toLowerCase().includes("waste adjustment")
+        (i.description || "").toLowerCase().includes("waste adjustment") ||
+        (i.description || "").toLowerCase().includes("shortage")
       );
       if (wasteItem) {
+        // Use delta (supplement) quantity when adjuster data is available, otherwise use total waste
+        const supplementQty = wasteCalcResult.supplementShingleSQ != null && wasteCalcResult.supplementShingleSQ > 0
+          ? wasteCalcResult.supplementShingleSQ
+          : wasteCalcResult.wasteSquares;
         wasteItem.justification = wasteCalcResult.formulaDisplay;
-        wasteItem.quantity = wasteCalcResult.wasteSquares;
-        wasteItem.total_price = Math.round(wasteCalcResult.wasteSquares * Number(wasteItem.unit_price || 0) * 100) / 100;
-        console.log(`[pipeline] Waste item overridden with calculator: ${wasteCalcResult.wasteSquares} SQ @ ${wasteCalcResult.wastePercent}%`);
+        wasteItem.quantity = supplementQty;
+        wasteItem.total_price = Math.round(supplementQty * Number(wasteItem.unit_price || 0) * 100) / 100;
+        console.log(`[pipeline] Waste item overridden: ${supplementQty} SQ (${wasteCalcResult.supplementShingleSQ != null ? "delta" : "total waste"}) @ ${wasteCalcResult.wastePercent}%`);
+      }
+    }
+
+    // ── 4d2. Delta math overrides for felt and IWS ──
+    // Felt: supplement = ((totalRoofArea - IWS_SF) / 100) - adjusterFeltSQ
+    const adjusterFeltItem = findAdjusterItem("FELT", "felt");
+    const adjusterFeltSQ = adjusterFeltItem?.quantity ?? null;
+    if (adjusterFeltSQ != null && claim.total_roof_area) {
+      const totalRoofAreaSF = Number(claim.total_roof_area);
+      const valleyLF = claim.ft_valleys ? Number(claim.ft_valleys) : 0;
+      const iwsSF = valleyLF * 3; // standard 36" wide IWS
+      const requiredFeltSQ = Math.round(((totalRoofAreaSF - iwsSF) / 100) * 100) / 100;
+      const feltDelta = Math.round((requiredFeltSQ - adjusterFeltSQ) * 100) / 100;
+
+      if (feltDelta > 0) {
+        const feltItem = analysisResult.items.find(i =>
+          (i.xactimate_code || "").toUpperCase().includes("FELT") ||
+          (i.description || "").toLowerCase().includes("underlayment")
+        );
+        if (feltItem) {
+          feltItem.quantity = feltDelta;
+          feltItem.total_price = Math.round(feltDelta * Number(feltItem.unit_price || 0) * 100) / 100;
+          feltItem.justification = [
+            `Total roof area: ${totalRoofAreaSF.toLocaleString()} SF`,
+            `Less IWS coverage: ${iwsSF.toLocaleString()} SF (${valleyLF} LF valleys × 3 ft width)`,
+            `Underlayment required: (${totalRoofAreaSF.toLocaleString()} - ${iwsSF.toLocaleString()}) / 100 = ${requiredFeltSQ.toFixed(2)} SQ`,
+            `Adjuster scoped: ${adjusterFeltSQ.toFixed(2)} SQ`,
+            `Supplement for shortage: ${requiredFeltSQ.toFixed(2)} - ${adjusterFeltSQ.toFixed(2)} = ${feltDelta.toFixed(2)} SQ`,
+            `Per IRC R905.2.3: underlayment required beneath all asphalt shingles.`,
+          ].join("\n");
+          console.log(`[pipeline] Felt delta override: ${feltDelta.toFixed(2)} SQ (required ${requiredFeltSQ.toFixed(2)} - adjuster ${adjusterFeltSQ.toFixed(2)})`);
+        }
+      }
+    }
+
+    // IWS in valleys: supplement = (valleyLF × 3) - adjusterIWS_SF
+    const adjusterIwsItem = findAdjusterItem("IWS", "ice & water");
+    const adjusterIwsSF = adjusterIwsItem?.quantity ?? null;
+    if (claim.ft_valleys) {
+      const valleyLF = Number(claim.ft_valleys);
+      const requiredIwsSF = valleyLF * 3; // 36" wide roll
+      const iwsDelta = adjusterIwsSF != null
+        ? Math.round((requiredIwsSF - adjusterIwsSF) * 100) / 100
+        : requiredIwsSF;
+
+      if (iwsDelta > 0) {
+        const iwsItem = analysisResult.items.find(i =>
+          (i.xactimate_code || "").toUpperCase().includes("IWS") ||
+          (i.description || "").toLowerCase().includes("ice & water") ||
+          (i.description || "").toLowerCase().includes("ice and water")
+        );
+        if (iwsItem) {
+          iwsItem.quantity = iwsDelta;
+          iwsItem.total_price = Math.round(iwsDelta * Number(iwsItem.unit_price || 0) * 100) / 100;
+          const justLines = [
+            `Valley measurements: ${valleyLF} LF requiring 36-inch wide ice & water shield`,
+            `IWS required: ${valleyLF} LF × 3 ft = ${requiredIwsSF.toLocaleString()} SF`,
+          ];
+          if (adjusterIwsSF != null) {
+            justLines.push(`Adjuster scoped: ${adjusterIwsSF.toLocaleString()} SF`);
+            justLines.push(`Supplement for shortage: ${requiredIwsSF.toLocaleString()} - ${adjusterIwsSF.toLocaleString()} = ${iwsDelta.toLocaleString()} SF`);
+          }
+          justLines.push(`Per IRC R905.2.8.4: ice & water shield required in valleys.`);
+          justLines.push(`GAF, CertainTeed, and Owens Corning all require ice barrier in valleys for warranty compliance.`);
+          iwsItem.justification = justLines.join("\n");
+          console.log(`[pipeline] IWS delta override: ${iwsDelta} SF (required ${requiredIwsSF} - adjuster ${adjusterIwsSF ?? 0})`);
+        }
       }
     }
 
@@ -474,12 +597,52 @@ export async function runSupplementPipeline(
         eaveLf: Math.round(totalEaveLf * (Number(pb.percentOfRoof) / 100) * 100) / 100,
       }));
 
+      // Pass adjuster's IWS SF for delta calculation
+      const adjIwsSfForCalc = adjusterIwsSF;
+
       iwsCalcResult = calculateIwsSteepPitch({
         facets,
-        adjusterIwsSf: null, // Could be extracted from estimate in the future
+        adjusterIwsSf: adjIwsSfForCalc,
         minimumHorizontalCoverage: 24,
       });
       console.log(`[pipeline] IWS steep pitch: ${iwsCalcResult.totalDeltaSf.toFixed(1)} SF additional needed`);
+    }
+
+    // Steep pitch delta override: steepAreaSF (from pitch breakdown) - adjusterSteepSF
+    const adjusterSteepItem = findAdjusterItem("STPCH", "steep");
+    const adjusterSteepSQ = adjusterSteepItem?.quantity ?? null;
+    if (pitchBreakdown.length > 0) {
+      const steepPitches = pitchBreakdown.filter((pb: { pitch: string }) => isSteepPitch(pb.pitch));
+      if (steepPitches.length > 0) {
+        const steepAreaSF = steepPitches.reduce((sum: number, pb: { areaSqFt: number }) => sum + Number(pb.areaSqFt), 0);
+        const steepAreaSQ = Math.round((steepAreaSF / 100) * 100) / 100;
+        const steepDelta = adjusterSteepSQ != null
+          ? Math.round((steepAreaSQ - adjusterSteepSQ) * 100) / 100
+          : steepAreaSQ;
+
+        if (steepDelta > 0) {
+          const steepItem = analysisResult.items.find(i =>
+            (i.xactimate_code || "").toUpperCase().includes("STPCH") ||
+            (i.description || "").toLowerCase().includes("steep pitch") ||
+            (i.description || "").toLowerCase().includes("steep charge")
+          );
+          if (steepItem) {
+            steepItem.quantity = steepDelta;
+            steepItem.total_price = Math.round(steepDelta * Number(steepItem.unit_price || 0) * 100) / 100;
+            const justLines = [
+              `Measurement report shows ${steepAreaSF.toLocaleString()} SF of steep pitch area (7/12 pitch and greater).`,
+            ];
+            if (adjusterSteepSQ != null) {
+              justLines.push(`Adjuster scoped: ${adjusterSteepSQ.toFixed(2)} SQ steep pitch.`);
+              justLines.push(`Supplement for shortage: ${steepAreaSQ.toFixed(2)} - ${adjusterSteepSQ.toFixed(2)} = ${steepDelta.toFixed(2)} SQ`);
+            }
+            justLines.push(`Per IRC R905.2.2 and OSHA 1926.501(b)(13): enhanced safety measures required for slopes 7:12 and greater.`);
+            justLines.push(`Additional labor time, safety equipment, and specialized installation methods are necessary.`);
+            steepItem.justification = justLines.join("\n");
+            console.log(`[pipeline] Steep pitch delta override: ${steepDelta.toFixed(2)} SQ (measurement ${steepAreaSQ.toFixed(2)} - adjuster ${adjusterSteepSQ?.toFixed(2) ?? 0})`);
+          }
+        }
+      }
     }
 
     // ── 5. Analyze photos (best-effort, non-blocking) ──
@@ -715,6 +878,7 @@ export async function runSupplementPipeline(
                 formula: iwsCalcResult.formulaDisplay,
               }
             : null,
+          adjuster_items: adjusterItems.length > 0 ? adjusterItems : null,
           county_info: countyInfo
             ? { county: countyInfo.county, state: countyInfo.state }
             : null,

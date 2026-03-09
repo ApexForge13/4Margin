@@ -105,6 +105,14 @@ export interface ExtractedClaimData {
   adjuster_estimate_total?: number | null;
 }
 
+export interface AdjusterItem {
+  xactimate_code: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  unit_price?: number;
+}
+
 export interface AnalysisResult {
   items: DetectedItem[];
   adjuster_total: number | null;
@@ -115,6 +123,8 @@ export interface AnalysisResult {
   extractedClaimData?: ExtractedClaimData;
   /** Raw Claude response text (first 1000 chars) for debugging */
   debugRawResponse?: string;
+  /** Line items already present in the adjuster's estimate — used for delta math */
+  adjusterItems?: AdjusterItem[];
 }
 
 /* ─────── Core Analysis ─────── */
@@ -230,6 +240,13 @@ export async function detectMissingItems(
       adjuster_email?: string;
       adjuster_phone?: string;
     };
+    adjuster_items?: Array<{
+      xactimate_code: string;
+      description: string;
+      quantity: number;
+      unit: string;
+      unit_price?: number;
+    }>;
     missing_items: Array<{
       xactimate_code: string;
       description: string;
@@ -256,6 +273,7 @@ export async function detectMissingItems(
   }
 
   console.log(`[detectMissingItems] Parsed: adjuster_total=${result.adjuster_total}, missing_items=${result.missing_items?.length ?? 0}, summary=${result.summary?.substring(0, 200)}`);
+  console.log(`[detectMissingItems] Adjuster items extracted: ${result.adjuster_items?.length ?? 0}`);
 
   if (!result.missing_items || result.missing_items.length === 0) {
     console.warn(`[detectMissingItems] WARNING: Claude returned 0 missing items. Summary: ${result.summary}`);
@@ -323,6 +341,16 @@ export async function detectMissingItems(
       }
     : undefined;
 
+  const adjusterItems: AdjusterItem[] = (result.adjuster_items || []).map(
+    (item: { xactimate_code: string; description: string; quantity: number; unit: string; unit_price?: number }) => ({
+      xactimate_code: item.xactimate_code,
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit,
+      unit_price: item.unit_price,
+    })
+  );
+
   return {
     items,
     adjuster_total: result.adjuster_total,
@@ -331,6 +359,7 @@ export async function detectMissingItems(
     summary: result.summary,
     extractedClaimData,
     debugRawResponse: textBlock.text.substring(0, 1000),
+    adjusterItems,
   };
 }
 
@@ -425,6 +454,11 @@ ${buildJustificationStrategy(ctx.policyContext)}
 ${ctx.codesContext}
 Note: You may also use valid Xactimate codes from your training knowledge if applicable.
 
+## ADJUSTER SCOPE EXTRACTION
+Before identifying missing items, you MUST extract ALL line items from the adjuster's estimate into the "adjuster_items" array.
+This is critical — we need to know exactly what the adjuster already scoped so we can calculate the delta (supplement = measurement - adjuster scope).
+Include EVERY line item from the estimate: shingles, felt, IWS, drip edge, starter, ridge cap, labor, tear-off, steep charges — everything.
+
 ## WHAT TO DO
 1. Read the PDF estimate — identify what IS already included
 2. Extract the adjuster's total RCV and waste % if visible
@@ -495,6 +529,15 @@ Return ONLY JSON — no markdown, no code fences:
     "adjuster_email": "<adjuster's email or empty string>",
     "adjuster_phone": "<adjuster's phone number or empty string>"
   },
+  "adjuster_items": [
+    {
+      "xactimate_code": "<code from estimate>",
+      "description": "<description>",
+      "quantity": <number>,
+      "unit": "<SQ|LF|SF|EA|etc>",
+      "unit_price": <dollar amount or null>
+    }
+  ],
   "missing_items": [
     {
       "xactimate_code": "<code>",

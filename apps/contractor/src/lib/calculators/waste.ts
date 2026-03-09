@@ -14,6 +14,7 @@ export interface WasteInput {
   numValleys: number | null;
   numDormers: number | null;
   countyName?: string;
+  adjusterShingleSQ?: number | null;  // adjuster's scoped shingle quantity
 }
 
 export interface WasteResult {
@@ -24,6 +25,8 @@ export interface WasteResult {
   complexityCategory: string;
   formulaDisplay: string;
   source: string;
+  adjusterShingleSQ: number | null;
+  supplementShingleSQ: number | null;  // adjustedSquares - adjusterShingleSQ (null if no adjuster data)
 }
 
 export function calculateWaste(input: WasteInput): WasteResult {
@@ -52,14 +55,24 @@ export function calculateWaste(input: WasteInput): WasteResult {
 
   const source = "Contractor-confirmed measurement report";
 
-  const formulaDisplay = [
+  const adjSQ = input.adjusterShingleSQ ?? null;
+  const supplementSQ = adjSQ != null ? Math.round((adjustedSquares - adjSQ) * 100) / 100 : null;
+
+  const formulaLines: string[] = [
     `Measured area: ${measuredSquares.toFixed(2)} SQ`,
     `Roof geometry: ${numHips || 0} hips, ${numValleys || 0} valleys, ${numDormers || 0} dormers (${complexityCategory})`,
     `Waste factor: ${wastePercent}% (per contractor-confirmed measurements)`,
     `Waste calculation: ${measuredSquares.toFixed(2)} SQ × ${wastePercent}% = ${wasteSquares.toFixed(2)} SQ`,
     `Adjusted total: ${measuredSquares.toFixed(2)} + ${wasteSquares.toFixed(2)} = ${adjustedSquares.toFixed(2)} SQ`,
     `Supporting document: Measurement report (included)`,
-  ].join("\n");
+  ];
+
+  if (adjSQ != null && supplementSQ != null && supplementSQ > 0) {
+    formulaLines.push(`Adjuster scoped: ${adjSQ.toFixed(2)} SQ`);
+    formulaLines.push(`Supplement for shortage: ${adjustedSquares.toFixed(2)} - ${adjSQ.toFixed(2)} = ${supplementSQ.toFixed(2)} SQ`);
+  }
+
+  const formulaDisplay = formulaLines.join("\n");
 
   return {
     measuredSquares,
@@ -69,5 +82,7 @@ export function calculateWaste(input: WasteInput): WasteResult {
     complexityCategory,
     formulaDisplay,
     source,
+    adjusterShingleSQ: adjSQ,
+    supplementShingleSQ: supplementSQ,
   };
 }

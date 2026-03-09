@@ -1,13 +1,14 @@
 /**
- * Confidence Scoring Engine — 3+1 Dimension Item Scorer
+ * Confidence Scoring Engine — 5-Dimension Item Scorer
  *
- * Every supplement line item gets scored across four dimensions:
+ * Every supplement line item gets scored across five dimensions:
  * 1. Policy Support (30 pts) — does the policy cover this item?
  * 2. Code Authority (30 pts) — is this code-required in this county?
  * 3. Manufacturer Requirement (30 pts) — does the manufacturer require it?
  * 4. Physical Presence (30 pts) — is this item physically on the roof?
+ * 5. Measurement Evidence (30 pts) — is quantity backed by measurement data?
  *
- * Raw scores sum to max 120, normalized to 0-100.
+ * Raw scores sum to max 150, normalized to 0-100.
  *
  * Score determines presentation order and contractor guidance:
  * 85-100: High confidence — push hard, strong three-pillar support
@@ -51,11 +52,18 @@ export interface PhysicalPresenceContext {
   itemType: "accessory" | "material" | "labor" | "general" | null;
 }
 
+export interface MeasurementContext {
+  isQuantityMeasurementDerived: boolean;  // quantity comes directly from EV/measurement calculation
+  hasMeasurementsOnFile: boolean;          // measurements exist for this claim (even if not directly used for this item)
+  measurementSource: string | null;        // e.g., "EagleView", "Hover", "Manual", "Contractor-confirmed"
+}
+
 export interface ConfidenceInput {
   policy: PolicyContext;
   code: CodeContext;
   manufacturer: ManufacturerContext;
   physical?: PhysicalPresenceContext;
+  measurement?: MeasurementContext;  // NEW
 }
 
 export interface DimensionScore {
@@ -145,6 +153,20 @@ function scoreManufacturerRequirement(ctx: ManufacturerContext): DimensionScore 
   return { dimension: "Manufacturer Requirement", score, maxScore: 30, reasoning };
 }
 
+function scoreMeasurementEvidence(ctx?: MeasurementContext): DimensionScore {
+  if (!ctx) return { dimension: "Measurement Evidence", score: 0, maxScore: 30, reasoning: "No measurement data available" };
+
+  if (ctx.isQuantityMeasurementDerived) {
+    return { dimension: "Measurement Evidence", score: 30, maxScore: 30,
+      reasoning: `Quantity derived directly from ${ctx.measurementSource || "measurement"} report — hard measurement proof` };
+  }
+  if (ctx.hasMeasurementsOnFile) {
+    return { dimension: "Measurement Evidence", score: 10, maxScore: 30,
+      reasoning: "Measurements on file support overall scope but not this specific item quantity" };
+  }
+  return { dimension: "Measurement Evidence", score: 0, maxScore: 30, reasoning: "No measurement basis for this item" };
+}
+
 function scorePhysicalPresence(ctx?: PhysicalPresenceContext): DimensionScore {
   if (!ctx) return { dimension: "Physical Presence", score: 0, maxScore: 30, reasoning: "Not applicable" };
   if (ctx.isPhysicallyOnRoof && ctx.requiresRemovalForReplacement) {
@@ -166,10 +188,11 @@ export function scoreConfidence(input: ConfidenceInput): ConfidenceResult {
     scoreCodeAuthority(input.code),
     scoreManufacturerRequirement(input.manufacturer),
     scorePhysicalPresence(input.physical),
+    scoreMeasurementEvidence(input.measurement),  // NEW
   ];
 
   const rawTotal = dimensions.reduce((sum, d) => sum + d.score, 0);
-  const totalScore = Math.round((rawTotal / 120) * 100);
+  const totalScore = Math.round((rawTotal / 150) * 100);
 
   let tier: ConfidenceResult["tier"];
   let tierLabel: string;
