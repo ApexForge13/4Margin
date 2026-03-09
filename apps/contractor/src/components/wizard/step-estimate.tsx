@@ -57,7 +57,7 @@ export function StepEstimate() {
             } else {
               // Census found the county but it's outside our coverage
               setResolvedCounty(null);
-              setGeocodeCountyName(`${data.county}, ${data.state}`);
+              setGeocodeCountyName(`${data.countyFull || data.county}, ${data.state}`);
             }
             setZipChecked(true);
             setGeocodeStatus("done");
@@ -455,7 +455,7 @@ export function StepEstimate() {
                 <svg className="h-4 w-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                ✓ {resolvedCounty.county} County, {resolvedCounty.state} — Zone {resolvedCounty.climateZone} — {resolvedCounty.state === "DE" ? "2021 IRC" : "2018 IRC"}
+                ✓ {resolvedCounty.county}, {resolvedCounty.state} — Zone {resolvedCounty.climateZone} — {resolvedCounty.state === "DE" ? "2021 IRC" : "2018 IRC"}
               </>
             ) : geocodeCountyName ? (
               <>

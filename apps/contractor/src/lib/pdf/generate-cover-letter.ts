@@ -45,6 +45,7 @@ const CL = {
 /* ─────── PDF Generation ─────── */
 
 export function generateCoverLetter(data: CoverLetterData): ArrayBuffer {
+  console.log("[cover-letter] Generating cover letter...", { companyName: data.companyName, itemCount: data.itemCount, supplementTotal: data.supplementTotal });
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -59,13 +60,13 @@ export function generateCoverLetter(data: CoverLetterData): ArrayBuffer {
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(CL.accent[0], CL.accent[1], CL.accent[2]);
-  doc.text(data.companyName.toUpperCase(), margin, y);
+  doc.text((data.companyName || "Contractor").toUpperCase(), margin, y);
   y += 16;
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(CL.textMuted[0], CL.textMuted[1], CL.textMuted[2]);
-  const contactLine = [data.companyAddress, data.companyPhone].filter(Boolean).join("  |  ");
+  const contactLine = [data.companyAddress || "", data.companyPhone || ""].filter(Boolean).join("  |  ");
   if (contactLine) {
     doc.text(contactLine, margin, y);
     y += 12;
@@ -96,12 +97,12 @@ export function generateCoverLetter(data: CoverLetterData): ArrayBuffer {
 
   doc.setFont("helvetica", "normal");
   const reFields = [
-    ["Claim #", data.claimNumber],
-    ["Policy #", data.policyNumber],
-    ["Carrier", data.carrierName],
-    ["Property", data.propertyAddress],
-    ["Date of Loss", data.dateOfLoss],
-    ["Adjuster", data.adjusterName],
+    ["Claim #", data.claimNumber || "N/A"],
+    ["Policy #", data.policyNumber || "N/A"],
+    ["Carrier", data.carrierName || "Insurance Carrier"],
+    ["Property", data.propertyAddress || "See claim file"],
+    ["Date of Loss", data.dateOfLoss || "See claim file"],
+    ["Adjuster", data.adjusterName || "Claims Department"],
   ].filter(([, v]) => v);
 
   doc.setFontSize(9);
@@ -193,8 +194,8 @@ export function generateCoverLetter(data: CoverLetterData): ArrayBuffer {
     "",
     "Respectfully,",
     "",
-    data.companyName,
-    data.companyPhone,
+    data.companyName || "Contractor",
+    data.companyPhone || "",
   ];
 
   for (const line of closingText) {
@@ -207,7 +208,7 @@ export function generateCoverLetter(data: CoverLetterData): ArrayBuffer {
   doc.setFont("helvetica", "normal");
   doc.setTextColor(CL.textMuted[0], CL.textMuted[1], CL.textMuted[2]);
   doc.text(
-    `${data.companyName}  |  ${data.generatedDate}`,
+    `${data.companyName || "Contractor"}  |  ${data.generatedDate}`,
     margin,
     pageHeight - 18
   );

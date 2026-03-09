@@ -162,6 +162,8 @@ export async function POST(
       items.map((i) => (i.category || "ROOFING").toUpperCase())
     )];
 
+    console.log(`[finalize] O&P inputs: adjusterBase=$${adjusterBase}, supplementBase=$${supplementTotal}, trades=[${tradeCategories.join(",")}]`);
+
     let ohpResult: OhpResult;
     try {
       ohpResult = calculateOhp({
@@ -204,10 +206,18 @@ export async function POST(
         detection_source: "calculator_ohp",
         status: "accepted",
       };
-      await admin.from("supplement_items").insert(ohpItem);
+      try {
+        const { error: ohpInsertErr } = await admin.from("supplement_items").insert(ohpItem);
+        if (ohpInsertErr) {
+          console.error("[finalize] O&P DB insert error:", ohpInsertErr.message, ohpInsertErr.details);
+        }
+      } catch (insertErr) {
+        console.error("[finalize] O&P insert threw:", insertErr);
+      }
+      // Always add to items array for PDF regardless of DB result
       items.push(ohpItem as typeof items[number]);
       supplementTotal += ohpResult.supplementalOhp;
-      console.log(`[finalize] O&P line item inserted: $${ohpResult.supplementalOhp.toFixed(2)}`);
+      console.log(`[finalize] O&P line item: $${ohpResult.supplementalOhp.toFixed(2)} (${ohpResult.tradeCount} trades: ${ohpResult.tradeNames.join(", ")})`);
     }
 
     // Build PDF data
@@ -335,7 +345,14 @@ export async function POST(
       coverLetterBuffer = generateCoverLetter(coverLetterData);
       console.log(`[finalize] Cover letter generated: ${coverLetterBuffer.byteLength} bytes`);
     } catch (clErr) {
-      console.error("[finalize] Cover letter generation failed (non-fatal):", clErr);
+      console.error("[finalize] Cover letter generation failed:", clErr);
+      console.error("[finalize] Cover letter data:", JSON.stringify({
+        companyName: coverLetterData.companyName,
+        carrierName: coverLetterData.carrierName,
+        itemCount: coverLetterData.itemCount,
+        supplementTotal: coverLetterData.supplementTotal,
+        adjusterName: coverLetterData.adjusterName,
+      }));
     }
 
     const coverLetterPath = `${supplement.company_id}/${supplementId}/cover-letter.pdf`;

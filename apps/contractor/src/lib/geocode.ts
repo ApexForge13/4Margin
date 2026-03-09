@@ -132,13 +132,14 @@ export async function geocodeAddress(
     }
 
     const countyGeo = counties[0];
-    const countyFullName: string = countyGeo.BASENAME || countyGeo.NAME || "";
+    const countyBaseName: string = countyGeo.BASENAME || "";
+    const countyFullWithSuffix: string = countyGeo.NAME || countyGeo.BASENAME || "";
     const geoid: string = countyGeo.GEOID || "";
     const stateCode: string = countyGeo.STATE || "";
 
     // BASENAME is usually "Baltimore" (without "County" suffix)
-    // NAME might be "Baltimore County" — strip the suffix for our data model
-    const countyName = countyFullName
+    // NAME is "Baltimore County" — use NAME for countyFull so it matches our jurisdiction data
+    const countyName = (countyBaseName || countyFullWithSuffix)
       .replace(/\s+(County|Parish|Borough|Census Area|Municipality|City and Borough)$/i, "")
       .trim();
 
@@ -155,7 +156,7 @@ export async function geocodeAddress(
       data: {
         matchedAddress,
         county: countyName,
-        countyFull: countyFullName,
+        countyFull: countyFullWithSuffix,
         state: stateAbbr,
         fipsCode,
         lat: coordinates?.y || 0,

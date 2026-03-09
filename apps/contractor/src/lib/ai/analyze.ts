@@ -450,13 +450,22 @@ Follow these formulas exactly — do NOT estimate or approximate:
 - Price per SF — match the adjuster's estimate IWS price (typically $1.50-$2.50/SF)
 - NEVER price per LF at a low rate — this drastically undervalues the material.
 
+### Shingle Waste Factor
+- The waste percentage is provided by the contractor from their measurement report. Do NOT override or invent your own waste percentage.
+- Justification MUST reference the measurement source: "Measurement report documents [X] hips, [Y] valleys, and [Z] dormers. Roof geometry requires [W]% material waste for cuts and fitting per contractor-confirmed measurements. Measurement report included as supporting documentation."
+- Do NOT say "industry standard waste factor" — adjusters push back on this. Reference the specific roof geometry and measurement report.
+
 ### Shingle Shortage
 - Shingle shortage = (Measured_SQ × (1 + waste%)) - Adjuster_Shingle_SQ
 - Completely separate from underlayment.
 
-### D&R of Accessories (Solar, HVAC, Satellite Dishes, etc.)
-- Satellite dishes: include BOTH removal/reinstallation AND recalibration/realignment as separate line items.
-- Solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician required).
+### D&R of Accessories (Solar, HVAC, Satellite Dishes, Skylights, Antennas, etc.)
+- For EVERY accessory currently installed on the roof, include a D&R line item.
+- The justification MUST state: "[Item] is currently installed on the roof and must be removed to complete roof replacement. Reinstallation with proper mounting/connections is required after roofing work is complete."
+- Do NOT use vague language like "industry standard" — state the physical fact: the item is there, it needs to come off, and it needs to go back on.
+- Satellite dishes: include removal/reinstallation AND recalibration/realignment. State the dish is currently mounted on the roof.
+- Solar panels: EACH panel = separate D&R line ($200-500+/panel, licensed electrician required). State that panels are currently installed on the roof and each must be individually disconnected, removed, stored, and reinstalled.
+- HVAC penetrations: State that HVAC stacks/penetrations currently penetrate the roof deck and must be temporarily removed and re-flashed.
 
 ## CRITICAL RULES
 - Only return items that are genuinely missing or underpaid based on evidence (measurements, code requirements, manufacturer specs, policy coverage). Do NOT fabricate or pad items.
@@ -513,7 +522,8 @@ function buildJustificationStrategy(policyContext: string | null): string {
   1. POLICY/INDUSTRY: Reference the Xactimate line item description as industry-standard scope
   2. CODE AUTHORITY: Cite the specific IRC section AND the jurisdiction's AHJ name/website (if provided above)
   3. MANUFACTURER: Reference the manufacturer's installation requirement and warranty impact
-- Write justifications in professional third-person language for carrier correspondence`;
+- Write justifications in professional third-person language for carrier correspondence
+- For D&R items: The PRIMARY justification is physical presence — the item is on the roof and cannot remain during replacement. This is a physical necessity, not an "industry standard" argument. State the fact directly.`;
 
   if (hasLOCoverage) {
     return `${baseRequirements}

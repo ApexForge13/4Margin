@@ -1979,11 +1979,26 @@ export function resolveCountyByName(
   if (!countyName || !state) return null;
 
   const normalized = countyName.trim().toLowerCase();
+
+  // Try exact match first (e.g. "Baltimore County" === "Baltimore County")
+  const exact = ALL_COUNTIES.find(
+    (c) => c.state === state && c.county.toLowerCase() === normalized
+  );
+  if (exact) return exact;
+
+  // Try with "County" suffix appended (e.g. "Baltimore" → "Baltimore County")
+  const withSuffix = ALL_COUNTIES.find(
+    (c) => c.state === state && c.county.toLowerCase() === `${normalized} county`
+  );
+  if (withSuffix) return withSuffix;
+
+  // Try stripped comparison — remove suffix from both sides
+  const stripped = normalized.replace(/\s+(county|city|parish|borough)$/i, "");
   return (
     ALL_COUNTIES.find(
       (c) =>
         c.state === state &&
-        c.county.toLowerCase() === normalized
+        c.county.toLowerCase().replace(/\s+(county|city|parish|borough)$/i, "") === stripped
     ) || null
   );
 }

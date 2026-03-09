@@ -628,14 +628,8 @@ function renderSpcSection(
       (isHail && report.magnitude !== null && report.magnitude >= 1.0) ||
       (isWind && report.magnitude !== null && report.magnitude >= 58);
 
-    // Type column
-    const typeLabel = isTornado
-      ? "TORNADO"
-      : isHail
-        ? "HAIL"
-        : isWind
-          ? "TSTM WND"
-          : report.typeText || report.type;
+    // Type column — use the readable IEM label (e.g. "NON-TSTM WND GST")
+    const typeLabel = report.typeText || report.type;
 
     if (isSevere) {
       doc.setFont("helvetica", "bold");
@@ -646,14 +640,10 @@ function renderSpcSection(
     }
     doc.text(typeLabel, cols[0].x + 3, y);
 
-    // Size/Speed column
+    // Size/Speed column — show magnitude when available for any report type
     let sizeStr = "—";
-    if (isHail && report.magnitude !== null) {
-      sizeStr = `${report.magnitude.toFixed(2)} in`;
-    } else if (isWind && report.magnitude !== null) {
-      sizeStr = `${report.magnitude} mph`;
-    } else if (isTornado) {
-      sizeStr = "—";
+    if (report.magnitude !== null && report.magnitude !== undefined) {
+      sizeStr = `${isHail ? report.magnitude.toFixed(2) : report.magnitude} ${report.unit || ""}`.trim();
     }
 
     if (isSevere) {

@@ -50,17 +50,15 @@ export function calculateWaste(input: WasteInput): WasteResult {
   const wasteSquares = Math.round(measuredSquares * (wastePercent / 100) * 100) / 100;
   const adjustedSquares = suggestedSquares || Math.round((measuredSquares + wasteSquares) * 100) / 100;
 
-  const source = countyName
-    ? `EagleView measurement report, ${countyName} standard`
-    : "EagleView measurement report, NRCA Guidelines";
+  const source = "Contractor-confirmed measurement report";
 
   const formulaDisplay = [
     `Measured area: ${measuredSquares.toFixed(2)} SQ`,
-    `Roof complexity: ${complexityCategory} (${numHips || 0} hips, ${numValleys || 0} valleys, ${numDormers || 0} dormers)`,
-    `Waste factor: ${wastePercent}%`,
-    `Waste calculation: ${measuredSquares.toFixed(2)} SQ x ${wastePercent}% = ${wasteSquares.toFixed(2)} SQ waste`,
+    `Roof geometry: ${numHips || 0} hips, ${numValleys || 0} valleys, ${numDormers || 0} dormers (${complexityCategory})`,
+    `Waste factor: ${wastePercent}% (per contractor-confirmed measurements)`,
+    `Waste calculation: ${measuredSquares.toFixed(2)} SQ × ${wastePercent}% = ${wasteSquares.toFixed(2)} SQ`,
     `Adjusted total: ${measuredSquares.toFixed(2)} + ${wasteSquares.toFixed(2)} = ${adjustedSquares.toFixed(2)} SQ`,
-    `Source: ${source}`,
+    `Supporting document: Measurement report (included)`,
   ].join("\n");
 
   return {

@@ -1,11 +1,13 @@
 /**
- * Confidence Scoring Engine — 4-Dimension Item Scorer
+ * Confidence Scoring Engine — 3+1 Dimension Item Scorer
  *
  * Every supplement line item gets scored across four dimensions:
- * 1. Policy Support (25 pts) — does the policy cover this item?
- * 2. Code Authority (25 pts) — is this code-required in this county?
- * 3. Manufacturer Requirement (25 pts) — does the manufacturer require it?
- * 4. Carrier Approval History (25 pts) — has this carrier approved it before?
+ * 1. Policy Support (30 pts) — does the policy cover this item?
+ * 2. Code Authority (30 pts) — is this code-required in this county?
+ * 3. Manufacturer Requirement (30 pts) — does the manufacturer require it?
+ * 4. Physical Presence (30 pts) — is this item physically on the roof?
+ *
+ * Raw scores sum to max 120, normalized to 0-100.
  *
  * Score determines presentation order and contractor guidance:
  * 85-100: High confidence — push hard, strong three-pillar support
@@ -43,19 +45,17 @@ export interface ManufacturerContext {
   warrantyVoidLanguage: string | null;
 }
 
-export interface CarrierContext {
-  carrierName: string | null;
-  countyName: string | null;
-  xactimateCode: string;
-  historicalApprovalRate: number | null; // 0-1, null = no data
-  sampleSize: number;                    // number of data points
+export interface PhysicalPresenceContext {
+  isPhysicallyOnRoof: boolean;
+  requiresRemovalForReplacement: boolean;
+  itemType: "accessory" | "material" | "labor" | "general" | null;
 }
 
 export interface ConfidenceInput {
   policy: PolicyContext;
   code: CodeContext;
   manufacturer: ManufacturerContext;
-  carrier: CarrierContext;
+  physical?: PhysicalPresenceContext;
 }
 
 export interface DimensionScore {
@@ -84,23 +84,23 @@ function scorePolicySupport(ctx: PolicyContext): DimensionScore {
     score = 0;
     reasoning = "Policy explicitly excludes this item";
   } else if (ctx.hasOrdinanceLaw && ctx.relevantEndorsements.length > 0) {
-    score = 25;
+    score = 30;
     reasoning = `Ordinance/Law endorsement present — fully payable per ${ctx.relevantEndorsements[0]}`;
   } else if (ctx.hasOrdinanceLaw) {
-    score = 20;
+    score = 24;
     reasoning = "Ordinance/Law endorsement present — code items are payable";
   } else if (ctx.coverageType === "RCV") {
-    score = 15;
+    score = 18;
     reasoning = "RCV coverage — full replacement cost basis";
   } else if (ctx.coverageType === "ACV" || ctx.coverageType === "MODIFIED_ACV") {
-    score = 10;
+    score = 12;
     reasoning = `${ctx.coverageType} coverage — depreciation applies but item still coverable`;
   } else {
-    score = 5;
+    score = 6;
     reasoning = "Policy coverage type unknown — include with documentation";
   }
 
-  return { dimension: "Policy Support", score, maxScore: 25, reasoning };
+  return { dimension: "Policy Support", score, maxScore: 30, reasoning };
 }
 
 function scoreCodeAuthority(ctx: CodeContext): DimensionScore {
@@ -108,20 +108,20 @@ function scoreCodeAuthority(ctx: CodeContext): DimensionScore {
   let reasoning: string;
 
   if (ctx.isCodeRequired && ctx.r9052_1Confirmed) {
-    score = 25;
+    score = 30;
     reasoning = `Code-required in ${ctx.countyName || "jurisdiction"} per IRC ${ctx.ircVersion || ""} ${ctx.codeSection || ""}. R905.2.1 confirmed.`;
   } else if (ctx.isCodeRequired && ctx.r9052_1Unverified) {
-    score = 15;
+    score = 18;
     reasoning = `Code-required per IRC ${ctx.codeSection || ""} but R905.2.1 adoption not yet verified for ${ctx.countyName || "this jurisdiction"}`;
   } else if (ctx.ircReferenced) {
-    score = 10;
+    score = 12;
     reasoning = `Referenced in IRC ${ctx.codeSection || ""} but not confirmed as county requirement`;
   } else {
     score = 0;
     reasoning = "No code basis for this item";
   }
 
-  return { dimension: "Code Authority", score, maxScore: 25, reasoning };
+  return { dimension: "Code Authority", score, maxScore: 30, reasoning };
 }
 
 function scoreManufacturerRequirement(ctx: ManufacturerContext): DimensionScore {
@@ -129,46 +129,33 @@ function scoreManufacturerRequirement(ctx: ManufacturerContext): DimensionScore 
   let reasoning: string;
 
   if (ctx.isRequired && ctx.r9052_1Applies) {
-    score = 25;
+    score = 30;
     reasoning = `Required by ${ctx.manufacturerName || "manufacturer"} AND code-mandated via R905.2.1 — strongest possible basis`;
   } else if (ctx.isRequired && ctx.isWarrantyBasisOnly) {
-    score = 15;
+    score = 18;
     reasoning = `Required by ${ctx.manufacturerName || "manufacturer"} for warranty — indemnification argument applies`;
   } else if (ctx.isRecommendedNotRequired) {
-    score = 5;
+    score = 6;
     reasoning = `Recommended by ${ctx.manufacturerName || "manufacturer"} but not required — weaker basis`;
   } else {
     score = 0;
     reasoning = "No manufacturer basis for this item";
   }
 
-  return { dimension: "Manufacturer Requirement", score, maxScore: 25, reasoning };
+  return { dimension: "Manufacturer Requirement", score, maxScore: 30, reasoning };
 }
 
-function scoreCarrierHistory(ctx: CarrierContext): DimensionScore {
-  let score: number;
-  let reasoning: string;
-
-  if (ctx.historicalApprovalRate === null || ctx.sampleSize < 3) {
-    score = 12;
-    reasoning = ctx.carrierName
-      ? `Insufficient data for ${ctx.carrierName} on ${ctx.xactimateCode} — neutral default`
-      : "No carrier data available — neutral default";
-  } else if (ctx.historicalApprovalRate > 0.8) {
-    score = 25;
-    reasoning = `${ctx.carrierName} approves ${ctx.xactimateCode} at ${Math.round(ctx.historicalApprovalRate * 100)}% rate (${ctx.sampleSize} claims)`;
-  } else if (ctx.historicalApprovalRate > 0.5) {
-    score = 15;
-    reasoning = `${ctx.carrierName} approves ${ctx.xactimateCode} at ${Math.round(ctx.historicalApprovalRate * 100)}% — rebuttal may be needed`;
-  } else if (ctx.historicalApprovalRate > 0.2) {
-    score = 10;
-    reasoning = `${ctx.carrierName} approves ${ctx.xactimateCode} at only ${Math.round(ctx.historicalApprovalRate * 100)}% — expect pushback, rebuttal loaded`;
-  } else {
-    score = 5;
-    reasoning = `${ctx.carrierName} rarely approves ${ctx.xactimateCode} (${Math.round(ctx.historicalApprovalRate * 100)}%) — strong rebuttal required`;
+function scorePhysicalPresence(ctx?: PhysicalPresenceContext): DimensionScore {
+  if (!ctx) return { dimension: "Physical Presence", score: 0, maxScore: 30, reasoning: "Not applicable" };
+  if (ctx.isPhysicallyOnRoof && ctx.requiresRemovalForReplacement) {
+    return { dimension: "Physical Presence", score: 30, maxScore: 30,
+      reasoning: "Item is physically installed on the roof and must be removed for roof replacement" };
   }
-
-  return { dimension: "Carrier Approval History", score, maxScore: 25, reasoning };
+  if (ctx.itemType === "general") {
+    return { dimension: "Physical Presence", score: 15, maxScore: 30,
+      reasoning: "Standard scope item for roof replacement project" };
+  }
+  return { dimension: "Physical Presence", score: 0, maxScore: 30, reasoning: "Not a physical on-roof item" };
 }
 
 /* ─────── Main Scoring Function ─────── */
@@ -178,10 +165,11 @@ export function scoreConfidence(input: ConfidenceInput): ConfidenceResult {
     scorePolicySupport(input.policy),
     scoreCodeAuthority(input.code),
     scoreManufacturerRequirement(input.manufacturer),
-    scoreCarrierHistory(input.carrier),
+    scorePhysicalPresence(input.physical),
   ];
 
-  const totalScore = dimensions.reduce((sum, d) => sum + d.score, 0);
+  const rawTotal = dimensions.reduce((sum, d) => sum + d.score, 0);
+  const totalScore = Math.round((rawTotal / 120) * 100);
 
   let tier: ConfidenceResult["tier"];
   let tierLabel: string;

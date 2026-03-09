@@ -301,6 +301,11 @@ function parseCsvToReports(
       const unit = magnitude !== null ? mapUnit(typeCode) : null;
       const timestamp = parseIemTimestamp(validRaw);
 
+      // Debug: log first 3 reports with magnitude info
+      if (magnitude !== null && reports.length < 3) {
+        console.log("[storm-reports] Report:", typeText, "mag=", magRaw, "type=", typeCode);
+      }
+
       reports.push({
         type,
         typeText: typeText || "",

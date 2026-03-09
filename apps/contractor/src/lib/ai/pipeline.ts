@@ -24,6 +24,7 @@ import {
   scoreConfidence,
   type ConfidenceInput,
   type ConfidenceResult,
+  type PhysicalPresenceContext,
 } from "@/lib/scoring/confidence";
 import { calculateWaste, type WasteResult } from "@/lib/calculators/waste";
 import {
@@ -266,9 +267,9 @@ export async function runSupplementPipeline(
       }
     }
 
-    // ── 4c. Confidence scoring — enrich each item with 4-dimension score ──
+    // ── 4c. Confidence scoring — enrich each item with 3+1 dimension score ──
     // Replaces the AI's raw confidence (0-1 gut feeling) with a structured
-    // score based on policy, code, manufacturer, and carrier data.
+    // score based on policy, code, manufacturer, and physical presence data.
     await updatePipelineStage(supabase, supplementId, "scoring");
 
     // Resolve county: try Census geocoding first (accurate), fall back to ZIP lookup
@@ -325,6 +326,34 @@ export async function runSupplementPipeline(
 
     const confidenceDetails: Array<{ xactimateCode: string; result: ConfidenceResult }> = [];
 
+    // Item classification helper for Physical Presence dimension
+    function classifyItemPresence(item: { xactimate_code?: string; description?: string; category?: string }): PhysicalPresenceContext | undefined {
+      const code = (item.xactimate_code || "").toUpperCase();
+      const desc = (item.description || "").toLowerCase();
+      const cat = (item.category || "").toLowerCase();
+
+      // D&R accessories physically on roof
+      const isRoofAccessory =
+        code.includes("ELC DR") || code.includes("HAC DR") || code.includes("PLM DR") ||
+        desc.includes("solar") || desc.includes("satellite") || desc.includes("hvac") ||
+        desc.includes("skylight") || desc.includes("antenna") || desc.includes("vent") ||
+        desc.includes("d&r") || desc.includes("remove") || desc.includes("reinstall") ||
+        cat === "solar" || cat === "hvac" || cat === "electronics";
+
+      if (isRoofAccessory) {
+        return { isPhysicallyOnRoof: true, requiresRemovalForReplacement: true, itemType: "accessory" };
+      }
+
+      // Dumpster/haul-off and permits — general scope
+      const isGeneralScope = code.includes("DUMR") || code.includes("PRMT") ||
+        desc.includes("dumpster") || desc.includes("haul") || desc.includes("permit");
+      if (isGeneralScope) {
+        return { isPhysicallyOnRoof: false, requiresRemovalForReplacement: false, itemType: "general" };
+      }
+
+      return undefined;
+    }
+
     for (const item of analysisResult.items) {
       // Check manufacturer requirements for this Xactimate code
       const mfrMatches = getRequirementsForXactimateCode(item.xactimate_code);
@@ -356,16 +385,29 @@ export async function runSupplementPipeline(
           productName: null,
           warrantyVoidLanguage: firstMatch?.requirement?.rebuttal || null,
         },
-        carrier: {
-          carrierName: null, // Carrier name not resolved in pipeline; historical data not populated yet
-          countyName: countyInfo?.county || null,
-          xactimateCode: item.xactimate_code,
-          historicalApprovalRate: null, // No historical data yet
-          sampleSize: 0,
-        },
+        physical: classifyItemPresence(item),
       };
 
       const scored = scoreConfidence(confidenceInput);
+
+      // Apply confidence floors
+      const physCtx = classifyItemPresence(item);
+      if (physCtx?.isPhysicallyOnRoof && physCtx?.requiresRemovalForReplacement) {
+        scored.totalScore = Math.max(scored.totalScore, 85);
+      }
+      const isDumpster = (item.xactimate_code || "").includes("DUMR") || (item.description || "").toLowerCase().includes("dumpster");
+      if (isDumpster) {
+        scored.totalScore = Math.max(scored.totalScore, 70);
+      }
+      const isPermit = (item.xactimate_code || "").includes("PRMT") || (item.description || "").toLowerCase().includes("permit");
+      if (isPermit) {
+        scored.totalScore = Math.max(scored.totalScore, 65);
+      }
+      // Re-determine tier based on floored score
+      if (scored.totalScore >= 85) scored.tier = "high";
+      else if (scored.totalScore >= 60) scored.tier = "good";
+      else if (scored.totalScore >= 35) scored.tier = "moderate";
+
       // Replace AI's raw confidence with scored confidence (0-1 scale for legacy column)
       item.confidence = scored.totalScore / 100;
       // Populate new migration 034 columns for UI/PDF display
@@ -377,7 +419,7 @@ export async function runSupplementPipeline(
         policy: scored.dimensions.find(d => d.dimension === "Policy Support"),
         code: scored.dimensions.find(d => d.dimension === "Code Authority"),
         manufacturer: scored.dimensions.find(d => d.dimension === "Manufacturer Requirement"),
-        carrier: scored.dimensions.find(d => d.dimension === "Carrier Approval History"),
+        physical: scored.dimensions.find(d => d.dimension === "Physical Presence"),
         summary: scored.summaryText,
       };
       confidenceDetails.push({ xactimateCode: item.xactimate_code, result: scored });
@@ -401,6 +443,21 @@ export async function runSupplementPipeline(
         countyName: countyInfo?.county,
       });
       console.log(`[pipeline] Waste calculated: ${wasteCalcResult.adjustedSquares} SQ (${wasteCalcResult.wastePercent}% waste)`);
+    }
+
+    // After waste calculation, override AI-generated waste item with calculator output
+    if (wasteCalcResult) {
+      const wasteItem = analysisResult.items.find(i =>
+        (i.xactimate_code || "").toUpperCase().includes("WASTE") ||
+        (i.description || "").toLowerCase().includes("waste factor") ||
+        (i.description || "").toLowerCase().includes("waste adjustment")
+      );
+      if (wasteItem) {
+        wasteItem.justification = wasteCalcResult.formulaDisplay;
+        wasteItem.quantity = wasteCalcResult.wasteSquares;
+        wasteItem.total_price = Math.round(wasteCalcResult.wasteSquares * Number(wasteItem.unit_price || 0) * 100) / 100;
+        console.log(`[pipeline] Waste item overridden with calculator: ${wasteCalcResult.wasteSquares} SQ @ ${wasteCalcResult.wastePercent}%`);
+      }
     }
 
     // ── 4e. IWS steep pitch calculator ──

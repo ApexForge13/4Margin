@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   // Try to match against our local jurisdiction database (MD/PA/DE)
   if (resolvedState === "MD" || resolvedState === "PA" || resolvedState === "DE") {
-    countyJurisdiction = resolveCountyByName(county, resolvedState) || null;
+    countyJurisdiction = resolveCountyByName(result.data.countyFull || county, resolvedState) || null;
   }
 
   return NextResponse.json({
