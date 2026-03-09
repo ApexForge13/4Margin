@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { InviteDialog } from "@/components/admin/invite-dialog";
+import { BulkInviteDialog } from "@/components/admin/bulk-invite-dialog";
 import type { TeamMember } from "./admin-tabs";
 
 const ROLE_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
@@ -36,7 +37,10 @@ export function TeamTable({ team, pendingInvites = [] }: TeamTableProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="flex-1" />
-        <InviteDialog />
+        <div className="flex items-center gap-2">
+          <BulkInviteDialog />
+          <InviteDialog />
+        </div>
       </div>
 
       <div className="rounded-lg border">
