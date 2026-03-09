@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useWizard } from "./wizard-context";
 import { parseEstimatePdf } from "@/lib/parsers/stub";
+import { lookupCountyByZip } from "@/data/county-jurisdictions";
+import type { CountyJurisdiction } from "@/data/county-jurisdictions";
 import { FileDropzone } from "@/components/upload/file-dropzone";
 import { FileList, type UploadedFile } from "@/components/upload/file-list";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,21 @@ import { CheckCircle2 } from "lucide-react";
 export function StepEstimate() {
   const { state, dispatch, nextStep, canProceed } = useWizard();
   const { claimDetails, estimateParsingStatus } = state;
+
+  const [resolvedCounty, setResolvedCounty] = useState<CountyJurisdiction | null>(null);
+  const [zipChecked, setZipChecked] = useState(false);
+
+  useEffect(() => {
+    const zip = claimDetails.propertyZip?.trim();
+    if (zip && zip.length === 5 && /^\d{5}$/.test(zip)) {
+      const county = lookupCountyByZip(zip) || null;
+      setResolvedCounty(county);
+      setZipChecked(true);
+    } else {
+      setResolvedCounty(null);
+      setZipChecked(false);
+    }
+  }, [claimDetails.propertyZip]);
 
   const handleEstimateFiles = useCallback(
     async (files: File[]) => {
@@ -348,6 +365,30 @@ export function StepEstimate() {
             />
           </div>
         </div>
+
+        {zipChecked && (
+          <div className={`mt-2 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 ${
+            resolvedCounty
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-amber-50 text-amber-700 border border-amber-200"
+          }`}>
+            {resolvedCounty ? (
+              <>
+                <svg className="h-4 w-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {resolvedCounty.county}, {resolvedCounty.state} — Zone {resolvedCounty.climateZone} — {resolvedCounty.state === "DE" ? "2021 IRC" : "2018 IRC"}
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                Outside coverage area (MD/PA/DE). Supplement will generate without jurisdiction-specific code authority.
+              </>
+            )}
+          </div>
+        )}
 
         <Separator />
 
