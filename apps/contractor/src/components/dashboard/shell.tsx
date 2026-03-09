@@ -144,7 +144,7 @@ export function DashboardShell({
     { label: "Supplements", href: "/dashboard/supplements", icon: NAV_ICONS.supplements },
     { label: "New Supplement", href: "/dashboard/upload", icon: NAV_ICONS.upload },
     { label: "Policy Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.decoder },
-    { label: "New Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.newDecoder },
+    { label: "New Decoder", href: "/dashboard/policy-decoder/new", icon: NAV_ICONS.newDecoder },
     { label: "Knowledge Base", href: "/dashboard/knowledge-base", icon: NAV_ICONS.knowledgeBase },
     { label: "Settings", href: "/dashboard/settings", icon: NAV_ICONS.settings },
     ...(isEnterpriseOwner
