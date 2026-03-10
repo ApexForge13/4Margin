@@ -12,6 +12,11 @@ export {
   CARRIER_ENDORSEMENT_FORMS,
   getLandminesForClaimType,
   getClaimTypeFocusPrompt,
+  CARRIER_PROFILES,
+  CARRIER_CODE_OBJECTIONS,
+  getCarrierProfile,
+  getCarrierCodeObjections,
+  buildCarrierContextForPrompt,
   type CoverageSection,
   type DepreciationMethod,
   type DepreciationInfo,
@@ -19,4 +24,6 @@ export {
   type FavorableProvision,
   type BaseFormExclusion,
   type CarrierEndorsementForm,
+  type CarrierProfile,
+  type CarrierCodeObjection,
 } from "@4margin/policy-engine";

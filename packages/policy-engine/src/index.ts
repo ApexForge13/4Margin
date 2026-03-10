@@ -22,6 +22,19 @@ export type {
   CarrierEndorsementForm,
 } from "./knowledge";
 
+export {
+  CARRIER_PROFILES,
+  CARRIER_CODE_OBJECTIONS,
+  getCarrierProfile,
+  getCarrierCodeObjections,
+  buildCarrierContextForPrompt,
+} from "./carrier-profiles";
+
+export type {
+  CarrierProfile,
+  CarrierCodeObjection,
+} from "./carrier-profiles";
+
 export { parsePolicyPdfV2 } from "./parser";
 
 export type {
