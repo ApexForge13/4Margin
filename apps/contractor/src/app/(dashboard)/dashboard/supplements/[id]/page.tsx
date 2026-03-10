@@ -26,6 +26,7 @@ import { NoItemsCard } from "@/components/supplements/no-items-card";
 import { GenerationTimeoutCard } from "@/components/supplements/generation-timeout-card";
 import { PipelineProgress } from "@/components/supplements/pipeline-progress";
 import { SupplementChat } from "@/components/supplements/supplement-chat";
+import { RebuttalTools } from "@/components/supplements/rebuttal-tools";
 
 export default async function SupplementDetailPage({
   params,
@@ -103,6 +104,12 @@ export default async function SupplementDetailPage({
   let weatherPdfUrl: string | null = null;
   if (supplement.weather_pdf_url) {
     weatherPdfUrl = await getSignedUrl("supplements", supplement.weather_pdf_url);
+  }
+
+  // Generate signed URL for rebuttal PDF
+  let rebuttalPdfUrl: string | null = null;
+  if (supplement.rebuttal_pdf_url) {
+    rebuttalPdfUrl = await getSignedUrl("supplements", supplement.rebuttal_pdf_url);
   }
 
   // Check for pipeline error
@@ -249,6 +256,20 @@ export default async function SupplementDetailPage({
             tool_results: msg.tool_results,
             created_at: msg.created_at as string,
           }))}
+        />
+      )}
+
+      {/* Rebuttal Tools — shown for denied/partially approved supplements */}
+      {(status === "denied" || status === "partially_approved") && lineItems && lineItems.length > 0 && (
+        <RebuttalTools
+          supplementId={id}
+          items={lineItems.map((item) => ({
+            id: item.id,
+            xactimate_code: item.xactimate_code,
+            description: item.description,
+            total_price: Number(item.total_price),
+          }))}
+          existingRebuttalUrl={rebuttalPdfUrl}
         />
       )}
 
