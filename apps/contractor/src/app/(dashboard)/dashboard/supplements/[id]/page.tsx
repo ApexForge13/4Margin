@@ -25,6 +25,7 @@ import { PolicyAnalysisCard } from "@/components/supplements/policy-analysis-car
 import { NoItemsCard } from "@/components/supplements/no-items-card";
 import { GenerationTimeoutCard } from "@/components/supplements/generation-timeout-card";
 import { PipelineProgress } from "@/components/supplements/pipeline-progress";
+import { SupplementChat } from "@/components/supplements/supplement-chat";
 
 export default async function SupplementDetailPage({
   params,
@@ -84,6 +85,13 @@ export default async function SupplementDetailPage({
       photoUrls[photo.id] = await getSignedUrl("photos", photo.storage_path);
     }
   }
+
+  // Fetch chat messages for co-pilot
+  const { data: chatMessages } = await supabase
+    .from("supplement_messages")
+    .select("*")
+    .eq("supplement_id", id)
+    .order("created_at", { ascending: true });
 
   // Generate signed URL for estimate
   let estimateUrl: string | null = null;
@@ -227,6 +235,21 @@ export default async function SupplementDetailPage({
         />
       ) : !pipelineError && status !== "generating" && status !== "draft" && (
         <NoItemsCard supplementId={id} />
+      )}
+
+      {/* Chat Co-Pilot — available when supplement is complete and before PDF */}
+      {status === "complete" && !hasPdf && (
+        <SupplementChat
+          supplementId={id}
+          initialMessages={(chatMessages ?? []).map((msg: Record<string, unknown>) => ({
+            id: msg.id as string,
+            role: msg.role as "user" | "assistant",
+            content: msg.content as string,
+            tool_calls: msg.tool_calls,
+            tool_results: msg.tool_results,
+            created_at: msg.created_at as string,
+          }))}
+        />
       )}
 
       {/* Policy Analysis — from Policy Decoder */}
