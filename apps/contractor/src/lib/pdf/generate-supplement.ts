@@ -31,6 +31,12 @@ const BRAND = {
 
 /* ─────── Types ─────── */
 
+export interface ReferenceLink {
+  type: "code" | "manufacturer" | "county";
+  label: string;
+  url: string;
+}
+
 export interface SupplementPdfData {
   // Company
   companyName: string;
@@ -76,6 +82,7 @@ export interface SupplementPdfData {
     irc_reference: string;
     confidence_score?: number;  // 0-100 score from confidence scorer
     confidence_tier?: string;   // "high" | "good" | "moderate" | "low"
+    referenceLinks?: ReferenceLink[];
   }>;
 
   // Generated date
@@ -592,7 +599,7 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
         });
       }
 
-      // IRC Reference
+      // IRC Reference (plain text label)
       if (item.irc_reference) {
         checkPage(16);
         doc.setFontSize(7);
@@ -600,6 +607,35 @@ export function generateSupplementPdf(data: SupplementPdfData): ArrayBuffer {
         setColor(BRAND.primaryDark);
         doc.text(`Code Ref: ${item.irc_reference}`, margin + 12, y);
         y += 12;
+      }
+
+      // Reference links footer
+      if (item.referenceLinks && item.referenceLinks.length > 0) {
+        checkPage(12 + item.referenceLinks.length * 11);
+
+        doc.setFontSize(6.5);
+        doc.setFont("helvetica", "bold");
+        setColor(BRAND.textMuted);
+        doc.text("References:", margin + 12, y);
+        y += 10;
+
+        for (const link of item.referenceLinks) {
+          checkPage(12);
+          doc.setFontSize(6.5);
+          doc.setFont("helvetica", "normal");
+
+          const icon = link.type === "code" ? "\u00A7" : link.type === "manufacturer" ? "\u25B8" : "\u2302";
+
+          setColor(BRAND.textMuted);
+          doc.text(icon, margin + 16, y);
+
+          // Clickable link text
+          setColor(BRAND.primary);
+          doc.textWithLink(link.label, margin + 24, y, { url: link.url });
+
+          y += 10;
+        }
+        y += 2;
       }
 
       // Spacer between items

@@ -11,6 +11,10 @@ import {
   type CoverLetterData,
 } from "@/lib/pdf/generate-cover-letter";
 import { calculateOhp, type OhpResult } from "@/lib/calculators/ohp";
+import { ircSectionToUrl } from "@/data/building-codes";
+import { getRequirementsForXactimateCode } from "@/data/manufacturers";
+import { lookupCountyByZip } from "@/data/county-jurisdictions";
+import type { ReferenceLink } from "@/lib/pdf/generate-supplement";
 
 export async function POST(
   request: NextRequest,
@@ -220,6 +224,53 @@ export async function POST(
       console.log(`[finalize] O&P line item: $${ohpResult.supplementalOhp.toFixed(2)} (${ohpResult.tradeCount} trades: ${ohpResult.tradeNames.join(", ")})`);
     }
 
+    // Resolve county from claim ZIP for permit links
+    const propertyZip = (claim.property_zip as string) || "";
+    const countyData = propertyZip ? lookupCountyByZip(propertyZip) : undefined;
+
+    // Helper: build reference links for a given item
+    function buildReferenceLinks(item: {
+      xactimate_code: string;
+      irc_reference?: string | null;
+    }): ReferenceLink[] {
+      const links: ReferenceLink[] = [];
+
+      // 1. IRC code link
+      const ircRef = item.irc_reference || "";
+      const ircUrl = ircSectionToUrl(ircRef);
+      if (ircUrl) {
+        links.push({
+          type: "code",
+          label: `IRC ${ircRef} — ICC Digital Codes`,
+          url: ircUrl,
+        });
+      }
+
+      // 2. Manufacturer install guide link
+      const mfrMatches = getRequirementsForXactimateCode(item.xactimate_code);
+      if (mfrMatches.length > 0) {
+        const first = mfrMatches[0];
+        if (first.requirement.sourceUrl) {
+          links.push({
+            type: "manufacturer",
+            label: `${first.manufacturer} Installation Instructions`,
+            url: first.requirement.sourceUrl,
+          });
+        }
+      }
+
+      // 3. County permits / code office link
+      if (countyData?.permit.ahjUrl) {
+        links.push({
+          type: "county",
+          label: `${countyData.county} County, ${countyData.state} — Permits & Inspections`,
+          url: countyData.permit.ahjUrl,
+        });
+      }
+
+      return links;
+    }
+
     // Build PDF data
     console.log("[finalize] Building PDF data...");
     const pdfData: SupplementPdfData = {
@@ -266,6 +317,7 @@ export async function POST(
         irc_reference: item.irc_reference || "",
         confidence_score: item.confidence_score || Math.round((Number(item.confidence) || 0) * 100),
         confidence_tier: item.confidence_tier || "moderate",
+        referenceLinks: buildReferenceLinks(item),
       })),
       generatedDate: new Date().toLocaleDateString("en-US", {
         month: "long",

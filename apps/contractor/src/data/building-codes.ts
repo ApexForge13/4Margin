@@ -1241,3 +1241,39 @@ export function enrichIrcReference(
     sourceRef: jurisdictionInfo?.sourceRef || null,
   };
 }
+
+/**
+ * Map an IRC section reference to an ICC Digital Codes URL.
+ *
+ * Input examples: "R905.2.8.2", "R903.2", "R806.2", "R301.2.1"
+ * Falls back to the IRC 2018 table of contents if section can't be mapped.
+ */
+export function ircSectionToUrl(section: string | null | undefined): string | null {
+  if (!section || section === "N/A") return null;
+
+  // Strip leading whitespace and any "IRC " prefix
+  const clean = section.replace(/^\s*(IRC\s*)?/i, "").trim();
+  if (!clean) return null;
+
+  const base = "https://codes.iccsafe.org/content/IRC2018P7";
+
+  // Map by chapter prefix
+  const match = clean.match(/^R(\d+)/i);
+  if (!match) return base;
+
+  const sectionNum = parseInt(match[1], 10);
+  const chapter = sectionNum >= 100 ? Math.floor(sectionNum / 100) : sectionNum;
+
+  const chapterMap: Record<number, string> = {
+    3: "/chapter-3-building-planning",
+    4: "/chapter-4-foundations",
+    5: "/chapter-5-floors",
+    6: "/chapter-6-wall-construction",
+    7: "/chapter-7-wall-covering",
+    8: "/chapter-8-roof-ceiling-construction",
+    9: "/chapter-9-roof-assemblies",
+  };
+
+  const path = chapterMap[chapter];
+  return path ? `${base}${path}` : base;
+}
