@@ -1056,4 +1056,158 @@ export const CARRIER_ENDORSEMENT_FORMS: CarrierEndorsementForm[] = [
     severity: "warning",
     affectsFields: ["deductibles"],
   },
+
+  // ── Progressive ─────────────────────────────────────────────────
+  {
+    carrier: "Progressive",
+    formNumber: "PH-4401",
+    name: "Cosmetic Damage Exclusion — Roof",
+    effect:
+      "Excludes coverage for cosmetic damage to roof surfacing. Only damage affecting the functional integrity of the roof is covered.",
+    severity: "critical",
+    affectsFields: ["exclusions"],
+  },
+  {
+    carrier: "Progressive",
+    formNumber: "PH-4410",
+    name: "Roof Surface Payment Schedule",
+    effect:
+      "Age-based payment schedule for roof surfaces. Applies ACV depreciation to roof claims based on roof age and material type.",
+    severity: "critical",
+    affectsFields: ["depreciation"],
+  },
+  {
+    carrier: "Progressive",
+    formNumber: "PH-4405",
+    name: "Wind/Hail Percentage Deductible",
+    effect:
+      "Separate percentage-based deductible for wind and hail damage. Typically 1-5% of Coverage A.",
+    severity: "warning",
+    affectsFields: ["deductibles"],
+  },
+
+  // ── Amica ───────────────────────────────────────────────────────
+  {
+    carrier: "Amica",
+    formNumber: "AM-HO-120",
+    name: "Roof Surface Material Limitation",
+    effect:
+      "May limit roof surface coverage based on age. Applied less aggressively than most carriers — Amica tends toward RCV settlement.",
+    severity: "warning",
+    affectsFields: ["depreciation"],
+  },
+  {
+    carrier: "Amica",
+    formNumber: "AM-HO-105",
+    name: "Wind/Hail Deductible",
+    effect:
+      "Separate deductible for wind and hail perils. Typically a flat dollar amount rather than percentage-based.",
+    severity: "warning",
+    affectsFields: ["deductibles"],
+  },
+  {
+    carrier: "Amica",
+    formNumber: "AM-HO-130",
+    name: "Ordinance or Law Coverage",
+    effect:
+      "Provides coverage for code-required upgrades during covered repairs. Standard on most Amica policies.",
+    severity: "info",
+    affectsFields: ["coverages"],
+  },
+
+  // ── Auto-Owners ─────────────────────────────────────────────────
+  {
+    carrier: "Auto-Owners",
+    formNumber: "AO-4501",
+    name: "Cosmetic Damage Limitation",
+    effect:
+      "Limits coverage for cosmetic damage to roof and exterior surfaces. Functional damage remains covered.",
+    severity: "critical",
+    affectsFields: ["exclusions"],
+  },
+  {
+    carrier: "Auto-Owners",
+    formNumber: "AO-4510",
+    name: "Roof Surface Depreciation Schedule",
+    effect:
+      "Applies age-based depreciation to roof surfaces. Moderate thresholds compared to national carriers.",
+    severity: "critical",
+    affectsFields: ["depreciation"],
+  },
+  {
+    carrier: "Auto-Owners",
+    formNumber: "AO-4505",
+    name: "Wind/Hail Deductible",
+    effect:
+      "Separate deductible for wind and hail losses. May be flat dollar or percentage-based depending on policy.",
+    severity: "warning",
+    affectsFields: ["deductibles"],
+  },
+
+  // ── Chubb ──────────────────────────────────────────────────────
+  {
+    carrier: "Chubb",
+    formNumber: "CB-MH-200",
+    name: "Masterpiece Homeowners — Guaranteed Replacement Cost",
+    effect:
+      "Provides guaranteed replacement cost coverage without depreciation caps. One of the most favorable roof coverage provisions in the market.",
+    severity: "info",
+    affectsFields: ["coverages"],
+  },
+  {
+    carrier: "Chubb",
+    formNumber: "CB-MH-210",
+    name: "Extended Replacement Cost",
+    effect:
+      "Extends replacement cost coverage beyond dwelling limit. Typically 120-150% of Coverage A.",
+    severity: "info",
+    affectsFields: ["coverages"],
+  },
+  {
+    carrier: "Chubb",
+    formNumber: "CB-MH-205",
+    name: "Ordinance or Law — Enhanced",
+    effect:
+      "Enhanced code upgrade coverage. Covers full cost of code-required upgrades without sublimits typical of other carriers.",
+    severity: "info",
+    affectsFields: ["coverages"],
+  },
+
+  // ── Encompass (Allstate subsidiary) ────────────────────────────
+  {
+    carrier: "Encompass",
+    formNumber: "EN-4201",
+    name: "Cosmetic Damage Exclusion — Roof",
+    effect:
+      "Excludes cosmetic roof damage. Similar structure to parent company Allstate's ACR5 but applied with moderate strictness.",
+    severity: "critical",
+    affectsFields: ["exclusions"],
+  },
+  {
+    carrier: "Encompass",
+    formNumber: "EN-4210",
+    name: "Roof Surface Payment Schedule",
+    effect:
+      "Age-based depreciation for roof surfaces. Similar to Allstate ARS1 but with slightly higher thresholds.",
+    severity: "critical",
+    affectsFields: ["depreciation"],
+  },
+  {
+    carrier: "Encompass",
+    formNumber: "EN-4205",
+    name: "Wind/Hail Deductible",
+    effect:
+      "Separate wind/hail deductible. May be percentage or flat dollar amount.",
+    severity: "warning",
+    affectsFields: ["deductibles"],
+  },
+  {
+    carrier: "Encompass",
+    formNumber: "EN-4215",
+    name: "Limited Matching Endorsement",
+    effect:
+      "Limits carrier obligation to match undamaged areas. Less restrictive than Allstate's AMA1 anti-matching endorsement.",
+    severity: "warning",
+    affectsFields: ["exclusions"],
+  },
 ];
