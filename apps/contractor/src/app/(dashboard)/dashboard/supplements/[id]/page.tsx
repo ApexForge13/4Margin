@@ -27,6 +27,7 @@ import { GenerationTimeoutCard } from "@/components/supplements/generation-timeo
 import { PipelineProgress } from "@/components/supplements/pipeline-progress";
 import { SupplementChat } from "@/components/supplements/supplement-chat";
 import { RebuttalTools } from "@/components/supplements/rebuttal-tools";
+import { AdvocacyScripts } from "@/components/supplements/advocacy-scripts";
 
 export default async function SupplementDetailPage({
   params,
@@ -259,6 +260,11 @@ export default async function SupplementDetailPage({
         />
       )}
 
+      {/* Advocacy Scripts — Pre-inspection prep */}
+      {status === "complete" && hasPdf && lineItems && lineItems.length > 0 && (
+        <AdvocacyScripts supplementId={id} scenario="pre_inspection" />
+      )}
+
       {/* Rebuttal Tools — shown for denied/partially approved supplements */}
       {(status === "denied" || status === "partially_approved") && lineItems && lineItems.length > 0 && (
         <RebuttalTools
@@ -271,6 +277,11 @@ export default async function SupplementDetailPage({
           }))}
           existingRebuttalUrl={rebuttalPdfUrl}
         />
+      )}
+
+      {/* Advocacy Scripts — Post-denial response */}
+      {(status === "denied" || status === "partially_approved") && lineItems && lineItems.length > 0 && (
+        <AdvocacyScripts supplementId={id} scenario="post_denial" />
       )}
 
       {/* Policy Analysis — from Policy Decoder */}
