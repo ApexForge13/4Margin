@@ -13,8 +13,12 @@ import {
   DEPRECIATION_METHODS,
   getLandminesForClaimType,
   getClaimTypeFocusPrompt,
+  getCarrierProfile,
+  getCarrierCodeObjections,
   type LandmineRule,
   type CarrierEndorsementForm,
+  type CarrierProfile,
+  type CarrierCodeObjection,
 } from "@/data/policy-knowledge";
 import { BUILDING_CODES, type BuildingCode } from "@/data/building-codes";
 import { getRequirementsForXactimateCode } from "@/data/manufacturers";
@@ -77,6 +81,8 @@ export function buildAdvocacyPrompt(ctx: AdvocacyContext): {
     (c) => c.carrierObjectionRate === "high" &&
       c.jurisdictions.some((j) => j.state === ctx.propertyState.toUpperCase())
   );
+  const carrierProfile = getCarrierProfile(ctx.carrierName);
+  const carrierObjections = getCarrierCodeObjections(ctx.carrierName);
 
   // System prompt
   const system = `You are a roofing insurance claim expert generating homeowner advocacy scripts for contractors. You produce structured, actionable content in two formats:
@@ -107,8 +113,8 @@ Return ONLY the JSON object. No markdown, no commentary.`;
 
   // User prompt — scenario-specific
   const user = ctx.scenario === "pre_inspection"
-    ? buildPreInspectionPrompt(ctx, landmines, carrierForms, highObjectionCodes, county, claimFocus)
-    : buildPostDenialPrompt(ctx, landmines, carrierForms, highObjectionCodes, county, claimFocus);
+    ? buildPreInspectionPrompt(ctx, landmines, carrierForms, highObjectionCodes, county, claimFocus, carrierProfile, carrierObjections)
+    : buildPostDenialPrompt(ctx, landmines, carrierForms, highObjectionCodes, county, claimFocus, carrierProfile, carrierObjections);
 
   return { system, user };
 }
@@ -122,6 +128,8 @@ function buildPreInspectionPrompt(
   highObjectionCodes: BuildingCode[],
   county: CountyJurisdiction | undefined,
   claimFocus: string,
+  carrierProfile: CarrierProfile | undefined,
+  carrierObjections: CarrierCodeObjection[],
 ): string {
   const sections: string[] = [];
 
@@ -165,6 +173,39 @@ function buildPreInspectionPrompt(
     sections.push(`## CARRIER-SPECIFIC ENDORSEMENTS (${ctx.carrierName})`);
     for (const form of carrierForms) {
       sections.push(`- Form ${form.formNumber}: ${form.name} — ${form.effect} [${form.severity}]`);
+    }
+  }
+
+  // Carrier behavioral profile
+  if (carrierProfile) {
+    sections.push(``);
+    sections.push(`## CARRIER BEHAVIOR PROFILE (${carrierProfile.name})`);
+    sections.push(`Aggressiveness: ${carrierProfile.aggressiveness.toUpperCase()}`);
+    sections.push(`Depreciation: ${carrierProfile.depreciationApproach}`);
+    sections.push(`Cosmetic Stance: ${carrierProfile.cosmeticDamageStance}`);
+    sections.push(``);
+    sections.push(`Known Tactics:`);
+    for (const tactic of carrierProfile.supplementTactics) {
+      sections.push(`- ${tactic}`);
+    }
+    sections.push(``);
+    sections.push(`Common Denial Language:`);
+    for (const lang of carrierProfile.commonDenialLanguage) {
+      sections.push(`- "${lang}"`);
+    }
+    sections.push(``);
+    sections.push(`Weaknesses (items they consistently underpay):`);
+    for (const w of carrierProfile.weaknesses) {
+      sections.push(`- ${w}`);
+    }
+  }
+
+  // Carrier-specific code objections
+  if (carrierObjections.length > 0) {
+    sections.push(``);
+    sections.push(`## CARRIER CODE OBJECTION PATTERNS`);
+    for (const obj of carrierObjections.slice(0, 6)) {
+      sections.push(`- IRC ${obj.ircSection} [${obj.objectionRate}]: "${obj.typicalObjection}" → ${obj.effectiveRebuttal.slice(0, 150)}`);
     }
   }
 
@@ -220,6 +261,8 @@ function buildPostDenialPrompt(
   highObjectionCodes: BuildingCode[],
   county: CountyJurisdiction | undefined,
   claimFocus: string,
+  carrierProfile: CarrierProfile | undefined,
+  carrierObjections: CarrierCodeObjection[],
 ): string {
   const sections: string[] = [];
 
@@ -270,6 +313,39 @@ function buildPostDenialPrompt(
     sections.push(`## CARRIER ENDORSEMENTS (${ctx.carrierName})`);
     for (const form of carrierForms) {
       sections.push(`- Form ${form.formNumber}: ${form.name} — ${form.effect} [${form.severity}]`);
+    }
+  }
+
+  // Carrier behavioral profile
+  if (carrierProfile) {
+    sections.push(``);
+    sections.push(`## CARRIER BEHAVIOR PROFILE (${carrierProfile.name})`);
+    sections.push(`Aggressiveness: ${carrierProfile.aggressiveness.toUpperCase()}`);
+    sections.push(`Depreciation: ${carrierProfile.depreciationApproach}`);
+    sections.push(`Cosmetic Stance: ${carrierProfile.cosmeticDamageStance}`);
+    sections.push(``);
+    sections.push(`Known Tactics:`);
+    for (const tactic of carrierProfile.supplementTactics) {
+      sections.push(`- ${tactic}`);
+    }
+    sections.push(``);
+    sections.push(`Common Denial Language:`);
+    for (const lang of carrierProfile.commonDenialLanguage) {
+      sections.push(`- "${lang}"`);
+    }
+    sections.push(``);
+    sections.push(`Weaknesses (items they consistently underpay):`);
+    for (const w of carrierProfile.weaknesses) {
+      sections.push(`- ${w}`);
+    }
+  }
+
+  // Carrier-specific code objections
+  if (carrierObjections.length > 0) {
+    sections.push(``);
+    sections.push(`## CARRIER CODE OBJECTION PATTERNS`);
+    for (const obj of carrierObjections.slice(0, 6)) {
+      sections.push(`- IRC ${obj.ircSection} [${obj.objectionRate}]: "${obj.typicalObjection}" → ${obj.effectiveRebuttal.slice(0, 150)}`);
     }
   }
 
