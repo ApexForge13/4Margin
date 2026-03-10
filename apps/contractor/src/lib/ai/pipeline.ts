@@ -184,6 +184,17 @@ export async function runSupplementPipeline(
 
     await updatePipelineStage(supabase, supplementId, "detecting_items");
 
+    // ── 4a. Look up carrier name for carrier-specific intelligence ──
+    let carrierName: string | null = null;
+    if (claim.carrier_id) {
+      const { data: carrier } = await supabase
+        .from("carriers")
+        .select("name")
+        .eq("id", claim.carrier_id)
+        .single();
+      carrierName = carrier?.name || null;
+    }
+
     const analysisInput: AnalysisInput = {
       supplementId,
       estimatePdfBase64: estimatePdfBase64,
@@ -194,6 +205,7 @@ export async function runSupplementPipeline(
       policyContext,
       propertyState: claim.property_state || null,
       propertyZip: claim.property_zip || null,
+      carrierName,
       measurements: {
         measuredSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
         wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,

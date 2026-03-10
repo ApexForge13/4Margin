@@ -13,6 +13,7 @@ import {
   enrichIrcReference,
 } from "@/data/building-codes";
 import { buildManufacturerContextForPrompt } from "@/data/manufacturers";
+import { buildCarrierContextForPrompt } from "@/data/policy-knowledge";
 import { withRetry } from "./retry";
 
 const getClient = () => {
@@ -42,6 +43,7 @@ export interface AnalysisInput {
   propertyState?: string | null; // For jurisdiction-specific building codes (e.g., "MD", "PA")
   propertyZip?: string | null;   // For county-level code lookups
   manufacturerName?: string | null; // Shingle manufacturer (if known) — narrows manufacturer context
+  carrierName?: string | null; // Insurance carrier name (for carrier-specific intelligence)
   measurements: {
     measuredSquares: number | null;
     wastePercent: number | null;
@@ -159,6 +161,11 @@ export async function detectMissingItems(
     input.manufacturerName || undefined
   );
 
+  // Build carrier-specific intelligence context
+  const carrierContext = input.carrierName
+    ? buildCarrierContextForPrompt(input.carrierName)
+    : "";
+
   const prompt = buildAnalysisPrompt({
     codesContext,
     measurementsContext,
@@ -169,6 +176,7 @@ export async function detectMissingItems(
     policyContext: input.policyContext || null,
     buildingCodeContext,
     manufacturerContext,
+    carrierContext,
   });
 
   const client = getClient();
@@ -428,6 +436,7 @@ function buildAnalysisPrompt(ctx: {
   policyContext: string | null;
   buildingCodeContext: string;
   manufacturerContext: string;
+  carrierContext: string;
 }): string {
   // Build contractor notes section with emphasis if they exist
   const contractorSection = ctx.itemsBelievedMissing
@@ -449,6 +458,7 @@ ${ctx.measurementsContext}
 ${ctx.policyContext ? `\n## POLICY CONTEXT\n${ctx.policyContext}` : ""}
 ${ctx.buildingCodeContext ? `\n${ctx.buildingCodeContext}` : ""}
 ${ctx.manufacturerContext ? `\n${ctx.manufacturerContext}` : ""}
+${ctx.carrierContext ? `\n${ctx.carrierContext}\n` : ""}
 ${buildJustificationStrategy(ctx.policyContext)}
 ## COMMONLY MISSED XACTIMATE CODES
 ${ctx.codesContext}
