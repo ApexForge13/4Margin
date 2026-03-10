@@ -299,7 +299,7 @@ export default async function SupplementDetailPage({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-3">
-              The ZIP includes the supplement report, justifications, weather verification, adjuster estimate, and photos — all as PDFs.
+              The ZIP includes the supplement report, evidence appendix, cover letter, weather verification, adjuster estimate, and photos.
             </p>
           </CardContent>
         </Card>

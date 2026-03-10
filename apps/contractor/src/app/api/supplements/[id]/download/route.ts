@@ -8,9 +8,9 @@ import {
   type SupplementPdfData,
 } from "@/lib/pdf/generate-supplement";
 import {
-  generateJustificationPdf,
-  type JustificationPdfData,
-} from "@/lib/pdf/generate-justification";
+  generateEvidenceAppendix,
+  type EvidenceAppendixData,
+} from "@/lib/pdf/generate-evidence-appendix";
 
 export async function GET(
   _request: NextRequest,
@@ -230,13 +230,16 @@ export async function GET(
     }
   }
 
-  // ── 4. Justification & Support Points PDF ──────────────
+  // ── 4. Evidence Appendix PDF ───────────────────────────────────────────────
   if (items && items.length > 0) {
     try {
-      const justData: JustificationPdfData = {
+      const evidenceData: EvidenceAppendixData = {
         claimNumber: (claim.claim_number as string) || "",
+        policyNumber: (claim.policy_number as string) || "",
         carrierName,
         propertyAddress,
+        propertyState: (claim.property_state as string) || "",
+        propertyZip: (claim.property_zip as string) || "",
         companyName: company?.name || "",
         generatedDate,
         items: items.map((item) => ({
@@ -247,19 +250,15 @@ export async function GET(
           total_price: Number(item.total_price),
           justification: item.justification || "",
           irc_reference: item.irc_reference || "",
-          photo_references: item.photo_references as string[] | undefined,
+          confidence_score: item.confidence_score || undefined,
+          confidence_tier: item.confidence_tier || undefined,
         })),
-        wastePercent: claim.waste_percent ? Number(claim.waste_percent) : null,
-        roofSquares: claim.roof_squares ? Number(claim.roof_squares) : null,
-        suggestedSquares: claim.suggested_squares
-          ? Number(claim.suggested_squares)
-          : null,
       };
 
-      const justPdfBuffer = generateJustificationPdf(justData);
-      zip.file("Justification_Support_Points.pdf", justPdfBuffer);
-    } catch (justErr) {
-      console.error("[download] Failed to generate justification PDF:", justErr);
+      const evidencePdfBuffer = generateEvidenceAppendix(evidenceData);
+      zip.file("Evidence_Appendix.pdf", evidencePdfBuffer);
+    } catch (evidenceErr) {
+      console.error("[download] Failed to generate Evidence Appendix:", evidenceErr);
     }
   }
 
