@@ -559,6 +559,30 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
           "Required for wind warranty upgrade (130/160 mph). Required for all SureStart Plus tiers.",
         sourceRef: "CT-REQ-001",
       },
+      {
+        manufacturer: "Owens Corning",
+        requirement:
+          "Required for TotalProtection Roofing System. WeatherLock Starter Shingles are a qualifying component for all warranty tiers.",
+        sourceRef: "OC-REQ-001",
+      },
+      {
+        manufacturer: "IKO",
+        requirement:
+          "Required for PRO4 Advantage warranty. Leading Edge Plus starter strip provides sealant adhesion for first course.",
+        sourceRef: "IKO-REQ-001",
+      },
+      {
+        manufacturer: "Atlas",
+        requirement:
+          "Required for ProPlus warranty tiers. Starter strip at eaves and rakes for proper adhesion.",
+        sourceRef: "ATLAS-REQ-001",
+      },
+      {
+        manufacturer: "Tamko",
+        requirement:
+          "Required for Pro-Select warranty. Starter strip at eaves and rakes per installation instructions.",
+        sourceRef: "TAMKO-REQ-001",
+      },
     ],
     codeRequirement:
       "Not explicitly code-required but manufacturer-required for warranty compliance",
@@ -580,6 +604,30 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
           "Metal drip edge required per Applicator's Manual with specific overhang dimensions.",
         sourceRef: "CT-REQ-002",
       },
+      {
+        manufacturer: "Owens Corning",
+        requirement:
+          "Non-corroding metal drip edge required at eaves and rakes per OC installation instructions and IRC R905.2.8.5.",
+        sourceRef: "OC-REQ-002",
+      },
+      {
+        manufacturer: "IKO",
+        requirement:
+          "Metal drip edge required at eaves and rakes per IKO installation instructions and IRC R905.2.8.5.",
+        sourceRef: "IKO-REQ-002",
+      },
+      {
+        manufacturer: "Atlas",
+        requirement:
+          "Drip edge required at eaves and rakes per Atlas installation instructions.",
+        sourceRef: "ATLAS-REQ-002",
+      },
+      {
+        manufacturer: "Tamko",
+        requirement:
+          "Metal drip edge required at eaves and rakes per Tamko installation instructions.",
+        sourceRef: "TAMKO-REQ-002",
+      },
     ],
     codeRequirement:
       "IRC R905.2.8.5 — Drip edge required at eaves and gable rake edges of shingle roofs",
@@ -594,6 +642,30 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
         requirement:
           "Required at eaves (24 inches beyond interior wall line), valleys, penetrations, wall intersections. Qualifying accessory for all enhanced warranties.",
         sourceRef: "GAF-REQ-003",
+      },
+      {
+        manufacturer: "Owens Corning",
+        requirement:
+          "WeatherLock Ice & Water Barrier required at eaves, valleys, penetrations. Qualifying component for TotalProtection warranty.",
+        sourceRef: "OC-REQ-003",
+      },
+      {
+        manufacturer: "IKO",
+        requirement:
+          "GoldShield/StormShield ice and water membrane required at eaves, valleys, penetrations. Required for Iron Clad Protection warranty.",
+        sourceRef: "IKO-REQ-003",
+      },
+      {
+        manufacturer: "Atlas",
+        requirement:
+          "Ice and water barrier required at eaves, valleys, and penetrations per Atlas installation instructions.",
+        sourceRef: "ATLAS-REQ-003",
+      },
+      {
+        manufacturer: "Tamko",
+        requirement:
+          "Ice and water membrane required at eaves, valleys, and penetrations per Tamko installation instructions.",
+        sourceRef: "TAMKO-REQ-003",
       },
     ],
     codeRequirement:
@@ -616,6 +688,30 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
           "Required at all roof-to-wall intersections with minimum dimensions specified.",
         sourceRef: "CT-REQ-006",
       },
+      {
+        manufacturer: "Owens Corning",
+        requirement:
+          "New step flashing required at all roof-to-wall intersections. Must integrate with new roofing system.",
+        sourceRef: "OC-REQ-007",
+      },
+      {
+        manufacturer: "IKO",
+        requirement:
+          "New step flashing required at all wall intersections per IKO installation instructions.",
+        sourceRef: "IKO-REQ-007",
+      },
+      {
+        manufacturer: "Atlas",
+        requirement:
+          "Step flashing required at all roof-to-wall intersections per Atlas installation instructions.",
+        sourceRef: "ATLAS-REQ-007",
+      },
+      {
+        manufacturer: "Tamko",
+        requirement:
+          "New step flashing required at all wall intersections per Tamko installation instructions.",
+        sourceRef: "TAMKO-REQ-007",
+      },
     ],
     codeRequirement:
       "IRC R905.2.8.3 — Base flashing and counter-flashing required at wall intersections",
@@ -637,6 +733,30 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
           "If roof has ridge vent, CertainTeed branded ridge vent must be installed for enhanced warranty.",
         sourceRef: "CT-REQ-005",
       },
+      {
+        manufacturer: "Owens Corning",
+        requirement:
+          "VentSure ridge vent is a qualifying component for TotalProtection warranty. Adequate ventilation required per IRC R806.1.",
+        sourceRef: "OC-REQ-006",
+      },
+      {
+        manufacturer: "IKO",
+        requirement:
+          "Adequate ventilation required per IKO installation instructions and IRC R806.1. Ridge vent replaced during tear-off.",
+        sourceRef: "IKO-REQ-006",
+      },
+      {
+        manufacturer: "Atlas",
+        requirement:
+          "Adequate ventilation required per Atlas installation instructions and IRC R806.1.",
+        sourceRef: "ATLAS-REQ-006",
+      },
+      {
+        manufacturer: "Tamko",
+        requirement:
+          "Ridge vent required for proper ventilation per Tamko installation instructions and IRC R806.1.",
+        sourceRef: "TAMKO-REQ-006",
+      },
     ],
     codeRequirement:
       "IRC R806.1 — Minimum 1 sq ft NFA per 150 sq ft attic floor (or 1:300 with balanced intake/exhaust)",
@@ -651,6 +771,12 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
         requirement:
           "Required for chimneys wider than 30 inches. Must extend 6 inches up chimney, 12 inches up roof deck.",
         sourceRef: "GAF-REQ-008",
+      },
+      {
+        manufacturer: "Owens Corning",
+        requirement:
+          "Cricket required on ridge side of chimneys wider than 30 inches per OC installation instructions and IRC R903.2.2.",
+        sourceRef: "OC-REQ-009",
       },
     ],
     codeRequirement:
