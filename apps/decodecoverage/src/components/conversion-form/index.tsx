@@ -44,6 +44,7 @@ export function ConversionForm({ leadId, score }: ConversionFormProps) {
           phone: phone.trim() || undefined,
           preferredContactMethod: contactMethod,
           bestTime,
+          connectWithAdvisor: true,
         }),
       });
 

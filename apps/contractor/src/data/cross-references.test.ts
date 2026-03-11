@@ -33,18 +33,9 @@ import {
 // =============================================================================
 
 describe("Carrier -> Code cross-reference", () => {
-  // Known gap: R905.1.2 (ice barrier / ice dam protection) is referenced in
-  // 5 carrier code objections but is not yet in BUILDING_CODES. The building
-  // codes data has R905.2.7.1 for ice barrier content, but the actual IRC
-  // section R905.1.2 has not been added. This should be resolved by adding
-  // R905.1.2 to BUILDING_CODES.
-  const KNOWN_MISSING_SECTIONS = ["R905.1.2"];
-
-  it("every CarrierCodeObjection.ircSection matches a BUILDING_CODES section (exact or parent), excluding known gaps", () => {
+  it("every CarrierCodeObjection.ircSection matches a BUILDING_CODES section (exact or parent)", () => {
     const nonGeneralObjections = CARRIER_CODE_OBJECTIONS.filter(
-      (obj) =>
-        obj.ircSection !== "general" &&
-        !KNOWN_MISSING_SECTIONS.includes(obj.ircSection)
+      (obj) => obj.ircSection !== "general"
     );
 
     const mismatches: string[] = [];
@@ -69,17 +60,17 @@ describe("Carrier -> Code cross-reference", () => {
     ).toHaveLength(0);
   });
 
-  it("documents known missing sections: R905.1.2 (ice barrier) referenced by 5 carriers", () => {
+  it("R905.1.2 (ice barrier) is now in BUILDING_CODES and referenced by 5 carriers", () => {
     const r90512Objections = CARRIER_CODE_OBJECTIONS.filter(
       (obj) => obj.ircSection === "R905.1.2"
     );
     // 5 carriers reference R905.1.2: State Farm, Nationwide, Allstate, Erie, Farmers
     expect(r90512Objections).toHaveLength(5);
 
-    // Confirm it is NOT in BUILDING_CODES (this test will fail when the gap is fixed,
-    // at which point KNOWN_MISSING_SECTIONS should be updated)
-    const matchAny = validateIrcReference("R905.1.2", "MD");
-    expect(matchAny).toBeNull();
+    // Confirm it IS in BUILDING_CODES (gap resolved)
+    const match = validateIrcReference("R905.1.2", "MD");
+    expect(match).not.toBeNull();
+    expect(match!.section).toBe("R905.1.2");
   });
 
   it('"general" ircSection entries exist and are valid catch-all entries', () => {

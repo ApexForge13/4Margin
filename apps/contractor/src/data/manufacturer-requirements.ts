@@ -787,6 +787,11 @@ export const JUSTIFICATION_MATRIX: Record<string, JustificationEntry> = {
 
 // ── Helper: get all requirements for a given Xactimate code ──────────────────
 
+/**
+ * @deprecated Use getRequirementsForXactimateCode() from '@/data/manufacturers/index' instead.
+ * This function only queries 2 manufacturers (GAF, CertainTeed).
+ * The modern function queries all 6 manufacturers.
+ */
 export function getRequirementsForCode(xactimateCode: string): ManufacturerRequirement[] {
   const results: ManufacturerRequirement[] = [];
   for (const manufacturer of Object.values(MANUFACTURERS)) {

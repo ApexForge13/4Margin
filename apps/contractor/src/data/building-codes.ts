@@ -1095,6 +1095,50 @@ export const BUILDING_CODES: BuildingCode[] = [
     rebuttal:
       "While most modern asphalt shingles are UL Class A rated, the complete roofing assembly (including underlayment and deck) must maintain the fire classification per IRC R905.1.1. This requires proper underlayment (contributing to the fire-rated assembly) and may require specific product combinations to maintain the UL listing.",
   },
+
+  // ─── ICE BARRIER / ICE DAM PROTECTION ───────────────────────────────
+
+  {
+    id: "IRC-R905.1.2",
+    section: "R905.1.2",
+    title: "Ice Barrier (Ice Dam Protection)",
+    requirement:
+      "In areas where there has been a history of ice forming along the eaves causing a backup of water, an ice barrier that consists of at least two layers of underlayment cemented together or of a self-adhering polymer modified bitumen sheet shall be used in lieu of normal underlayment and shall extend from the lowest edges of all roof surfaces to a point at least 24 inches inside the exterior wall line of the building.",
+    justificationText:
+      "IRC R905.1.2 requires ice and water shield at eaves in Climate Zones 5, 6, 7, and 8, and in areas with history of ice damming. All of PA and western MD fall within these zones. The ice barrier must extend at least 24 inches past the interior wall line. This is a code-required component — not an optional upgrade. Self-adhering membrane (ice & water shield) is the standard method of compliance.",
+    category: "roofing",
+    xactimateCodes: ["RFG IWS"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "Required in western MD counties (Allegany, Garrett, Washington) and recommended statewide. Coastal areas may have additional requirements.",
+        sourceRef: "COMAR 09.12.01; 2018 IRC R905.1.2",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: true,
+        amendmentNote:
+          "Required statewide — entire state is in Climate Zones 4A-6A with documented ice dam history.",
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R905.1.2",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.1.2",
+      },
+    ],
+    carrierObjectionRate: "high",
+    typicalObjection:
+      "Ice barrier is not required in this area / ice barrier is included in standard underlayment pricing.",
+    rebuttal:
+      "IRC R905.1.2 explicitly requires ice and water shield (self-adhering membrane) at eaves in areas with ice dam history. This jurisdiction falls within the applicable climate zone. Ice barrier is a distinct product from synthetic underlayment — it is self-adhering, creates a waterproof seal around fasteners, and costs significantly more per square. Standard underlayment pricing does not include ice barrier material or the additional labor for proper installation.",
+  },
 ];
 
 // ── Lookup Helpers ────────────────────────────────────────────────────────

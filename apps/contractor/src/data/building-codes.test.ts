@@ -13,8 +13,8 @@ import {
 // ── Data Integrity ────────────────────────────────────────────────────────
 
 describe("BUILDING_CODES data integrity", () => {
-  it("has exactly 24 entries", () => {
-    expect(BUILDING_CODES).toHaveLength(24);
+  it("has exactly 25 entries", () => {
+    expect(BUILDING_CODES).toHaveLength(25);
   });
 
   it("every code has non-empty id, section, title, requirement, justificationText", () => {
@@ -76,7 +76,7 @@ describe("BUILDING_CODES data integrity", () => {
     const codesWithXactimate = BUILDING_CODES.filter(
       (c) => c.xactimateCodes.length > 0
     );
-    expect(codesWithXactimate).toHaveLength(21);
+    expect(codesWithXactimate).toHaveLength(22);
     for (const code of codesWithXactimate) {
       expect(
         code.xactimateCodes.length,

@@ -64,6 +64,13 @@ export async function GET(
 
   const buffer = generateDecoderPdf(pdfData);
 
+  // Fire-and-forget: mark report as downloaded
+  supabase
+    .from("consumer_leads")
+    .update({ report_downloaded: true })
+    .eq("id", id)
+    .then(() => {});
+
   // CAPI: track download (fire-and-forget)
   sendReportEvent("PolicyDownloaded", {
     leadId: id,

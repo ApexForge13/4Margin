@@ -326,7 +326,7 @@ describe("fetchWeatherData", () => {
 
     const result = await fetchWeatherData("addr", "2024-01-15");
     expect(result.verdict).toBe("moderate_weather");
-    expect(result.verdictText).toContain("MODERATE WEATHER DETECTED");
+    expect(result.verdictText).toContain("WEATHER EVENT CONFIRMED");
   });
 
   it("returns no_significant_weather for calm conditions", async () => {
