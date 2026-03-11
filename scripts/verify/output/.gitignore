@@ -1,0 +1,6 @@
+# Generated CSV outputs — regenerate with:
+#   npx tsx scripts/verify/populate-sheet.ts
+#   npx tsx scripts/verify/verify-urls.ts
+#   npx tsx scripts/verify/verify-fips.ts
+#   npx tsx scripts/verify/verify-zips.ts
+*.csv
