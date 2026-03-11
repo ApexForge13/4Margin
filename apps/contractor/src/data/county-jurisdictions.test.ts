@@ -136,15 +136,14 @@ describe("Wind speed validation", () => {
 // ── Ice Barrier Requirement Validation ───────────────────────────────────
 
 describe("Ice barrier requirement validation", () => {
-  // SPEC DISCREPANCY: The spec listed enum values "required-full" | "required-eaves" | "recommended"
-  // but the actual enum values are "eaves_only" | "eaves_valleys_penetrations" | "eaves_valleys_penetrations_extended".
   const validIceBarrier = [
     "eaves_only",
+    "eaves_valleys",
     "eaves_valleys_penetrations",
     "eaves_valleys_penetrations_extended",
   ];
 
-  it("every iceBarrierRequirement is one of the 3 valid enum values", () => {
+  it("every iceBarrierRequirement is one of the 4 valid enum values", () => {
     for (const c of ALL_COUNTIES) {
       expect(
         validIceBarrier,
@@ -539,6 +538,12 @@ describe("iceBarrierScopeLabel", () => {
   it('returns correct label for "eaves_only"', () => {
     const label = iceBarrierScopeLabel("eaves_only");
     expect(label).toContain("eaves only");
+  });
+
+  it('returns correct label for "eaves_valleys"', () => {
+    const label = iceBarrierScopeLabel("eaves_valleys");
+    expect(label).toContain("eaves");
+    expect(label).toContain("valleys");
   });
 
   it('returns correct label for "eaves_valleys_penetrations"', () => {

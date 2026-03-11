@@ -11,6 +11,7 @@ import {
   checkPaymentStatus,
 } from "@/app/(dashboard)/dashboard/policy-decoder/actions";
 import { PolicyDecoderResults } from "./decoder-results";
+import { PreInspectionPrep } from "./pre-inspection-prep";
 
 /* ─── Types ─── */
 
@@ -1011,6 +1012,9 @@ export function DecoderFlow({
           analysis={analysis}
           documentMeta={documentMeta}
         />
+
+        {/* Pre-Inspection Prep — generate talking points from decoded policy */}
+        <PreInspectionPrep decodingId={decodingId} />
       </div>
     );
   }

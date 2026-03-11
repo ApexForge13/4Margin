@@ -28,6 +28,9 @@ const emptyClaimDetails: ClaimDetails = {
   adjusterScopeNotes: "",
   itemsBelievedMissing: "",
   priorSupplementHistory: "",
+  guttersNailedThroughDripEdge: "",
+  roofUnderWarranty: "",
+  preExistingConditions: "",
 };
 
 const emptyMeasurementData: MeasurementData = {

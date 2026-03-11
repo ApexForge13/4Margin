@@ -13,8 +13,8 @@ import {
 // ── Data Integrity ────────────────────────────────────────────────────────
 
 describe("BUILDING_CODES data integrity", () => {
-  it("has exactly 25 entries", () => {
-    expect(BUILDING_CODES).toHaveLength(24);
+  it("has exactly 29 entries", () => {
+    expect(BUILDING_CODES).toHaveLength(29);
   });
 
   it("every code has non-empty id, section, title, requirement, justificationText", () => {
@@ -48,6 +48,7 @@ describe("BUILDING_CODES data integrity", () => {
       "flashing",
       "ventilation",
       "gutters",
+      "siding",
       "insulation",
       "general",
     ];
@@ -76,7 +77,7 @@ describe("BUILDING_CODES data integrity", () => {
     const codesWithXactimate = BUILDING_CODES.filter(
       (c) => c.xactimateCodes.length > 0
     );
-    expect(codesWithXactimate).toHaveLength(22); // 24 total - 2 without xactimate codes
+    expect(codesWithXactimate).toHaveLength(27); // 29 total - 2 without xactimate codes
     for (const code of codesWithXactimate) {
       expect(
         code.xactimateCodes.length,

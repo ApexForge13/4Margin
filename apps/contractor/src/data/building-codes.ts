@@ -22,7 +22,7 @@ export interface BuildingCode {
   /** Pre-written justification text for supplements */
   justificationText: string;
   /** Category of work */
-  category: "roofing" | "flashing" | "ventilation" | "gutters" | "insulation" | "general";
+  category: "roofing" | "flashing" | "ventilation" | "gutters" | "siding" | "insulation" | "general";
   /** Xactimate codes this code supports */
   xactimateCodes: string[];
   /** Jurisdictions where this code applies */
@@ -1097,6 +1097,210 @@ export const BUILDING_CODES: BuildingCode[] = [
       "Ice barrier is not required in this area / ice barrier is included in standard underlayment pricing.",
     rebuttal:
       "IRC R905.1.2 explicitly requires ice and water shield (self-adhering membrane) at eaves in areas with ice dam history. This jurisdiction falls within the applicable climate zone. Ice barrier is a distinct product from synthetic underlayment — it is self-adhering, creates a waterproof seal around fasteners, and costs significantly more per square. Standard underlayment pricing does not include ice barrier material or the additional labor for proper installation.",
+  },
+
+  // ─── GUTTER DETACH & RESET ────────────────────────────────────────────
+
+  {
+    id: "IRC-R903.4-DR",
+    section: "R903.4",
+    title: "Gutter Detach and Reset for Drip Edge Installation",
+    requirement:
+      "Gutters must be detached and reset when drip edge is installed or replaced during re-roofing. Drip edge extends beneath the gutter apron, requiring temporary gutter removal for proper installation per IRC R905.2.8.5.",
+    justificationText:
+      "IRC R905.2.8.5 requires drip edge at eaves, and IRC R903.4 governs the roof drainage system. When gutters are nailed through the existing drip edge (common installation method), the drip edge cannot be properly replaced without detaching the gutters. Gutter detach and reset is a standard re-roofing line item — not an optional service. Failure to detach gutters results in improper drip edge installation, code noncompliance, and potential water intrusion behind the fascia.",
+    category: "gutters",
+    xactimateCodes: ["GTR DET", "GTR ALM5", "GTR DSAL"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R903.4, R905.2.8.5",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R903.4, R905.2.8.5",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R903.4, R905.2.8.5",
+      },
+    ],
+    carrierObjectionRate: "high",
+    typicalObjection:
+      "Gutter detach/reset is not necessary for re-roofing / gutters can remain in place.",
+    rebuttal:
+      "Drip edge is required at all eaves per IRC R905.2.8.5. When gutters are nailed through the drip edge — the most common installation method — they must be detached to remove the old drip edge and install new drip edge beneath the gutter apron. This is a standard re-roofing procedure documented in manufacturer installation guides. Leaving gutters in place prevents proper drip edge installation and creates a code violation. The gutter must be detached, drip edge installed, and gutter reset — this is labor and material that is part of the roofing scope.",
+  },
+
+  // ─── SIDING / EXTERIOR WALL COVERING ──────────────────────────────────
+
+  {
+    id: "IRC-R703.1",
+    section: "R703.1",
+    title: "Exterior Wall Covering — General",
+    requirement:
+      "Exterior walls shall provide the building with a weather-resistant exterior wall envelope. The exterior wall envelope shall include flashing, and shall be designed and constructed in a manner that prevents the accumulation of water within the wall assembly.",
+    justificationText:
+      "IRC R703.1 requires exterior wall covering to provide a weather-resistant envelope. When siding is damaged by a covered peril, replacement siding must restore the weather-resistant barrier. This includes proper flashing at all penetrations, transitions, and intersections per R703.4, and a water-resistive barrier per R703.2.",
+    category: "siding",
+    xactimateCodes: ["SDG VNYL", "SDG FBCM", "SDG WOOD", "SDG ALUM"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R703.1",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R703.1",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R703.1",
+      },
+    ],
+    carrierObjectionRate: "medium",
+    typicalObjection:
+      "Siding damage is cosmetic only / siding can be patched rather than replaced.",
+    rebuttal:
+      "IRC R703.1 requires the exterior wall envelope to prevent water accumulation within the wall assembly. When siding is cracked, broken, or displaced by a covered peril, the weather-resistant barrier is compromised. Patching damaged siding with mismatched material does not restore the weather barrier to code-compliant condition. Full panel replacement in the affected area ensures proper overlap, water management, and weather resistance as required by code.",
+  },
+
+  {
+    id: "IRC-R703.2",
+    section: "R703.2",
+    title: "Water-Resistive Barrier (House Wrap)",
+    requirement:
+      "A minimum of one layer of No. 15 asphalt felt or other approved water-resistive barrier shall be applied over studs or sheathing of all exterior walls. The water-resistive barrier shall be installed in a manner to prevent moisture from entering the wall cavity.",
+    justificationText:
+      "IRC R703.2 requires a water-resistive barrier (WRB) behind all exterior wall coverings. When siding is removed for replacement, the WRB must be inspected and replaced if damaged. If the existing WRB is torn, deteriorated, or improperly installed, new house wrap or felt paper must be installed before new siding goes on.",
+    category: "siding",
+    xactimateCodes: ["SDG WRAP", "SDG FELT"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R703.2",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R703.2",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R703.2",
+      },
+    ],
+    carrierObjectionRate: "medium",
+    typicalObjection:
+      "House wrap is not storm-related / house wrap is included in siding replacement.",
+    rebuttal:
+      "IRC R703.2 mandates a water-resistive barrier behind all exterior wall coverings. When siding is removed, the existing WRB is typically disturbed, torn, or found to be deteriorated. New WRB installation is a code requirement and a separate line item from siding installation. Siding pricing covers the siding material and labor — not the WRB beneath it. Proper WRB installation requires separate material (Tyvek, felt paper) and labor to wrap, tape seams, and integrate with window/door flashing.",
+  },
+
+  {
+    id: "IRC-R703.4",
+    section: "R703.4",
+    title: "Flashing — Exterior Wall Openings",
+    requirement:
+      "Approved corrosion-resistant flashing shall be applied shingle-fashion in a manner to prevent entry of water into the wall cavity or penetration of water to the building structural framing components at all of the following locations: exterior window and door openings, intersections of chimneys or other masonry with frame or stucco walls, under and at the ends of masonry and wood copings and sills, continuously above projecting wood trim, where exterior porches or decks attach to a wall, at wall and roof intersections, and at built-in gutters.",
+    justificationText:
+      "IRC R703.4 requires flashing at all exterior wall openings, intersections, and transitions. When siding is replaced, window and door flashing must be inspected and replaced where damaged. J-channel, drip cap, and kick-out flashing are code-required components of a properly flashed exterior wall system.",
+    category: "siding",
+    xactimateCodes: ["SDG JCHN", "SDG TRIM", "SDG FLSH"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R703.4",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R703.4",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R703.4",
+      },
+    ],
+    carrierObjectionRate: "high",
+    typicalObjection:
+      "Flashing is existing and not damaged / J-channel is included in siding installation.",
+    rebuttal:
+      "IRC R703.4 requires proper flashing at all exterior wall openings and transitions. When siding is removed and replaced, existing J-channel, drip cap, and trim must be replaced to integrate with the new siding system. Old J-channel cannot be reused with new siding — it is cut, deformed, and does not match the new profile. These are separate line items from siding installation, requiring distinct material and labor. Proper flashing at window and door openings is a code requirement that prevents water intrusion into the wall cavity.",
+  },
+
+  {
+    id: "IRC-R703.11",
+    section: "R703.11",
+    title: "Fiber Cement Siding Installation",
+    requirement:
+      "Fiber cement siding shall be installed in accordance with the manufacturer's installation instructions and shall comply with the requirements of R703.1 through R703.4. Fiber cement panels shall be a minimum 5/16 inch thick and fastened per manufacturer specifications.",
+    justificationText:
+      "IRC R703.11 governs fiber cement siding installation. When fiber cement siding (HardiePlank, etc.) is damaged and must be replaced, the replacement must comply with manufacturer installation requirements including proper gapping, fastening, and flashing. Fiber cement siding requires specific tools, skills, and fastener patterns — it cannot be installed the same way as vinyl siding.",
+    category: "siding",
+    xactimateCodes: ["SDG FBCM", "SDG HRDP"],
+    jurisdictions: [
+      {
+        state: "MD",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "COMAR 09.12.01; 2018 IRC R703.11",
+      },
+      {
+        state: "PA",
+        ircEdition: "2018 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "34 Pa. Code Ch. 403; 2018 IRC R703.11",
+      },
+      {
+        state: "DE",
+        ircEdition: "2021 IRC",
+        hasAmendment: false,
+        amendmentNote: null,
+        sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R703.11",
+      },
+    ],
+    carrierObjectionRate: "medium",
+    typicalObjection:
+      "Fiber cement can be repaired / replacement with vinyl is an acceptable alternative.",
+    rebuttal:
+      "IRC R703.11 requires fiber cement siding to be installed per manufacturer specifications. Replacing fiber cement with vinyl changes the building's exterior wall assembly and may not meet the original fire rating, wind resistance, or structural requirements of the installed system. Like-kind replacement with fiber cement is required to maintain code compliance. Fiber cement installation requires blind nailing, proper gapping for expansion, and priming of cut edges — these are separate labor considerations from standard siding installation.",
   },
 ];
 

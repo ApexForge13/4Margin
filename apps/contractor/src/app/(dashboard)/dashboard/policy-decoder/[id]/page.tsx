@@ -74,56 +74,71 @@ export default async function PolicyDecodingDetailPage({
     }
   }
 
-  // ── Determine isFirstDecode ─────────────────────────────────
-  const admin = createAdminClient();
-  const { data: userProfile } = await admin
-    .from("users")
-    .select("company_id")
-    .eq("id", user.id)
-    .single();
-
+  // ── Determine isFirstDecode + enterprise status ─────────────
+  // Wrapped in try/catch — enterprise/billing features should not
+  // crash the page if migrations are pending or columns are missing.
   let isFirstDecode = true;
-  if (userProfile?.company_id) {
-    const { count: priorPaidCount } = await admin
-      .from("policy_decodings")
-      .select("id", { count: "exact", head: true })
-      .eq("company_id", userProfile.company_id)
-      .not("paid_at", "is", null);
-    isFirstDecode = (priorPaidCount ?? 0) === 0;
-  }
+  let isEnterprise = false;
 
-  // ── Detect enterprise account ──────────────────────────────
-  const isEnterprise = userProfile?.company_id
-    ? await shouldBypassPayment(userProfile.company_id)
-    : false;
-
-  // Enterprise auto-pay: if enterprise + has file + not yet paid, mark paid and record usage
-  if (isEnterprise && !decoding.paid_at && decoding.policy_pdf_url) {
-    await admin
-      .from("policy_decodings")
-      .update({ paid_at: new Date().toISOString() })
-      .eq("id", decoding.id);
-
-    // Record usage for billing
-    const { data: userWithOffice } = await admin
+  try {
+    const admin = createAdminClient();
+    const { data: userProfile } = await admin
       .from("users")
-      .select("office_id")
+      .select("company_id")
       .eq("id", user.id)
       .single();
 
-    await recordUsage(
-      userProfile!.company_id,
-      user.id,
-      userWithOffice?.office_id || null,
-      "decode",
-      decoding.id
-    );
+    if (userProfile?.company_id) {
+      const { count: priorPaidCount } = await admin
+        .from("policy_decodings")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", userProfile.company_id)
+        .not("paid_at", "is", null);
+      isFirstDecode = (priorPaidCount ?? 0) === 0;
 
-    // Re-fetch to reflect paid status
-    const refreshed = await getPolicyDecoding(id);
-    if (refreshed.decoding) {
-      decoding = refreshed.decoding;
+      // Detect enterprise account
+      try {
+        isEnterprise = await shouldBypassPayment(userProfile.company_id);
+      } catch {
+        // Enterprise billing not yet configured — default to non-enterprise
+      }
+
+      // Enterprise auto-pay: if enterprise + has file + not yet paid
+      if (isEnterprise && !decoding.paid_at && decoding.policy_pdf_url) {
+        await admin
+          .from("policy_decodings")
+          .update({ paid_at: new Date().toISOString() })
+          .eq("id", decoding.id);
+
+        // Record usage for billing
+        try {
+          const { data: userWithOffice } = await admin
+            .from("users")
+            .select("office_id")
+            .eq("id", user.id)
+            .single();
+
+          await recordUsage(
+            userProfile.company_id,
+            user.id,
+            userWithOffice?.office_id || null,
+            "decode",
+            decoding.id
+          );
+        } catch {
+          console.error("[policy-decoder] Failed to record enterprise usage");
+        }
+
+        // Re-fetch to reflect paid status
+        const refreshed = await getPolicyDecoding(id);
+        if (refreshed.decoding) {
+          decoding = refreshed.decoding;
+        }
+      }
     }
+  } catch (err) {
+    console.error("[policy-decoder] Error in enterprise/billing check:", err);
+    // Continue with defaults: isFirstDecode=true, isEnterprise=false
   }
 
   // ── Compute state for DecoderFlow ──────────────────────────

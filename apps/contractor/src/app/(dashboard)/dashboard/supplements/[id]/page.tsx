@@ -260,10 +260,9 @@ export default async function SupplementDetailPage({
         />
       )}
 
-      {/* Advocacy Scripts — Pre-inspection prep */}
-      {status === "complete" && hasPdf && lineItems && lineItems.length > 0 && (
-        <AdvocacyScripts supplementId={id} scenario="pre_inspection" />
-      )}
+      {/* TODO: Approval Talking Points — helps get supplement approved by carrier.
+          Pre-inspection prep moved to Policy Decoder tab (chronologically correct).
+          This section will be built when supplement engine is revamped with Xactimate data. */}
 
       {/* Rebuttal Tools — shown for denied/partially approved supplements */}
       {(status === "denied" || status === "partially_approved") && lineItems && lineItems.length > 0 && (

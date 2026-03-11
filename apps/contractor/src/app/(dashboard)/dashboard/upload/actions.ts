@@ -167,6 +167,9 @@ export async function createClaimAndSupplement(
       adjuster_scope_notes: input.claimDetails.adjusterScopeNotes || null,
       items_believed_missing: input.claimDetails.itemsBelievedMissing || null,
       prior_supplement_history: input.claimDetails.priorSupplementHistory || null,
+      gutters_nailed_through_drip_edge: input.claimDetails.guttersNailedThroughDripEdge || null,
+      roof_under_warranty: input.claimDetails.roofUnderWarranty || null,
+      pre_existing_conditions: input.claimDetails.preExistingConditions || null,
       notes: input.claimName,
       created_by: user.id,
     })

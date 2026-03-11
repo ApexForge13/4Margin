@@ -28,6 +28,7 @@ export interface CountyJurisdiction {
   /** Ice barrier installation scope per climate zone + local practice */
   iceBarrierRequirement:
     | "eaves_only"
+    | "eaves_valleys"
     | "eaves_valleys_penetrations"
     | "eaves_valleys_penetrations_extended";
   /** Permit information */
@@ -75,7 +76,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -93,7 +94,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -111,7 +112,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$150–$350",
@@ -131,7 +132,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -149,7 +150,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -167,7 +168,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -185,7 +186,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -203,7 +204,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -221,7 +222,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 120,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -241,7 +242,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -280,7 +281,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -298,7 +299,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -316,7 +317,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -334,7 +335,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$150–$350",
@@ -354,7 +355,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -372,7 +373,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -390,7 +391,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 125,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$50–$125",
@@ -410,7 +411,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -428,7 +429,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$75–$175",
@@ -446,7 +447,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -464,7 +465,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 120,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$75–$175",
@@ -484,7 +485,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 130,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_valleys_penetrations",
+    iceBarrierRequirement: "eaves_valleys",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -2012,6 +2013,8 @@ export function iceBarrierScopeLabel(
   switch (requirement) {
     case "eaves_only":
       return "eaves only (24\" past interior wall line)";
+    case "eaves_valleys":
+      return "eaves and valleys";
     case "eaves_valleys_penetrations":
       return "eaves, valleys, and around all penetrations";
     case "eaves_valleys_penetrations_extended":

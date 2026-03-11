@@ -360,6 +360,83 @@ export function StepEstimate() {
 
         <Separator />
 
+        {/* Property Condition — intake questions */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-base font-semibold">Property Condition</h3>
+            <p className="text-sm text-muted-foreground">
+              These details help generate stronger supplement justifications.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="guttersNailedThroughDripEdge">
+                Are gutters nailed through drip edge?
+              </Label>
+              <select
+                id="guttersNailedThroughDripEdge"
+                value={claimDetails.guttersNailedThroughDripEdge}
+                onChange={(e) =>
+                  updateField("guttersNailedThroughDripEdge", e.target.value)
+                }
+                disabled={isParsing}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Not sure</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                If yes, drip edge removal/replacement may require gutter re-hang.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="roofUnderWarranty">
+                Is current roof under manufacturer warranty?
+              </Label>
+              <select
+                id="roofUnderWarranty"
+                value={claimDetails.roofUnderWarranty}
+                onChange={(e) =>
+                  updateField("roofUnderWarranty", e.target.value)
+                }
+                disabled={isParsing}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Warranty status affects whether manufacturer installation requirements can be used in rebuttals.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="preExistingConditions">
+              Pre-existing conditions
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                Optional
+              </span>
+            </Label>
+            <Textarea
+              id="preExistingConditions"
+              placeholder='e.g. "Previous patch repairs on the north slope. Sagging gutters on east side. One layer of existing shingles — no prior tear-off."'
+              rows={2}
+              value={claimDetails.preExistingConditions}
+              onChange={(e) =>
+                updateField("preExistingConditions", e.target.value)
+              }
+              disabled={isParsing}
+              className="resize-y"
+            />
+          </div>
+        </div>
+
+        <Separator />
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="carrierName">Insurance carrier *</Label>

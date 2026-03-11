@@ -28,6 +28,10 @@ export interface ClaimDetails {
   adjusterScopeNotes: string;
   itemsBelievedMissing: string;
   priorSupplementHistory: string;
+  // Property condition — intake questions
+  guttersNailedThroughDripEdge: string; // "yes" | "no" | "unknown" | ""
+  roofUnderWarranty: string;            // "yes" | "no" | "unknown" | ""
+  preExistingConditions: string;        // free text
 }
 
 // --- Pitch breakdown from EagleView "Areas per Pitch" table ---

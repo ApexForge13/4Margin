@@ -158,6 +158,10 @@ export const claimDetailsSchema = z.object({
   adjusterScopeNotes: optionalString,
   itemsBelievedMissing: optionalString,
   priorSupplementHistory: optionalString,
+  // Property condition — intake questions
+  guttersNailedThroughDripEdge: optionalString,
+  roofUnderWarranty: optionalString,
+  preExistingConditions: optionalString,
 });
 
 // ── Wizard — Measurements (Step 3) ──────────────────────────
@@ -252,6 +256,10 @@ export const updateClaimSchema = z.object({
   adjusterScopeNotes: optionalString,
   itemsBelievedMissing: optionalString,
   priorSupplementHistory: optionalString,
+  // Property condition
+  guttersNailedThroughDripEdge: optionalString,
+  roofUnderWarranty: optionalString,
+  preExistingConditions: optionalString,
 });
 
 // ── Dashboard — Supplement result ────────────────────────────
@@ -312,6 +320,9 @@ export const adminUpdateClaimSchema = z.object({
   adjusterScopeNotes: optionalString,
   itemsBelievedMissing: optionalString,
   priorSupplementHistory: optionalString,
+  guttersNailedThroughDripEdge: optionalString,
+  roofUnderWarranty: optionalString,
+  preExistingConditions: optionalString,
 });
 
 // ── API — Finalize supplement (generate PDF from selected items) ──
