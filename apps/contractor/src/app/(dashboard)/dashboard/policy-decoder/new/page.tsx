@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { createDraftDecoding } from "../actions";
 
 /**
@@ -7,12 +8,21 @@ import { createDraftDecoding } from "../actions";
  * Used by the sidebar "New Decoder" nav item.
  */
 export default async function NewDecoderPage() {
-  const { decodingId, error } = await createDraftDecoding();
+  try {
+    const { decodingId, error } = await createDraftDecoding();
 
-  if (error || !decodingId) {
-    // Fallback: send to the list page if draft creation fails
-    redirect("/dashboard/policy-decoder");
+    if (!error && decodingId) {
+      redirect(`/dashboard/policy-decoder/${decodingId}`);
+    }
+
+    // Draft creation failed — fall through to list page redirect below
+    console.error("[new-decoder] Draft creation failed:", error);
+  } catch (err) {
+    // redirect() works by throwing — rethrow so Next.js handles the redirect
+    if (isRedirectError(err)) throw err;
+    console.error("[new-decoder] Unexpected error:", err);
   }
 
-  redirect(`/dashboard/policy-decoder/${decodingId}`);
+  // Fallback: send to the list page
+  redirect("/dashboard/policy-decoder");
 }
