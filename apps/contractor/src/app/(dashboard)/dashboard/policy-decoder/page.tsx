@@ -20,24 +20,30 @@ export default async function PolicyDecoderPage() {
 
   const isFirstDecode = paidCount === 0;
 
-  // Check if enterprise account
-  const admin = createAdminClient();
-  const { data: userProfile } = await admin
-    .from("users")
-    .select("company_id")
-    .eq("id", user.id)
-    .single();
-
+  // Check if enterprise account — wrapped in try/catch so missing
+  // enterprise columns (migration 031) don't crash the page.
   let isEnterprise = false;
-  if (userProfile?.company_id) {
-    const { data: company } = await admin
-      .from("companies")
-      .select("account_type, subscription_status")
-      .eq("id", userProfile.company_id)
+  try {
+    const admin = createAdminClient();
+    const { data: userProfile } = await admin
+      .from("users")
+      .select("company_id")
+      .eq("id", user.id)
       .single();
-    isEnterprise =
-      company?.account_type === "enterprise" &&
-      company?.subscription_status === "active";
+
+    if (userProfile?.company_id) {
+      const { data: company } = await admin
+        .from("companies")
+        .select("account_type, subscription_status")
+        .eq("id", userProfile.company_id)
+        .single();
+      isEnterprise =
+        company?.account_type === "enterprise" &&
+        company?.subscription_status === "active";
+    }
+  } catch (err) {
+    console.error("[policy-decoder] Enterprise check failed:", err);
+    // Default: isEnterprise = false
   }
 
   return (
