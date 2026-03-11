@@ -65,7 +65,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
       notes: null,
     },
     localAmendments: [
-      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+      "Climate Zone 5A — extended ice barrier required at eaves and valleys, valleys, and penetrations",
     ],
     fipsCode: "24001",
   },
@@ -75,7 +75,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -93,7 +93,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -111,7 +111,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$150–$350",
@@ -131,7 +131,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -149,7 +149,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -167,7 +167,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -185,7 +185,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -203,7 +203,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -221,7 +221,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 120,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -241,7 +241,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -280,7 +280,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -298,7 +298,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -316,7 +316,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -334,7 +334,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$150–$350",
@@ -354,7 +354,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$150–$300",
@@ -372,7 +372,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$75–$150",
@@ -390,7 +390,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 125,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$50–$125",
@@ -410,7 +410,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -428,7 +428,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$75–$175",
@@ -446,7 +446,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 115,
     highWindZone: false,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$200",
@@ -464,7 +464,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 120,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$75–$175",
@@ -484,7 +484,7 @@ export const MD_COUNTIES: CountyJurisdiction[] = [
     climateZone: "4A",
     designWindSpeed: 130,
     highWindZone: true,
-    iceBarrierRequirement: "eaves_only",
+    iceBarrierRequirement: "eaves_valleys_penetrations",
     permit: {
       required: true,
       typicalFeeRange: "$100–$250",
@@ -701,7 +701,7 @@ export const PA_COUNTIES: CountyJurisdiction[] = [
       notes: "Includes Allentown — Climate Zone 5A, enhanced ice barrier scope",
     },
     localAmendments: [
-      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+      "Climate Zone 5A — extended ice barrier required at eaves and valleys, valleys, and penetrations",
     ],
     fipsCode: "42077",
   },
@@ -739,7 +739,7 @@ export const PA_COUNTIES: CountyJurisdiction[] = [
       notes: "Includes Bethlehem/Easton — Climate Zone 5A, enhanced ice barrier scope",
     },
     localAmendments: [
-      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+      "Climate Zone 5A — extended ice barrier required at eaves and valleys, valleys, and penetrations",
     ],
     fipsCode: "42095",
   },
@@ -777,7 +777,7 @@ export const PA_COUNTIES: CountyJurisdiction[] = [
       notes: "Climate Zone 5A — borders Allegany County MD. UCC enforced at municipal level.",
     },
     localAmendments: [
-      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+      "Climate Zone 5A — extended ice barrier required at eaves and valleys, valleys, and penetrations",
     ],
     fipsCode: "42009",
   },
@@ -797,7 +797,7 @@ export const PA_COUNTIES: CountyJurisdiction[] = [
       notes: "Climate Zone 5A — between Bedford and Franklin counties. Rural area, some townships use third-party inspectors.",
     },
     localAmendments: [
-      "Climate Zone 5A — extended ice barrier coverage required at eaves, valleys, and penetrations",
+      "Climate Zone 5A — extended ice barrier required at eaves and valleys, valleys, and penetrations",
     ],
     fipsCode: "42057",
   },

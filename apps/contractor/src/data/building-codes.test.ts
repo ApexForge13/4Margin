@@ -14,7 +14,7 @@ import {
 
 describe("BUILDING_CODES data integrity", () => {
   it("has exactly 25 entries", () => {
-    expect(BUILDING_CODES).toHaveLength(25);
+    expect(BUILDING_CODES).toHaveLength(24);
   });
 
   it("every code has non-empty id, section, title, requirement, justificationText", () => {
@@ -30,8 +30,8 @@ describe("BUILDING_CODES data integrity", () => {
     }
   });
 
-  it('every id starts with "IRC-" or is a known non-IRC id (WASTE-FACTOR, PERMIT-FEE)', () => {
-    const knownNonIrc = ["WASTE-FACTOR", "PERMIT-FEE"];
+  it('every id starts with "IRC-" or is a known non-IRC id (PERMIT-FEE)', () => {
+    const knownNonIrc = ["PERMIT-FEE"];
     for (const code of BUILDING_CODES) {
       const isIrc = code.id.startsWith("IRC-");
       const isKnown = knownNonIrc.includes(code.id);
@@ -59,24 +59,24 @@ describe("BUILDING_CODES data integrity", () => {
     }
   });
 
-  // NOTE: 3 codes (IRC-R105.1, WASTE-FACTOR, IRC-R301.2.1) have empty
-  // xactimateCodes arrays because they are general/policy codes without
-  // direct Xactimate line items. We verify the exact count here.
-  it("most codes have at least 1 xactimate code (3 exceptions with empty arrays)", () => {
+  // NOTE: 2 codes (IRC-R105.1, IRC-R301.2.1) have empty xactimateCodes
+  // arrays because they are general/policy codes without direct Xactimate
+  // line items. We verify the exact count here.
+  it("most codes have at least 1 xactimate code (2 exceptions with empty arrays)", () => {
     const codesWithEmptyXactimate = BUILDING_CODES.filter(
       (c) => c.xactimateCodes.length === 0
     );
-    expect(codesWithEmptyXactimate).toHaveLength(3);
+    expect(codesWithEmptyXactimate).toHaveLength(2);
 
     const emptyIds = codesWithEmptyXactimate.map((c) => c.id).sort();
     expect(emptyIds).toEqual(
-      ["IRC-R105.1", "IRC-R301.2.1", "WASTE-FACTOR"].sort()
+      ["IRC-R105.1", "IRC-R301.2.1"].sort()
     );
 
     const codesWithXactimate = BUILDING_CODES.filter(
       (c) => c.xactimateCodes.length > 0
     );
-    expect(codesWithXactimate).toHaveLength(22);
+    expect(codesWithXactimate).toHaveLength(22); // 24 total - 2 without xactimate codes
     for (const code of codesWithXactimate) {
       expect(
         code.xactimateCodes.length,

@@ -235,11 +235,11 @@ describe("Building Code -> Xactimate cross-reference", () => {
     ).toHaveLength(0);
   });
 
-  it("3 building codes have empty xactimateCodes arrays (known)", () => {
+  it("2 building codes have empty xactimateCodes arrays (known)", () => {
     const codesWithEmptyXact = BUILDING_CODES.filter(
       (c) => c.xactimateCodes.length === 0
     );
-    expect(codesWithEmptyXact).toHaveLength(3);
+    expect(codesWithEmptyXact).toHaveLength(2);
   });
 });
 

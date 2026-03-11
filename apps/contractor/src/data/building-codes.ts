@@ -131,11 +131,11 @@ export const BUILDING_CODES: BuildingCode[] = [
         sourceRef: "Delaware Code Title 16 Ch. 76; 2021 IRC R905.2.1",
       },
     ],
-    carrierObjectionRate: "medium",
+    carrierObjectionRate: "high",
     typicalObjection:
-      "Sheathing replacement is not warranted unless visible damage is present.",
+      "Sheathing deterioration (rot) is not direct physical loss from a covered peril — it is wear and tear and falls on the homeowner.",
     rebuttal:
-      "IRC R905.2.1 requires a solidly sheathed deck. Sheathing that is soft, spongy, delaminated, or shows moisture damage cannot provide adequate fastener holding power per manufacturer nailing requirements. Failure to replace compromised sheathing voids the manufacturer's warranty and creates a code violation.",
+      "IRC R905.2.1 requires asphalt shingles to be installed on solidly sheathed decks. The insurance carrier is paying for a new roof — that new roof must be installed on a code-compliant deck. Compromised sheathing cannot be left in place and covered with new materials. If the deterioration was caused or worsened by water intrusion from the storm-damaged roof, it is consequential damage from a covered peril. Regardless of cause, the contractor cannot install new roofing over deficient decking — doing so would violate IRC R905.2.1 and render the installation non-code-compliant. Sheathing replacement is a necessary cost of the covered repair, not a separate maintenance item.",
   },
 
   {
@@ -253,7 +253,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     carrierObjectionRate: "low",
     typicalObjection: "4 nails per shingle is standard.",
     rebuttal:
-      "While 4 nails is the base requirement, manufacturer warranty requirements (GAF, CertainTeed, Owens Corning) typically specify 6-nail pattern for enhanced wind warranty coverage. Additionally, high-wind zones per ASCE 7 require 6 nails per IRC R905.2.5.",
+      "While 4 nails is the base IRC requirement, manufacturer installation instructions (GAF, CertainTeed, Owens Corning) specify 6-nail pattern for proper wind resistance per ASTM D7158 testing standards. High-wind zones per ASCE 7 require 6 nails per IRC R905.2.5. The 6-nail pattern is the manufacturer-specified installation method — not an upgrade.",
   },
 
   // ─── ROOFING — Starter Strip ───────────────────────────────────────────
@@ -265,7 +265,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     requirement:
       "A starter strip shall be installed along the eaves and rakes per manufacturer requirements. The starter strip provides the initial seal and wind resistance for the first course of shingles.",
     justificationText:
-      "IRC R905.2.8.2 requires starter strip shingles along eaves and rakes. This is a mandatory component of any code-compliant shingle installation — not an optional upgrade. All major manufacturers (GAF, CertainTeed, Owens Corning) require starter strip for warranty coverage.",
+      "IRC R905.2.8.2 requires starter strip shingles along eaves and rakes. This is a mandatory component of any code-compliant shingle installation — not an optional upgrade. All major manufacturer installation instructions specify starter strip as a required component.",
     category: "roofing",
     xactimateCodes: ["RFG STRP"],
     jurisdictions: [
@@ -295,7 +295,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     typicalObjection:
       "Starter strip is included in the shingle square price / not a separate line item.",
     rebuttal:
-      "Starter strip is a separate material (distinct SKU from field shingles) requiring separate installation along eaves and rakes. IRC R905.2.8.2 mandates its use, and all major manufacturers require it for warranty eligibility. Xactimate correctly prices it as a separate line item because it is a separate material and labor component.",
+      "Starter strip is a separate material (distinct SKU from field shingles) requiring separate installation along eaves and rakes. IRC R905.2.8.2 mandates its use, and all major manufacturer installation instructions list it as a required component. Xactimate correctly prices it as a separate line item because it is a separate material and labor component.",
   },
 
   // ─── ROOFING — Hip & Ridge Cap ─────────────────────────────────────────
@@ -399,7 +399,7 @@ export const BUILDING_CODES: BuildingCode[] = [
         ircEdition: "2018 IRC",
         hasAmendment: true,
         amendmentNote:
-          "Western MD counties (Garrett, Allegany, Washington) are in Climate Zone 5A — ice barrier required at eaves, valleys, and around penetrations. Central and Eastern MD counties are Zone 4A — ice barrier required at eaves.",
+          "Ice barrier (ice & water shield) is required at eaves and valleys statewide per field practice and manufacturer installation requirements. Western MD (Garrett, Allegany — Climate Zone 5A) also requires ice barrier around penetrations.",
         sourceRef: "COMAR 09.12.01; 2018 IRC R905.2.7.1; IECC Figure R301.1",
       },
       {
@@ -464,7 +464,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     carrierObjectionRate: "medium",
     typicalObjection: "Flashing is reusable and does not need replacement.",
     rebuttal:
-      "IRC R903.2.1 requires proper flashing at all wall-roof intersections. When shingles are removed, step flashing is disturbed and the seal is broken. Manufacturer installation instructions (GAF, CertainTeed) require new step flashing with each roof installation to maintain warranty coverage. Reusing old flashing compromises the weather barrier and creates a code violation.",
+      "IRC R903.2.1 requires proper flashing at all wall-roof intersections. When shingles are removed, step flashing is disturbed and the seal is broken. Manufacturer installation instructions (GAF, CertainTeed) require new step flashing with each roof installation. Reusing old flashing compromises the weather barrier and creates a code violation. This is a required component of the roof replacement — not a separate upgrade.",
   },
 
   {
@@ -712,48 +712,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     carrierObjectionRate: "medium",
     typicalObjection: "Valley metal is reusable / ice & water in valleys is an upgrade.",
     rebuttal:
-      "IRC R905.2.8.4 requires proper valley treatment per manufacturer specifications. All major manufacturers (GAF, CertainTeed, Owens Corning) require ice & water shield in valleys for warranty coverage. Valley metal that is disturbed during tear-off should be replaced to ensure a watertight installation. This is a code and manufacturer requirement.",
-  },
-
-  // ─── WASTE FACTOR ──────────────────────────────────────────────────────
-
-  {
-    id: "WASTE-FACTOR",
-    section: "Industry Standard",
-    title: "Material Waste Factor",
-    requirement:
-      "A material waste factor of 10-15% for standard complexity roofs and 15-20% for complex roofs (many hips, valleys, dormers) is industry standard and recognized by Xactimate, HAAG Engineering, and all major manufacturers.",
-    justificationText:
-      "Industry standard waste factors are 10-15% for standard roofs and 15-20% for complex roofs. This accounts for cutting, fitting at hips/valleys/penetrations, starter waste, and manufacturer-specified overlap requirements. Waste percentages below these ranges result in material shortages on the jobsite.",
-    category: "general",
-    xactimateCodes: [],
-    jurisdictions: [
-      {
-        state: "MD",
-        ircEdition: "2018 IRC",
-        hasAmendment: false,
-        amendmentNote: null,
-        sourceRef: "Xactimate Industry Standards; HAAG Engineering Residential Roof Manual",
-      },
-      {
-        state: "PA",
-        ircEdition: "2018 IRC",
-        hasAmendment: false,
-        amendmentNote: null,
-        sourceRef: "Xactimate Industry Standards; HAAG Engineering Residential Roof Manual",
-      },
-      {
-        state: "DE",
-        ircEdition: "2021 IRC",
-        hasAmendment: false,
-        amendmentNote: null,
-        sourceRef: "Xactimate Industry Standards; HAAG Engineering Residential Roof Manual",
-      },
-    ],
-    carrierObjectionRate: "high",
-    typicalObjection: "The waste factor should be 5% or less.",
-    rebuttal:
-      "HAAG Engineering (the industry standard for roof inspections) recommends 10-15% waste for standard roofs and 15-20% for complex roofs. Xactimate's built-in waste calculations follow these same guidelines. A waste factor below 10% does not account for cutting at hips, valleys, penetrations, and manufacturer-specified overlaps. The EagleView/aerial measurement report provides a recommended waste percentage based on actual roof complexity — this measurement-based waste figure should be used.",
+      "IRC R905.2.8.4 requires proper valley treatment per manufacturer specifications. All major manufacturer installation instructions (GAF, CertainTeed, Owens Corning) specify ice & water shield in valleys as a required installation component. Valley metal that is disturbed during tear-off should be replaced to ensure a watertight installation. This is a code and manufacturer installation requirement.",
   },
 
   // ─── PERMIT FEE ────────────────────────────────────────────────────────
@@ -763,9 +722,9 @@ export const BUILDING_CODES: BuildingCode[] = [
     section: "R105.1",
     title: "Building Permit Fee",
     requirement:
-      "Building permits are required for roof replacement in both Maryland and Pennsylvania. The permit fee is a direct cost of the code-compliant replacement.",
+      "IRC R105.1 requires permits for roof replacement, but enforcement varies significantly by jurisdiction. In MD, permits are actively enforced primarily in Baltimore City and some townships — most counties do not require roofing permits in practice. PA and DE enforcement varies by municipality.",
     justificationText:
-      "Building permits are required by IRC R105.1 for roof replacement. Both Maryland (COMAR 09.12.01) and Pennsylvania (34 Pa. Code §403.42) mandate permits for this work. The permit fee is a necessary cost of the insured replacement and should be included in the claim.",
+      "Where a building permit is required by the local AHJ (Authority Having Jurisdiction), the permit fee is a direct project cost — not contractor overhead. Verify permit requirements with the local AHJ before including this line item. In jurisdictions that do not enforce roofing permits, this line item should not be included.",
     category: "general",
     xactimateCodes: ["GEN PRMT"],
     jurisdictions: [
@@ -774,7 +733,7 @@ export const BUILDING_CODES: BuildingCode[] = [
         ircEdition: "2018 IRC",
         hasAmendment: true,
         amendmentNote:
-          "Permit fees vary by county. Typical range: $75-$300 for residential roof replacement.",
+          "Most MD counties do not enforce roofing permits. Baltimore City actively requires them. Confirm with local AHJ before supplementing.",
         sourceRef: "COMAR 09.12.01; Local AHJ fee schedules",
       },
       {
@@ -782,7 +741,7 @@ export const BUILDING_CODES: BuildingCode[] = [
         ircEdition: "2018 IRC",
         hasAmendment: true,
         amendmentNote:
-          "Permit fees vary by municipality. Typical range: $50-$250 for residential roof replacement.",
+          "Permit enforcement varies by municipality. Some townships and boroughs require permits; many rural areas do not enforce. Confirm with local AHJ.",
         sourceRef: "34 Pa. Code §403.42; Local AHJ fee schedules",
       },
       {
@@ -790,14 +749,14 @@ export const BUILDING_CODES: BuildingCode[] = [
         ircEdition: "2021 IRC",
         hasAmendment: true,
         amendmentNote:
-          "Permit fees vary by county. Typical range: $50-$200 for residential roof replacement.",
+          "Permit requirements vary by county. Confirm with local AHJ before supplementing.",
         sourceRef: "Delaware Code Title 16 Ch. 76; Local county fee schedules",
       },
     ],
     carrierObjectionRate: "medium",
     typicalObjection: "Permit fees are the contractor's overhead.",
     rebuttal:
-      "Building permits are a direct cost of the code-compliant roof replacement, required by law (IRC R105.1, MD COMAR 09.12.01, PA UCC 34 Pa. Code §403.42). This is not a general overhead item — it is a job-specific regulatory cost that the contractor pays to the local government on behalf of the project. Xactimate includes permit fees as a separate line item (GEN PRMT) because they are a direct project expense.",
+      "Where required by the local Authority Having Jurisdiction, building permits are a direct job-specific regulatory cost — not general contractor overhead. Xactimate includes permit fees as a separate line item (GEN PRMT) because they are a direct project expense paid to the local government for each specific project.",
   },
 
   // ─── RE-ROOFING / TEAR-OFF ─────────────────────────────────────────────
@@ -837,9 +796,9 @@ export const BUILDING_CODES: BuildingCode[] = [
     ],
     carrierObjectionRate: "medium",
     typicalObjection:
-      "Only one layer exists, full tear-off is not required.",
+      "Only one layer — tear-off is not required; or on multi-layer: only wrote for a repair / will not pay for additional layer tear-off.",
     rebuttal:
-      "IRC R908.3 mandates complete tear-off when existing roofing exceeds one layer or when existing materials are water-soaked or deteriorated. Inspection of the existing roof revealed [condition], requiring full removal to the deck per code. Additionally, all major manufacturers (GAF, CertainTeed, Owens Corning, IKO) recommend or require installation over a single layer only for warranty coverage.",
+      "IRC R908.3 prohibits more than two layers of roofing. On a two-layer roof, the carrier must pay for full tear-off to the deck — repairs are not code-compliant on a two-layer system because the roof is already at maximum layers per code. If the carrier scoped only a repair on a two-layer roof, the repair itself violates R908.3 and cannot be performed. For additional layer tear-off charges, the Xactimate line item (RFG TEAR / RFG REMV) covers the additional labor and material haul-away required to remove the extra layer — this is a distinct cost beyond single-layer removal. Carriers are incentivized to approve full tear-off: a new roof installed over existing layers has a shorter lifespan and higher risk of a future claim.",
   },
 
   // ─── WIND RESISTANCE ───────────────────────────────────────────────────
@@ -923,7 +882,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     typicalObjection:
       "3-tab shingles are an acceptable replacement for architectural shingles.",
     rebuttal:
-      "Like-kind-and-quality replacement is an insurance principle reinforced by code. IRC R905.2.4 requires ASTM D3462 compliance, and the replacement must match the quality of the damaged material. Architectural shingles have a different wind resistance class, aesthetic profile, and warranty duration than 3-tab. Downgrading the replacement does not constitute like-kind-and-quality.",
+      "Like-kind-and-quality replacement is an insurance principle reinforced by code. IRC R905.2.4 requires ASTM D3462 compliance, and the replacement must match the quality of the damaged material. Architectural shingles have a different wind resistance class (ASTM D7158), aesthetic profile, and performance characteristics than 3-tab. Downgrading the replacement does not constitute like-kind-and-quality.",
   },
 
   // ─── CHIMNEY CRICKET ───────────────────────────────────────────────────
@@ -965,7 +924,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     typicalObjection:
       "Cricket is existing and does not need replacement / cricket is not storm-damaged.",
     rebuttal:
-      "During re-roofing, chimney cricket flashing must be replaced to properly integrate with the new roofing system. IRC R903.2.2 requires crickets on chimneys wider than 30 inches. The existing cricket flashing cannot be properly resealed to new shingles — it must be replaced for a watertight installation. All major manufacturers require new cricket flashing during re-roofing for warranty compliance.",
+      "During re-roofing, chimney cricket flashing must be replaced to properly integrate with the new roofing system. IRC R903.2.2 requires crickets on chimneys wider than 30 inches. The existing cricket flashing cannot be properly resealed to new shingles — it must be replaced for a watertight, code-compliant installation per manufacturer installation instructions.",
   },
 
   // ─── MINIMUM VENT AREA ─────────────────────────────────────────────────
@@ -1007,7 +966,7 @@ export const BUILDING_CODES: BuildingCode[] = [
     typicalObjection:
       "Ventilation is adequate / ventilation upgrades are not storm-related.",
     rebuttal:
-      "IRC R806.2 specifies minimum ventilation ratios that must be met during re-roofing per R105.1. If the existing ventilation does not meet the 1:150 (or 1:300 with balanced intake/exhaust) requirement, additional ventilation components are code-required — not optional upgrades. Soffit intake vents and attic baffles are necessary to maintain airflow at the eave-to-ridge path. Manufacturers also require adequate ventilation for warranty coverage.",
+      "IRC R806.2 specifies minimum ventilation ratios that must be met during re-roofing per R105.1. If the existing ventilation does not meet the 1:150 (or 1:300 with balanced intake/exhaust) requirement, additional ventilation components are code-required — not optional upgrades. Soffit intake vents and attic baffles are necessary to maintain airflow at the eave-to-ridge path. All major manufacturer installation instructions also require adequate ventilation as a condition of proper installation.",
   },
 
   // ─── WIND DESIGN CRITERIA ──────────────────────────────────────────────
