@@ -27,18 +27,18 @@ async function getSupplementContext(supplementId: string) {
 
   const { data: supplement } = await supabase
     .from("supplements")
-    .select("claim_id, company_id, supplement_total")
+    .select("job_id, company_id, supplement_total")
     .eq("id", supplementId)
     .single();
 
   if (!supplement) return null;
 
   const { data: claim } = await supabase
-    .from("claims")
+    .from("jobs")
     .select(
       "claim_number, property_address, property_city, property_state, property_zip, user_id"
     )
-    .eq("id", supplement.claim_id)
+    .eq("id", supplement.job_id)
     .single();
 
   if (!claim) return null;

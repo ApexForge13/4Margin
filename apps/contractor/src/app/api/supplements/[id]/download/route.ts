@@ -40,7 +40,7 @@ export async function GET(
   const { data: supplement, error } = await admin
     .from("supplements")
     .select(
-      `*, claims ( *, carriers ( * ) )`
+      `*, jobs ( *, carriers ( * ) )`
     )
     .eq("id", id)
     .single();
@@ -57,7 +57,7 @@ export async function GET(
     );
   }
 
-  const claim = supplement.claims as Record<string, unknown>;
+  const claim = supplement.jobs as Record<string, unknown>;
   const carrier = (claim?.carriers as Record<string, unknown>) || null;
 
   // ── Fetch supplement items (only accepted / detected) ─────
@@ -73,7 +73,7 @@ export async function GET(
   const { data: photos } = await admin
     .from("photos")
     .select("*")
-    .eq("claim_id", claim.id as string)
+    .eq("job_id", claim.id as string)
     .order("created_at", { ascending: true });
 
   // ── Fetch company info ────────────────────────────────────

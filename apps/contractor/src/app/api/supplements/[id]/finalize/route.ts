@@ -43,7 +43,7 @@ export async function POST(
     // Fetch supplement with claim
     const { data: supplement, error: supError } = await supabase
       .from("supplements")
-      .select("*, claims(*)")
+      .select("*, jobs(*)")
       .eq("id", supplementId)
       .single();
 
@@ -71,7 +71,7 @@ export async function POST(
 
     console.log(`[finalize] Starting finalization for supplement ${supplementId}`);
 
-    const claim = supplement.claims as Record<string, unknown>;
+    const claim = supplement.jobs as Record<string, unknown>;
     const admin = createAdminClient();
 
     // Update item statuses: selected → accepted, unselected → rejected

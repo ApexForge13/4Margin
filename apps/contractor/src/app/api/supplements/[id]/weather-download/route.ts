@@ -34,7 +34,7 @@ export async function GET(
   // Fetch supplement
   const { data: supplement, error } = await admin
     .from("supplements")
-    .select("weather_pdf_url, paid_at, claims(claim_number)")
+    .select("weather_pdf_url, paid_at, jobs(claim_number)")
     .eq("id", id)
     .single();
 
@@ -69,7 +69,7 @@ export async function GET(
   }
 
   const buffer = await pdfBlob.arrayBuffer();
-  const claim = supplement.claims as unknown as Record<string, unknown> | null;
+  const claim = supplement.jobs as unknown as Record<string, unknown> | null;
   const claimNum = (claim?.claim_number as string) || id.slice(0, 8);
   const filename = `Weather_Report_${claimNum}.pdf`;
 

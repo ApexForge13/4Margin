@@ -174,9 +174,9 @@ export async function deleteCarrier(carrierId: string) {
 
   const admin = createAdminClient();
 
-  // Unlink any claims referencing this carrier before deleting
+  // Unlink any jobs referencing this carrier before deleting
   await admin
-    .from("claims")
+    .from("jobs")
     .update({ carrier_id: null })
     .eq("carrier_id", idResult.data);
 
@@ -245,7 +245,7 @@ export async function adminUpdateClaim(claimId: string, data: unknown) {
   }
 
   const { error } = await admin
-    .from("claims")
+    .from("jobs")
     .update({
       notes: input.notes || null,
       claim_number: input.claimNumber || null,
@@ -288,7 +288,7 @@ export async function deleteClaim(claimId: string) {
   const { data: photos } = await admin
     .from("photos")
     .select("storage_path")
-    .eq("claim_id", idResult.data);
+    .eq("job_id", idResult.data);
 
   if (photos && photos.length > 0) {
     const paths = photos.map((p) => p.storage_path).filter(Boolean);
@@ -301,7 +301,7 @@ export async function deleteClaim(claimId: string) {
   const { data: supplements } = await admin
     .from("supplements")
     .select("generated_pdf_url, weather_pdf_url")
-    .eq("claim_id", idResult.data);
+    .eq("job_id", idResult.data);
 
   if (supplements && supplements.length > 0) {
     const pdfPaths = supplements
@@ -317,9 +317,9 @@ export async function deleteClaim(claimId: string) {
     }
   }
 
-  // Delete claim — supplements, supplement_items, photos cascade automatically
+  // Delete job — supplements, supplement_items, photos cascade automatically
   const { error } = await admin
-    .from("claims")
+    .from("jobs")
     .delete()
     .eq("id", idResult.data);
 

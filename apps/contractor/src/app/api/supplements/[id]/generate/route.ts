@@ -47,10 +47,10 @@ export async function POST(
   // Use admin client — RLS session doesn't reliably refresh in API routes
   const admin = createAdminClient();
 
-  // Fetch supplement to get claim_id and company_id
+  // Fetch supplement to get job_id and company_id
   const { data: supplement, error } = await admin
     .from("supplements")
-    .select("claim_id, company_id")
+    .select("job_id, company_id")
     .eq("id", supplementId)
     .single();
 
@@ -90,7 +90,7 @@ export async function POST(
 
   const pipelineInput = {
     supplementId,
-    claimId: supplement.claim_id,
+    claimId: supplement.job_id,
     companyId: supplement.company_id,
   };
 

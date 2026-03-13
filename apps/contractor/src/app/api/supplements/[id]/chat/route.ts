@@ -71,7 +71,7 @@ export async function POST(
     /* ── 3. Fetch supplement (RLS enforces company_id) ── */
     const { data: supplement, error: supError } = await supabase
       .from("supplements")
-      .select("*, claims(*)")
+      .select("*, jobs(*)")
       .eq("id", supplementId)
       .single();
 
@@ -82,7 +82,7 @@ export async function POST(
       );
     }
 
-    const claim = supplement.claims as Record<string, unknown>;
+    const claim = supplement.jobs as Record<string, unknown>;
     const claimId = claim.id as string;
     const companyId = supplement.company_id as string;
 

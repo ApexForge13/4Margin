@@ -54,9 +54,9 @@ export default async function AdminPage() {
       .from("users")
       .select("id, full_name, email, role, created_at, company_id, companies(name)")
       .order("created_at", { ascending: false }),
-    // NEW: all claims with carrier + supplement data + user + company
+    // NEW: all jobs with carrier + supplement data + user + company
     admin
-      .from("claims")
+      .from("jobs")
       .select(
         `
         id, notes, claim_number, policy_number,

@@ -471,7 +471,7 @@ async function handleUpdateMeasurement(
     field === "roof_pitch" ? String(input.value) : Number(input.value);
 
   const { error } = await admin
-    .from("claims")
+    .from("jobs")
     .update({ [field]: value })
     .eq("id", context.claimId);
 

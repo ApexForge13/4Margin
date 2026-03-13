@@ -97,7 +97,7 @@ export async function runSupplementPipeline(
 
     // ── 1. Fetch claim data ──
     const { data: claim, error: claimError } = await supabase
-      .from("claims")
+      .from("jobs")
       .select("*")
       .eq("id", claimId)
       .single();
@@ -271,7 +271,7 @@ export async function runSupplementPipeline(
         }
 
         if (Object.keys(claimUpdate).length > 0) {
-          await supabase.from("claims").update(claimUpdate).eq("id", claimId);
+          await supabase.from("jobs").update(claimUpdate).eq("id", claimId);
           console.log(`[pipeline] Backfilled claim fields: ${Object.keys(claimUpdate).join(", ")}`);
         }
       } catch (backfillErr) {
@@ -671,7 +671,7 @@ export async function runSupplementPipeline(
         const { data: photos } = await supabase
           .from("photos")
           .select("id, storage_path, mime_type")
-          .eq("claim_id", claimId);
+          .eq("job_id", claimId);
 
         if (photos && photos.length > 0) {
           const photoData: Array<{ id: string; base64: string; mimeType: string }> = [];

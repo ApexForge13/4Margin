@@ -32,7 +32,7 @@ export async function POST(
     // Fetch supplement + claim + company
     const { data: supplement, error } = await supabase
       .from("supplements")
-      .select("*, claims(*, carriers(*))")
+      .select("*, jobs(*, carriers(*))")
       .eq("id", supplementId)
       .single();
 
@@ -40,7 +40,7 @@ export async function POST(
       return NextResponse.json({ error: "Supplement not found" }, { status: 404 });
     }
 
-    const claim = supplement.claims as Record<string, unknown>;
+    const claim = supplement.jobs as Record<string, unknown>;
     const carrier = (claim?.carriers as Record<string, unknown>) || null;
 
     // Fetch denied items

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // ── Verify supplement exists and belongs to user's company ─
     const { data: supplement, error } = await admin
       .from("supplements")
-      .select("id, status, paid_at, company_id, claim_id, claims(id, claim_number, property_address)")
+      .select("id, status, paid_at, company_id, job_id, jobs(id, claim_number, property_address)")
       .eq("id", supplementId)
       .eq("company_id", companyId)
       .single();
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ url: freeUrl });
     }
 
-    const claim = supplement.claims as unknown as Record<string, unknown>;
+    const claim = supplement.jobs as unknown as Record<string, unknown>;
     const claimLabel =
       (claim?.claim_number as string) ||
       (claim?.property_address as string) ||

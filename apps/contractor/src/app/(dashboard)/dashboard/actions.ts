@@ -37,7 +37,7 @@ export async function updateClaim(claimId: string, data: unknown) {
   }
 
   const { error } = await supabase
-    .from("claims")
+    .from("jobs")
     .update({
       notes: input.notes || null,
       claim_number: input.claimNumber || null,
@@ -71,7 +71,7 @@ export async function archiveClaim(claimId: string) {
   if (!user) return { error: "Session expired." };
 
   const { error } = await supabase
-    .from("claims")
+    .from("jobs")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", idResult.data);
 
@@ -92,7 +92,7 @@ export async function restoreClaim(claimId: string) {
   if (!user) return { error: "Session expired." };
 
   const { error } = await supabase
-    .from("claims")
+    .from("jobs")
     .update({ archived_at: null })
     .eq("id", idResult.data);
 
