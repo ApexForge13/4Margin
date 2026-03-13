@@ -251,7 +251,7 @@ export function StepEstimate() {
       {/* Claim Details Form */}
       <div className="space-y-4 relative">
         <div>
-          <h2 className="text-lg font-semibold">Claim Details</h2>
+          <h2 className="text-lg font-semibold">Job Details</h2>
           <p className="text-sm text-muted-foreground">
             {isParsing
               ? "Analyzing document..."

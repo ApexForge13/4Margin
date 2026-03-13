@@ -9,10 +9,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { WizardState, WizardAction, ClaimDetails, MeasurementData } from "@/types/wizard";
+import type { WizardState, WizardAction, JobDetails, MeasurementData } from "@/types/wizard";
 
 // --- Initial state ---
-const emptyClaimDetails: ClaimDetails = {
+const emptyJobDetails: JobDetails = {
   claimNumber: "",
   claimDescription: "",
   policyNumber: "",
@@ -71,7 +71,7 @@ const initialState: WizardState = {
   currentStep: 1,
   estimateFiles: [],
   policyFiles: [],
-  claimDetails: emptyClaimDetails,
+  claimDetails: emptyJobDetails,
   estimateParsingStatus: "idle",
   photos: [],
   measurementFiles: [],
@@ -104,7 +104,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         policyFiles: state.policyFiles.filter((_, i) => i !== action.index),
       };
 
-    // Step 1 — claim details
+    // Step 1 — job details
+    case "UPDATE_JOB_DETAILS":
     case "UPDATE_CLAIM_DETAILS":
       return {
         ...state,
@@ -176,6 +177,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, measurementParsingStatus: action.status };
 
     // Step 4
+    case "SET_JOB_NAME":
     case "SET_CLAIM_NAME":
       return { ...state, claimName: action.name };
 
@@ -214,7 +216,7 @@ const STORAGE_KEY = "4margin-wizard-draft";
 
 interface PersistedState {
   currentStep: number;
-  claimDetails: ClaimDetails;
+  claimDetails: JobDetails;
   measurementData: MeasurementData;
   claimName: string;
   photoNotes: string[]; // just the notes, not the files
@@ -242,7 +244,7 @@ function loadFromStorage(): Partial<WizardState> | null {
     const data: PersistedState = JSON.parse(raw);
     return {
       currentStep: data.currentStep,
-      claimDetails: { ...emptyClaimDetails, ...data.claimDetails },
+      claimDetails: { ...emptyJobDetails, ...data.claimDetails },
       measurementData: { ...emptyMeasurementData, ...data.measurementData },
       claimName: data.claimName ?? "",
     };

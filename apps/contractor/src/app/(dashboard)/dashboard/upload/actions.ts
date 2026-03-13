@@ -2,21 +2,38 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createClaimInputSchema, validate } from "@/lib/validations/schemas";
+import { createJobInputSchema, validate } from "@/lib/validations/schemas";
+import { findOrCreateJob } from "@/lib/jobs/auto-create";
 
-interface CreateClaimResult {
-  claimId: string | null;
+// --- Helpers ---
+
+function parseFloatOrNull(val: string | undefined): number | null {
+  if (!val) return null;
+  const n = parseFloat(val);
+  return isNaN(n) ? null : n;
+}
+
+function parseIntOrNull(val: string | undefined): number | null {
+  if (!val) return null;
+  const n = parseInt(val);
+  return isNaN(n) ? null : n;
+}
+
+// --- Types ---
+
+interface CreateJobResult {
+  jobId: string | null;
   supplementId: string | null;
   error: string | null;
 }
 
-export async function createClaimAndSupplement(
+export async function createJobAndSupplement(
   data: unknown
-): Promise<CreateClaimResult> {
+): Promise<CreateJobResult> {
   // ── Validate input ──────────────────────────────────────────
-  const parsed = validate(createClaimInputSchema, data);
+  const parsed = validate(createJobInputSchema, data);
   if (!parsed.success) {
-    return { claimId: null, supplementId: null, error: parsed.error };
+    return { jobId: null, supplementId: null, error: parsed.error };
   }
   const input = parsed.data;
   const supabase = await createClient();
@@ -28,7 +45,7 @@ export async function createClaimAndSupplement(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { claimId: null, supplementId: null, error: "Session expired." };
+    return { jobId: null, supplementId: null, error: "Session expired." };
   }
 
   // Get company_id
@@ -39,7 +56,7 @@ export async function createClaimAndSupplement(
     .single();
 
   if (!profile?.company_id) {
-    return { claimId: null, supplementId: null, error: "Company not found." };
+    return { jobId: null, supplementId: null, error: "Company not found." };
   }
 
   const companyId = profile.company_id;
@@ -63,125 +80,118 @@ export async function createClaimAndSupplement(
     }
   }
 
-  // Create claim
-  const { data: claim, error: claimError } = await supabase
-    .from("claims")
-    .insert({
-      company_id: companyId,
-      carrier_id: carrierId,
-      claim_number: input.claimDetails.claimNumber || null,
-      policy_number: input.claimDetails.policyNumber || null,
-      property_address: input.claimDetails.propertyAddress || null,
-      property_city: input.claimDetails.propertyCity || null,
-      property_state: input.claimDetails.propertyState || null,
-      property_zip: input.claimDetails.propertyZip || null,
-      date_of_loss: input.claimDetails.dateOfLoss || null,
-      adjuster_name: input.claimDetails.adjusterName || null,
-      adjuster_email: input.claimDetails.adjusterEmail || null,
-      adjuster_phone: input.claimDetails.adjusterPhone || null,
-      roof_squares: input.measurementData.measuredSquares
-        ? parseFloat(input.measurementData.measuredSquares)
-        : null,
-      waste_percent: input.measurementData.wastePercent
-        ? parseFloat(input.measurementData.wastePercent)
-        : null,
-      suggested_squares: input.measurementData.suggestedSquares
-        ? parseFloat(input.measurementData.suggestedSquares)
-        : null,
-      roof_pitch: input.measurementData.predominantPitch || null,
-      ft_ridges: input.measurementData.ftRidges
-        ? parseFloat(input.measurementData.ftRidges)
-        : null,
-      ft_hips: input.measurementData.ftHips
-        ? parseFloat(input.measurementData.ftHips)
-        : null,
-      ft_valleys: input.measurementData.ftValleys
-        ? parseFloat(input.measurementData.ftValleys)
-        : null,
-      ft_rakes: input.measurementData.ftRakes
-        ? parseFloat(input.measurementData.ftRakes)
-        : null,
-      ft_eaves: input.measurementData.ftEaves
-        ? parseFloat(input.measurementData.ftEaves)
-        : null,
-      ft_drip_edge: input.measurementData.ftDripEdge
-        ? parseFloat(input.measurementData.ftDripEdge)
-        : null,
-      ft_parapet: input.measurementData.ftParapet
-        ? parseFloat(input.measurementData.ftParapet)
-        : null,
-      ft_flashing: input.measurementData.ftFlashing
-        ? parseFloat(input.measurementData.ftFlashing)
-        : null,
-      ft_step_flashing: input.measurementData.ftStepFlashing
-        ? parseFloat(input.measurementData.ftStepFlashing)
-        : null,
-      accessories: input.measurementData.accessories || null,
-      total_roof_area: input.measurementData.totalRoofArea
-        ? parseFloat(input.measurementData.totalRoofArea)
-        : null,
-      total_roof_area_less_penetrations: input.measurementData.totalRoofAreaLessPenetrations
-        ? parseFloat(input.measurementData.totalRoofAreaLessPenetrations)
-        : null,
-      num_ridges: input.measurementData.numRidges
-        ? parseInt(input.measurementData.numRidges)
-        : null,
-      num_hips: input.measurementData.numHips
-        ? parseInt(input.measurementData.numHips)
-        : null,
-      num_valleys: input.measurementData.numValleys
-        ? parseInt(input.measurementData.numValleys)
-        : null,
-      num_rakes: input.measurementData.numRakes
-        ? parseInt(input.measurementData.numRakes)
-        : null,
-      num_eaves: input.measurementData.numEaves
-        ? parseInt(input.measurementData.numEaves)
-        : null,
-      num_flashing_lengths: input.measurementData.numFlashingLengths
-        ? parseInt(input.measurementData.numFlashingLengths)
-        : null,
-      num_step_flashing_lengths: input.measurementData.numStepFlashingLengths
-        ? parseInt(input.measurementData.numStepFlashingLengths)
-        : null,
-      total_penetrations_area: input.measurementData.totalPenetrationsArea
-        ? parseFloat(input.measurementData.totalPenetrationsArea)
-        : null,
-      total_penetrations_perimeter: input.measurementData.totalPenetrationsPerimeter
-        ? parseFloat(input.measurementData.totalPenetrationsPerimeter)
-        : null,
-      pitch_breakdown: (input.measurementData.pitchBreakdown ?? []).length > 0
-        ? input.measurementData.pitchBreakdown
-        : null,
-      structure_complexity: input.measurementData.structureComplexity || null,
-      steep_squares: input.measurementData.steepSquares
-        ? parseFloat(input.measurementData.steepSquares)
-        : null,
-      high_story_squares: input.measurementData.highStorySquares
-        ? parseFloat(input.measurementData.highStorySquares)
-        : null,
-      damage_types: (input.measurementData.damageTypes ?? []).length > 0
-        ? input.measurementData.damageTypes
-        : null,
-      description: input.claimDetails.claimDescription || null,
-      adjuster_scope_notes: input.claimDetails.adjusterScopeNotes || null,
-      items_believed_missing: input.claimDetails.itemsBelievedMissing || null,
-      prior_supplement_history: input.claimDetails.priorSupplementHistory || null,
-      gutters_nailed_through_drip_edge: input.claimDetails.guttersNailedThroughDripEdge || null,
-      roof_under_warranty: input.claimDetails.roofUnderWarranty || null,
-      pre_existing_conditions: input.claimDetails.preExistingConditions || null,
-      notes: input.claimName,
-      created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (claimError || !claim) {
+  // Find or create job via CRM auto-create
+  let jobId: string;
+  try {
+    const jobResult = await findOrCreateJob(supabase, {
+      companyId,
+      createdBy: user.id,
+      propertyAddress: input.claimDetails.propertyAddress || "",
+      propertyCity: input.claimDetails.propertyCity || undefined,
+      propertyState: input.claimDetails.propertyState || undefined,
+      propertyZip: input.claimDetails.propertyZip || undefined,
+      jobType: "insurance",
+      insuranceData: {
+        carrier_id: carrierId || undefined,
+        claim_number: input.claimDetails.claimNumber || undefined,
+        policy_number: input.claimDetails.policyNumber || undefined,
+        date_of_loss: input.claimDetails.dateOfLoss || undefined,
+        adjuster_name: input.claimDetails.adjusterName || undefined,
+        adjuster_email: input.claimDetails.adjusterEmail || undefined,
+        adjuster_phone: input.claimDetails.adjusterPhone || undefined,
+        damage_type:
+          (input.measurementData.damageTypes ?? []).join(",") || undefined,
+        roof_type: undefined,
+      },
+      metadata: {
+        description: input.claimDetails.claimDescription || undefined,
+        adjuster_scope_notes:
+          input.claimDetails.adjusterScopeNotes || undefined,
+        items_believed_missing:
+          input.claimDetails.itemsBelievedMissing || undefined,
+        prior_supplement_history:
+          input.claimDetails.priorSupplementHistory || undefined,
+        gutters_nailed_through_drip_edge:
+          input.claimDetails.guttersNailedThroughDripEdge || undefined,
+        roof_under_warranty:
+          input.claimDetails.roofUnderWarranty || undefined,
+        pre_existing_conditions:
+          input.claimDetails.preExistingConditions || undefined,
+        notes: input.claimName || undefined,
+      },
+    });
+    jobId = jobResult.jobId;
+  } catch (err) {
     return {
-      claimId: null,
+      jobId: null,
       supplementId: null,
-      error: claimError?.message || "Failed to create claim.",
+      error:
+        err instanceof Error ? err.message : "Failed to create job.",
     };
+  }
+
+  // Update measurement data on the job (typed columns)
+  const { error: measurementError } = await supabase
+    .from("jobs")
+    .update({
+      roof_squares: parseFloatOrNull(input.measurementData.measuredSquares),
+      waste_percent: parseFloatOrNull(input.measurementData.wastePercent),
+      suggested_squares: parseFloatOrNull(
+        input.measurementData.suggestedSquares
+      ),
+      roof_pitch: input.measurementData.predominantPitch || null,
+      ft_ridges: parseFloatOrNull(input.measurementData.ftRidges),
+      ft_hips: parseFloatOrNull(input.measurementData.ftHips),
+      ft_valleys: parseFloatOrNull(input.measurementData.ftValleys),
+      ft_rakes: parseFloatOrNull(input.measurementData.ftRakes),
+      ft_eaves: parseFloatOrNull(input.measurementData.ftEaves),
+      ft_drip_edge: parseFloatOrNull(input.measurementData.ftDripEdge),
+      ft_parapet: parseFloatOrNull(input.measurementData.ftParapet),
+      ft_flashing: parseFloatOrNull(input.measurementData.ftFlashing),
+      ft_step_flashing: parseFloatOrNull(input.measurementData.ftStepFlashing),
+      accessories: input.measurementData.accessories || null,
+      total_roof_area: parseFloatOrNull(input.measurementData.totalRoofArea),
+      total_roof_area_less_penetrations: parseFloatOrNull(
+        input.measurementData.totalRoofAreaLessPenetrations
+      ),
+      num_ridges: parseIntOrNull(input.measurementData.numRidges),
+      num_hips: parseIntOrNull(input.measurementData.numHips),
+      num_valleys: parseIntOrNull(input.measurementData.numValleys),
+      num_rakes: parseIntOrNull(input.measurementData.numRakes),
+      num_eaves: parseIntOrNull(input.measurementData.numEaves),
+      num_flashing_lengths: parseIntOrNull(
+        input.measurementData.numFlashingLengths
+      ),
+      num_step_flashing_lengths: parseIntOrNull(
+        input.measurementData.numStepFlashingLengths
+      ),
+      total_penetrations_area: parseFloatOrNull(
+        input.measurementData.totalPenetrationsArea
+      ),
+      total_penetrations_perimeter: parseFloatOrNull(
+        input.measurementData.totalPenetrationsPerimeter
+      ),
+      pitch_breakdown:
+        (input.measurementData.pitchBreakdown ?? []).length > 0
+          ? input.measurementData.pitchBreakdown
+          : null,
+      structure_complexity:
+        input.measurementData.structureComplexity || null,
+      steep_squares: parseFloatOrNull(input.measurementData.steepSquares),
+      high_story_squares: parseFloatOrNull(
+        input.measurementData.highStorySquares
+      ),
+      damage_types:
+        (input.measurementData.damageTypes ?? []).length > 0
+          ? input.measurementData.damageTypes
+          : null,
+      notes: input.claimName,
+    })
+    .eq("id", jobId);
+
+  if (measurementError) {
+    console.error("Job measurement update error:", measurementError);
+    // Non-fatal — job already created, continue with supplement creation
   }
 
   // Create supplement
@@ -189,7 +199,7 @@ export async function createClaimAndSupplement(
   // with full claim context during generation for better analysis accuracy.
   const supplementInsert: Record<string, unknown> = {
     company_id: companyId,
-    claim_id: claim.id,
+    job_id: jobId,
     status: "draft",
     adjuster_estimate_url: input.estimateStoragePath,
     created_by: user.id,
@@ -206,7 +216,7 @@ export async function createClaimAndSupplement(
 
   if (supplementError || !supplement) {
     return {
-      claimId: claim.id,
+      jobId,
       supplementId: null,
       error: supplementError?.message || "Failed to create supplement.",
     };
@@ -215,7 +225,7 @@ export async function createClaimAndSupplement(
   // Create photo records
   if (input.photoMeta.length > 0) {
     const photoRows = input.photoMeta.map((p) => ({
-      claim_id: claim.id,
+      job_id: jobId,
       company_id: companyId,
       storage_path: p.storagePath,
       file_name: p.fileName,
@@ -230,7 +240,7 @@ export async function createClaimAndSupplement(
 
     if (photoError) {
       console.error("Photo insert error:", photoError);
-      // Non-fatal — claim and supplement already created
+      // Non-fatal — job and supplement already created
     }
   }
 
@@ -238,5 +248,8 @@ export async function createClaimAndSupplement(
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/supplements");
 
-  return { claimId: claim.id, supplementId: supplement.id, error: null };
+  return { jobId, supplementId: supplement.id, error: null };
 }
+
+/** @deprecated Use createJobAndSupplement */
+export const createClaimAndSupplement = createJobAndSupplement;

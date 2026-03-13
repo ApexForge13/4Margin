@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useWizard, clearWizardStorage } from "./wizard-context";
-import { createClaimAndSupplement } from "@/app/(dashboard)/dashboard/upload/actions";
+import { createJobAndSupplement } from "@/app/(dashboard)/dashboard/upload/actions";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/supabase/storage";
 import { Button } from "@/components/ui/button";
@@ -142,7 +142,7 @@ export function StepReview() {
       }
 
       // Create DB records
-      const result = await createClaimAndSupplement({
+      const result = await createJobAndSupplement({
         claimName: state.claimName,
         claimDetails: state.claimDetails,
         measurementData: state.measurementData,
@@ -189,7 +189,7 @@ export function StepReview() {
       }
 
       // Fallback: redirect to supplement detail page
-      toast.success("Supplement created! Redirecting to your claim...");
+      toast.success("Supplement created! Redirecting...");
       router.push(`/dashboard/supplements/${result.supplementId}`);
     } catch (err) {
       console.error("Generate error:", err);
@@ -203,13 +203,13 @@ export function StepReview() {
       {/* Claim Name */}
       <div className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold">Name Your Claim</h2>
+          <h2 className="text-lg font-semibold">Name Your Job</h2>
           <p className="text-sm text-muted-foreground">
-            Give this claim a display name for your dashboard.
+            Give this job a display name for your dashboard.
           </p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="claimName">Claim name *</Label>
+          <Label htmlFor="claimName">Job name *</Label>
           <Input
             id="claimName"
             placeholder="e.g. Smith Residence — Hail Damage 2024"
@@ -231,7 +231,7 @@ export function StepReview() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Claim Details</CardTitle>
+              <CardTitle className="text-base">Job Details</CardTitle>
               <Button
                 variant="ghost"
                 size="sm"
