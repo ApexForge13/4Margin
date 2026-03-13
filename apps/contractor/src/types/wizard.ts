@@ -10,8 +10,8 @@ export interface PhotoFile {
   previewUrl: string; // URL.createObjectURL
 }
 
-// --- Claim details (Step 1) ---
-export interface ClaimDetails {
+// --- Job details (Step 1) ---
+export interface JobDetails {
   claimNumber: string;
   claimDescription: string;
   policyNumber: string;
@@ -33,6 +33,9 @@ export interface ClaimDetails {
   roofUnderWarranty: string;            // "yes" | "no" | "unknown" | ""
   preExistingConditions: string;        // free text
 }
+
+/** @deprecated Use JobDetails */
+export type ClaimDetails = JobDetails;
 
 // --- Pitch breakdown from EagleView "Areas per Pitch" table ---
 export interface PitchBreakdown {
@@ -95,7 +98,7 @@ export interface WizardState {
   // Step 1
   estimateFiles: UploadedFile[];
   policyFiles: UploadedFile[];
-  claimDetails: ClaimDetails;
+  jobDetails: JobDetails;
   estimateParsingStatus: ParsingStatus;
 
   // Step 2
@@ -107,7 +110,7 @@ export interface WizardState {
   measurementParsingStatus: ParsingStatus;
 
   // Step 4
-  claimName: string;
+  jobName: string;
 
   // Submission
   isSubmitting: boolean;
@@ -122,8 +125,9 @@ export type WizardAction =
   | { type: "REMOVE_ESTIMATE_FILE"; index: number }
   | { type: "ADD_POLICY_FILES"; files: UploadedFile[] }
   | { type: "REMOVE_POLICY_FILE"; index: number }
-  // Step 1 — claim details
-  | { type: "UPDATE_CLAIM_DETAILS"; details: Partial<ClaimDetails> }
+  // Step 1 — job details
+  | { type: "UPDATE_JOB_DETAILS"; details: Partial<JobDetails> }
+  | { type: "UPDATE_CLAIM_DETAILS"; details: Partial<JobDetails> } // @deprecated Use UPDATE_JOB_DETAILS
   | { type: "SET_ESTIMATE_PARSING"; status: ParsingStatus }
   // Step 2 — photos
   | { type: "ADD_PHOTOS"; photos: PhotoFile[] }
@@ -138,7 +142,8 @@ export type WizardAction =
   | { type: "UNCONFIRM_MEASUREMENTS" }
   | { type: "SET_MEASUREMENT_PARSING"; status: ParsingStatus }
   // Step 4
-  | { type: "SET_CLAIM_NAME"; name: string }
+  | { type: "SET_JOB_NAME"; name: string }
+  | { type: "SET_CLAIM_NAME"; name: string } // @deprecated Use SET_JOB_NAME
   // Submission
   | { type: "SET_SUBMITTING"; isSubmitting: boolean }
   | { type: "SET_UPLOAD_PROGRESS"; current: number; total: number }

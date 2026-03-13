@@ -129,9 +129,9 @@ export const xactimateCodeSchema = z.object({
   notes: optionalString,
 });
 
-// ── Wizard — Claim Details (Step 1) ─────────────────────────
+// ── Wizard — Job Details (Step 1) ───────────────────────────
 
-export const claimDetailsSchema = z.object({
+export const jobDetailsSchema = z.object({
   claimNumber: requiredString("Claim number").max(100),
   claimDescription: requiredString("Claim description").max(5000),
   policyNumber: optionalString,
@@ -163,6 +163,9 @@ export const claimDetailsSchema = z.object({
   roofUnderWarranty: optionalString,
   preExistingConditions: optionalString,
 });
+
+/** @deprecated Use jobDetailsSchema */
+export const claimDetailsSchema = jobDetailsSchema;
 
 // ── Wizard — Measurements (Step 3) ──────────────────────────
 
@@ -227,18 +230,21 @@ export const photoMetaSchema = z.object({
   storagePath: z.string().min(1),
 });
 
-export const createClaimInputSchema = z.object({
-  claimName: requiredString("Claim name").max(255),
-  claimDetails: claimDetailsSchema,
+export const createJobInputSchema = z.object({
+  jobName: requiredString("Job name").max(255),
+  jobDetails: jobDetailsSchema,
   measurementData: measurementDataSchema,
   photoMeta: z.array(photoMetaSchema),
   estimateStoragePath: z.string().min(1, "Estimate file is required"),
   policyPdfUrl: z.string().nullable().optional(),
 });
 
-// ── Dashboard — Claim update ────────────────────────────────
+/** @deprecated Use createJobInputSchema */
+export const createClaimInputSchema = createJobInputSchema;
 
-export const updateClaimSchema = z.object({
+// ── Dashboard — Job update ──────────────────────────────────
+
+export const updateJobSchema = z.object({
   notes: optionalString,
   claimNumber: optionalString,
   policyNumber: optionalString,
@@ -261,6 +267,9 @@ export const updateClaimSchema = z.object({
   roofUnderWarranty: optionalString,
   preExistingConditions: optionalString,
 });
+
+/** @deprecated Use updateJobSchema */
+export const updateClaimSchema = updateJobSchema;
 
 // ── Dashboard — Supplement result ────────────────────────────
 
@@ -301,9 +310,9 @@ export const adminUpdateUserSchema = z.object({
   role: z.enum(["owner", "admin", "user"]),
 });
 
-// ── Admin — Claim management (cross-company) ────────────────
+// ── Admin — Job management (cross-company) ──────────────────
 
-export const adminUpdateClaimSchema = z.object({
+export const adminUpdateJobSchema = z.object({
   notes: optionalString,
   claimNumber: optionalString,
   policyNumber: optionalString,
@@ -324,6 +333,9 @@ export const adminUpdateClaimSchema = z.object({
   roofUnderWarranty: optionalString,
   preExistingConditions: optionalString,
 });
+
+/** @deprecated Use adminUpdateJobSchema */
+export const adminUpdateClaimSchema = adminUpdateJobSchema;
 
 // ── API — Finalize supplement (generate PDF from selected items) ──
 
