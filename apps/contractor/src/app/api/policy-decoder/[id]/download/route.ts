@@ -3,13 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateDecoderPdf } from "@/lib/pdf/generate-decoder-pdf";
 import type { DecoderPdfData } from "@/lib/pdf/generate-decoder-pdf";
+import {
+  generateContractorDecodePdf,
+  generateHomeownerDecodePdf,
+} from "@4margin/pdf";
+import type {
+  ContractorDecodePdfData,
+  HomeownerDecodePdfData,
+} from "@4margin/pdf";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const reportType = request.nextUrl.searchParams.get("type") || "contractor";
 
     // Auth check
     const supabase = await createClient();
@@ -58,39 +67,66 @@ export async function GET(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const analysis = decoding.policy_analysis as any;
 
-    const pdfData: DecoderPdfData = {
-      policyType: analysis.policyType || "Unknown",
-      carrier: analysis.carrier || "Unknown",
-      policyNumber: analysis.policyNumber || "—",
-      effectiveDate: analysis.effectiveDate || null,
-      expirationDate: analysis.expirationDate || null,
-      namedInsured: analysis.namedInsured || "—",
-      propertyAddress: analysis.propertyAddress || "—",
-      riskLevel: analysis.riskLevel || "unknown",
-      confidence: analysis.confidence || 0,
-      summaryForContractor: analysis.summaryForContractor || "",
-      documentType: analysis.documentType || "unknown",
-      scanQuality: analysis.scanQuality || "unknown",
-      coverages: analysis.coverages || [],
-      deductibles: analysis.deductibles || [],
-      depreciationMethod: analysis.depreciationMethod || "Unknown",
-      depreciationNotes: analysis.depreciationNotes || "",
-      exclusions: analysis.exclusions || [],
-      endorsements: analysis.endorsements || [],
-      landmines: analysis.landmines || [],
-      favorableProvisions: analysis.favorableProvisions || [],
-      generatedDate: new Date().toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
-    };
+    let pdfBuffer: ArrayBuffer;
+    let filePrefix: string;
 
-    const pdfBuffer = generateDecoderPdf(pdfData);
+    if (reportType === "homeowner") {
+      const hoData: HomeownerDecodePdfData = {
+        analysis: {
+          carrier: analysis.carrier || null,
+          policyNumber: analysis.policyNumber || null,
+          namedInsured: analysis.namedInsured || null,
+          propertyAddress: analysis.propertyAddress || null,
+          coverages: analysis.coverages || [],
+          deductibles: analysis.deductibles || [],
+          depreciationMethod: analysis.depreciationMethod || null,
+          depreciationNotes: analysis.depreciationNotes || null,
+          exclusions: analysis.exclusions || [],
+          favorableProvisions: analysis.favorableProvisions || [],
+          summaryForContractor: analysis.summaryForContractor || null,
+          confidence: analysis.confidence || null,
+        },
+        generatedAt: new Date().toISOString(),
+      };
 
-    const filename = decoding.original_filename
-      ? `Policy-Analysis-${decoding.original_filename.replace(/\.pdf$/i, "")}.pdf`
-      : `Policy-Analysis-${id.slice(0, 8)}.pdf`;
+      pdfBuffer = generateHomeownerDecodePdf(hoData);
+      filePrefix = "Homeowner-Report";
+    } else {
+      // Default: contractor report
+      const contractorData: ContractorDecodePdfData = {
+        analysis: {
+          policyType: analysis.policyType || "Unknown",
+          carrier: analysis.carrier || "Unknown",
+          policyNumber: analysis.policyNumber || "---",
+          effectiveDate: analysis.effectiveDate || null,
+          expirationDate: analysis.expirationDate || null,
+          namedInsured: analysis.namedInsured || "---",
+          propertyAddress: analysis.propertyAddress || "---",
+          coverages: analysis.coverages || [],
+          deductibles: analysis.deductibles || [],
+          depreciationMethod: analysis.depreciationMethod || "UNKNOWN",
+          depreciationNotes: analysis.depreciationNotes || "",
+          exclusions: analysis.exclusions || [],
+          endorsements: analysis.endorsements || [],
+          landmines: analysis.landmines || [],
+          favorableProvisions: analysis.favorableProvisions || [],
+          summaryForContractor: analysis.summaryForContractor || "",
+          riskLevel: analysis.riskLevel || "medium",
+          confidence: analysis.confidence || 0,
+          parseNotes: analysis.parseNotes || undefined,
+        },
+        generatedAt: new Date().toISOString(),
+      };
+
+      pdfBuffer = generateContractorDecodePdf(contractorData);
+      filePrefix = "Contractor-Report";
+    }
+
+    const baseName = decoding.original_filename
+      ? decoding.original_filename.replace(/\.pdf$/i, "")
+      : id.slice(0, 8);
+
+    const filename = `${filePrefix}-${baseName}.pdf`;
 
     return new NextResponse(pdfBuffer, {
       headers: {

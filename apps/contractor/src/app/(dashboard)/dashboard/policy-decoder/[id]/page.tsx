@@ -262,6 +262,7 @@ export default async function PolicyDecodingDetailPage({
         autoProcess={autoProcess}
         paymentReturned={payment === "success"}
         isEnterprise={isEnterprise}
+        carrierNotes={decoding.carrier_notes ?? undefined}
       />
     </div>
   );

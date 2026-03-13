@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -20,7 +20,12 @@ import {
   Ban,
   ScrollText,
   Info,
+  Download,
+  User,
+  Briefcase,
 } from "lucide-react";
+import { GoNoGoSignal } from "./go-no-go-signal";
+import { CarrierBattleCard } from "./carrier-battle-card";
 
 /* ─── Types ─── */
 
@@ -101,17 +106,26 @@ interface PolicyAnalysisData {
   endorsementFormNumbers?: string[];
 }
 
+type TabView = "contractor" | "homeowner";
+
 /* ─── Component ─── */
 
 export function PolicyDecoderResults({
   analysis: raw,
   documentMeta,
+  decodingId,
+  carrierNotes,
 }: {
   analysis: Record<string, unknown>;
   documentMeta: Record<string, unknown> | null;
+  decodingId?: string;
+  carrierNotes?: string;
 }) {
   const analysis = raw as unknown as PolicyAnalysisData;
+  const [activeTab, setActiveTab] = useState<TabView>("contractor");
 
+  const criticalExclusions =
+    analysis.exclusions?.filter((e) => e.severity === "critical") || [];
   const criticalLandmines =
     analysis.landmines?.filter((l) => l.severity === "critical") || [];
   const warningLandmines =
@@ -148,8 +162,75 @@ export function PolicyDecoderResults({
   const isDecPage = docType === "dec_page_only";
   const isPoorScan = scanQuality === "poor";
 
+  const firstDeductibleAmount =
+    analysis.deductibles?.[0]?.dollarAmount ?? null;
+
   return (
     <div className="space-y-6">
+      {/* Go / No-Go Signal */}
+      <GoNoGoSignal
+        riskLevel={(analysis.riskLevel as "low" | "medium" | "high") || "medium"}
+        depreciationMethod={analysis.depreciationMethod || "Unknown"}
+        criticalExclusionCount={criticalExclusions.length}
+        favorableProvisionCount={analysis.favorableProvisions?.length || 0}
+        deductibleAmount={firstDeductibleAmount}
+      />
+
+      {/* Download buttons + Tab switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Tab buttons */}
+        <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+          <button
+            type="button"
+            onClick={() => setActiveTab("contractor")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "contractor"
+                ? "bg-white text-[#344767] shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Briefcase className="h-3.5 w-3.5" />
+            Contractor View
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("homeowner")}
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "homeowner"
+                ? "bg-white text-[#344767] shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <User className="h-3.5 w-3.5" />
+            Homeowner View
+          </button>
+        </div>
+
+        {/* Download buttons */}
+        {decodingId && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={`/api/policy-decoder/${decodingId}/download?type=contractor`}
+                download
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                Contractor PDF
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={`/api/policy-decoder/${decodingId}/download?type=homeowner`}
+                download
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                Homeowner PDF
+              </a>
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Document warnings */}
       {isDecPage && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 flex items-start gap-2">
@@ -179,328 +260,350 @@ export function PolicyDecoderResults({
         </div>
       )}
 
-      {/* Risk overview card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <riskConfig.Icon
-                className={`h-5 w-5 ${riskConfig.iconColor}`}
-              />
-              Policy Analysis
-            </CardTitle>
-            <Badge className={riskConfig.badgeClass}>{riskConfig.label}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Quick stats */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <QuickStat
-              label="Policy Type"
-              value={analysis.policyType || "—"}
-              confidence={analysis.sectionConfidence?.policyMeta}
-            />
-            <QuickStat
-              label="Carrier"
-              value={analysis.carrier || "—"}
-            />
-            <QuickStat
-              label="Depreciation"
-              value={analysis.depreciationMethod || "—"}
-              confidence={analysis.sectionConfidence?.depreciation}
-            />
-            <QuickStat
-              label="Deductible"
-              value={analysis.deductibles?.[0]?.amount || "—"}
-              confidence={analysis.sectionConfidence?.deductibles}
-            />
-          </div>
+      {/* ─── Contractor View ─── */}
+      {activeTab === "contractor" && (
+        <div className="space-y-6">
+          {/* Risk overview card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <riskConfig.Icon
+                    className={`h-5 w-5 ${riskConfig.iconColor}`}
+                  />
+                  Policy Analysis
+                </CardTitle>
+                <Badge className={riskConfig.badgeClass}>{riskConfig.label}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Quick stats */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <QuickStat
+                  label="Policy Type"
+                  value={analysis.policyType || "\u2014"}
+                  confidence={analysis.sectionConfidence?.policyMeta}
+                />
+                <QuickStat
+                  label="Carrier"
+                  value={analysis.carrier || "\u2014"}
+                />
+                <QuickStat
+                  label="Depreciation"
+                  value={analysis.depreciationMethod || "\u2014"}
+                  confidence={analysis.sectionConfidence?.depreciation}
+                />
+                <QuickStat
+                  label="Deductible"
+                  value={analysis.deductibles?.[0]?.amount || "\u2014"}
+                  confidence={analysis.sectionConfidence?.deductibles}
+                />
+              </div>
 
-          {/* Contractor summary */}
-          {analysis.summaryForContractor && (
-            <div className="rounded-lg bg-slate-50 p-3 text-sm">
-              <p className="font-medium text-slate-700 mb-1">Summary</p>
-              <p className="text-slate-600">{analysis.summaryForContractor}</p>
-            </div>
+              {/* Contractor summary */}
+              {analysis.summaryForContractor && (
+                <div className="rounded-lg bg-slate-50 p-3 text-sm">
+                  <p className="font-medium text-slate-700 mb-1">Summary</p>
+                  <p className="text-slate-600">{analysis.summaryForContractor}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Landmines */}
+          {(criticalLandmines.length > 0 || warningLandmines.length > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <AlertTriangle className="h-5 w-5" />
+                  Policy Landmines ({analysis.landmines.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {criticalLandmines.map((l, i) => (
+                  <LandmineRow key={i} landmine={l} />
+                ))}
+                {warningLandmines.map((l, i) => (
+                  <LandmineRow key={`w-${i}`} landmine={l} />
+                ))}
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Landmines */}
-      {(criticalLandmines.length > 0 || warningLandmines.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              Policy Landmines ({analysis.landmines.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {criticalLandmines.map((l, i) => (
-              <LandmineRow key={i} landmine={l} />
-            ))}
-            {warningLandmines.map((l, i) => (
-              <LandmineRow key={`w-${i}`} landmine={l} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
+          {/* Favorable provisions */}
+          {analysis.favorableProvisions && analysis.favorableProvisions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-600">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Favorable Provisions ({analysis.favorableProvisions.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {analysis.favorableProvisions.map((p, i) => (
+                  <FavorableRow key={i} provision={p} />
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Favorable provisions */}
-      {analysis.favorableProvisions && analysis.favorableProvisions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="h-5 w-5" />
-              Favorable Provisions ({analysis.favorableProvisions.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {analysis.favorableProvisions.map((p, i) => (
-              <FavorableRow key={i} provision={p} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
+          {/* Coverages */}
+          {analysis.coverages && analysis.coverages.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-blue-500" />
+                  Coverage Sections
+                  <ConfidenceDot value={analysis.sectionConfidence?.coverages} />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {analysis.coverages.map((c, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start justify-between gap-4 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{c.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {c.description}
+                        </p>
+                      </div>
+                      {c.limit && (
+                        <span className="shrink-0 font-semibold text-green-700">
+                          {c.limit}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Coverages */}
-      {analysis.coverages && analysis.coverages.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-blue-500" />
-              Coverage Sections
-              <ConfidenceDot value={analysis.sectionConfidence?.coverages} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {analysis.coverages.map((c, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-between gap-4 text-sm"
+          {/* Deductibles */}
+          {analysis.deductibles && analysis.deductibles.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-amber-500" />
+                  Deductibles
+                  <ConfidenceDot value={analysis.sectionConfidence?.deductibles} />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {analysis.deductibles.map((d, i) => (
+                    <div key={i} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{d.amount}</span>
+                        {d.dollarAmount && d.amount.includes("%") && (
+                          <span className="text-xs text-green-700 font-medium">
+                            (${d.dollarAmount.toLocaleString()})
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          ({d.type})
+                        </span>
+                        {d.needsVerification && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-600"
+                          >
+                            verify
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Applies to: {d.appliesTo}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Depreciation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-purple-500" />
+                Depreciation Method
+                <ConfidenceDot value={analysis.sectionConfidence?.depreciation} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm">
+                <Badge
+                  variant="outline"
+                  className={
+                    analysis.depreciationMethod === "RCV"
+                      ? "border-green-300 text-green-700"
+                      : analysis.depreciationMethod === "ACV"
+                        ? "border-red-300 text-red-700"
+                        : ""
+                  }
                 >
-                  <div>
-                    <p className="font-medium">{c.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {c.description}
-                    </p>
-                  </div>
-                  {c.limit && (
-                    <span className="shrink-0 font-semibold text-green-700">
-                      {c.limit}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Deductibles */}
-      {analysis.deductibles && analysis.deductibles.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-amber-500" />
-              Deductibles
-              <ConfidenceDot value={analysis.sectionConfidence?.deductibles} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {analysis.deductibles.map((d, i) => (
-                <div key={i} className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">{d.amount}</span>
-                    {d.dollarAmount && d.amount.includes("%") && (
-                      <span className="text-xs text-green-700 font-medium">
-                        (${d.dollarAmount.toLocaleString()})
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      ({d.type})
-                    </span>
-                    {d.needsVerification && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-600"
-                      >
-                        verify
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Applies to: {d.appliesTo}
+                  {analysis.depreciationMethod || "Unknown"}
+                </Badge>
+                {analysis.depreciationNotes && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {analysis.depreciationNotes}
                   </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Exclusions */}
+          {analysis.exclusions && analysis.exclusions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ban className="h-5 w-5 text-red-500" />
+                  Exclusions ({analysis.exclusions.length})
+                  <ConfidenceDot value={analysis.sectionConfidence?.exclusions} />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {analysis.exclusions.map((ex, i) => (
+                    <div key={i} className="text-sm space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{ex.name}</span>
+                        <SeverityBadge severity={ex.severity} />
+                        {ex.needsVerification && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-600"
+                          >
+                            verify
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {ex.description}
+                      </p>
+                      {ex.policyLanguage && (
+                        <blockquote className="border-l-2 border-slate-300 pl-3 text-xs italic text-slate-500">
+                          &ldquo;{ex.policyLanguage}&rdquo;
+                        </blockquote>
+                      )}
+                      <p className="text-xs font-medium text-red-700">
+                        Impact: {ex.impact}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Depreciation */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-purple-500" />
-            Depreciation Method
-            <ConfidenceDot value={analysis.sectionConfidence?.depreciation} />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm">
-            <Badge
-              variant="outline"
-              className={
-                analysis.depreciationMethod === "RCV"
-                  ? "border-green-300 text-green-700"
-                  : analysis.depreciationMethod === "ACV"
-                    ? "border-red-300 text-red-700"
-                    : ""
-              }
-            >
-              {analysis.depreciationMethod || "Unknown"}
-            </Badge>
-            {analysis.depreciationNotes && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                {analysis.depreciationNotes}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Exclusions */}
-      {analysis.exclusions && analysis.exclusions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Ban className="h-5 w-5 text-red-500" />
-              Exclusions ({analysis.exclusions.length})
-              <ConfidenceDot value={analysis.sectionConfidence?.exclusions} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analysis.exclusions.map((ex, i) => (
-                <div key={i} className="text-sm space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{ex.name}</span>
-                    <SeverityBadge severity={ex.severity} />
-                    {ex.needsVerification && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-600"
-                      >
-                        verify
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {ex.description}
-                  </p>
-                  {ex.policyLanguage && (
-                    <blockquote className="border-l-2 border-slate-300 pl-3 text-xs italic text-slate-500">
-                      &ldquo;{ex.policyLanguage}&rdquo;
-                    </blockquote>
-                  )}
-                  <p className="text-xs font-medium text-red-700">
-                    Impact: {ex.impact}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Endorsements */}
-      {analysis.endorsements && analysis.endorsements.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ScrollText className="h-5 w-5 text-orange-500" />
-              Endorsements ({analysis.endorsements.length})
-              <ConfidenceDot value={analysis.sectionConfidence?.endorsements} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {analysis.endorsements.map((en, i) => (
-                <div key={i} className="text-sm space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{en.name}</span>
-                    {en.number && (
-                      <span className="text-xs text-muted-foreground">
-                        ({en.number})
-                      </span>
-                    )}
-                    <SeverityBadge severity={en.severity} />
-                    {en.needsVerification && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-600"
-                      >
-                        verify
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {en.description}
-                  </p>
-                  <p className="text-xs font-medium">{en.impact}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Policy Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-slate-500" />
-            Policy Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 text-sm">
-            <DetailRow label="Policy #" value={analysis.policyNumber} />
-            <DetailRow label="Named Insured" value={analysis.namedInsured} />
-            <DetailRow
-              label="Property Address"
-              value={analysis.propertyAddress}
-            />
-            <DetailRow
-              label="Effective"
-              value={analysis.effectiveDate || "—"}
-            />
-            <DetailRow
-              label="Expiration"
-              value={analysis.expirationDate || "—"}
-            />
-            <DetailRow
-              label="Overall Confidence"
-              value={`${Math.round((analysis.confidence || 0) * 100)}%`}
-            />
-            {docType && (
-              <DetailRow label="Document Type" value={docType.replace(/_/g, " ")} />
-            )}
-            {scanQuality && (
-              <DetailRow label="Scan Quality" value={scanQuality} />
-            )}
-          </div>
-          {analysis.parseNotes && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {analysis.parseNotes}
-            </p>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Endorsements */}
+          {analysis.endorsements && analysis.endorsements.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ScrollText className="h-5 w-5 text-orange-500" />
+                  Endorsements ({analysis.endorsements.length})
+                  <ConfidenceDot value={analysis.sectionConfidence?.endorsements} />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {analysis.endorsements.map((en, i) => (
+                    <div key={i} className="text-sm space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{en.name}</span>
+                        {en.number && (
+                          <span className="text-xs text-muted-foreground">
+                            ({en.number})
+                          </span>
+                        )}
+                        <SeverityBadge severity={en.severity} />
+                        {en.needsVerification && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-600"
+                          >
+                            verify
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {en.description}
+                      </p>
+                      <p className="text-xs font-medium">{en.impact}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Policy Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-slate-500" />
+                Policy Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 sm:grid-cols-2 text-sm">
+                <DetailRow label="Policy #" value={analysis.policyNumber} />
+                <DetailRow label="Named Insured" value={analysis.namedInsured} />
+                <DetailRow
+                  label="Property Address"
+                  value={analysis.propertyAddress}
+                />
+                <DetailRow
+                  label="Effective"
+                  value={analysis.effectiveDate || "\u2014"}
+                />
+                <DetailRow
+                  label="Expiration"
+                  value={analysis.expirationDate || "\u2014"}
+                />
+                <DetailRow
+                  label="Overall Confidence"
+                  value={`${Math.round((analysis.confidence || 0) * 100)}%`}
+                />
+                {docType && (
+                  <DetailRow label="Document Type" value={docType.replace(/_/g, " ")} />
+                )}
+                {scanQuality && (
+                  <DetailRow label="Scan Quality" value={scanQuality} />
+                )}
+              </div>
+              {analysis.parseNotes && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {analysis.parseNotes}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Carrier Battle Card */}
+          {decodingId && (
+            <CarrierBattleCard
+              carrierName={analysis.carrier || "Unknown"}
+              riskLevel={analysis.riskLevel || "unknown"}
+              decodingId={decodingId}
+              initialNotes={carrierNotes}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ─── Homeowner View ─── */}
+      {activeTab === "homeowner" && (
+        <div className="space-y-6">
+          <HomeownerPreview analysis={analysis} />
+        </div>
+      )}
 
       {/* Disclaimer */}
       <div className="rounded-lg bg-slate-50 p-4 text-xs text-muted-foreground">
@@ -513,6 +616,157 @@ export function PolicyDecoderResults({
         </p>
       </div>
     </div>
+  );
+}
+
+/* ─── Homeowner Preview ─── */
+
+function HomeownerPreview({
+  analysis,
+}: {
+  analysis: PolicyAnalysisData;
+}) {
+  const coveredItems = (analysis.coverages || []).filter(
+    (c) => c.limit && c.limit !== "$0" && c.limit !== "0"
+  );
+  const notCoveredItems = (analysis.exclusions || []).filter(
+    (e) => e.severity === "critical" || e.severity === "warning"
+  );
+
+  return (
+    <>
+      {/* Coverage at a glance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-500" />
+            Your Coverage at a Glance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-slate-600">
+            Your {analysis.carrier || "insurance"} policy ({analysis.policyType || "homeowner's"})
+            uses <strong>{(analysis.depreciationMethod || "standard").toUpperCase()}</strong> depreciation.
+            {analysis.depreciationMethod === "RCV"
+              ? " This means your carrier pays to fully replace damaged items at today's prices."
+              : analysis.depreciationMethod === "ACV"
+                ? " This means your carrier factors in the age and wear of damaged items when calculating payment."
+                : ""}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* What's covered */}
+      {coveredItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              What&apos;s Covered
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {coveredItems.map((c, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-green-500" />
+                  <div>
+                    <span className="font-medium">{c.label}</span>
+                    {c.limit && (
+                      <span className="text-green-700 ml-1">({c.limit})</span>
+                    )}
+                    <p className="text-xs text-muted-foreground">{c.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* What's not covered */}
+      {notCoveredItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-slate-600">
+              <Info className="h-5 w-5" />
+              Important Limitations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {notCoveredItems.map((ex, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5 text-slate-400" />
+                  <div>
+                    <span className="font-medium">{ex.name}</span>
+                    <p className="text-xs text-muted-foreground">{ex.description}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Deductible explanation */}
+      {analysis.deductibles && analysis.deductibles.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-blue-500" />
+              Your Deductible
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg bg-blue-50 border border-blue-100 p-4">
+              <p className="text-lg font-bold text-blue-900">
+                {analysis.deductibles[0].amount}
+              </p>
+              <p className="text-sm text-blue-700 mt-1">
+                This is the amount you pay out of pocket before your insurance
+                coverage kicks in.
+                {analysis.deductibles[0].dollarAmount &&
+                  analysis.deductibles[0].amount.includes("%") && (
+                    <span className="block mt-1">
+                      Based on your coverage, this works out to approximately{" "}
+                      <strong>
+                        ${analysis.deductibles[0].dollarAmount.toLocaleString()}
+                      </strong>
+                      .
+                    </span>
+                  )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Favorable provisions — friendly framing */}
+      {analysis.favorableProvisions && analysis.favorableProvisions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              Good News in Your Policy
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {analysis.favorableProvisions.map((p, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-green-500" />
+                  <div>
+                    <span className="font-medium">{p.name}</span>
+                    <p className="text-xs text-muted-foreground">{p.impact}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+    </>
   );
 }
 

@@ -39,6 +39,8 @@ interface DecoderFlowProps {
   paymentReturned?: boolean;
   /** Enterprise accounts skip payment entirely */
   isEnterprise?: boolean;
+  /** Carrier notes from the policy_decodings row */
+  carrierNotes?: string;
 }
 
 /* ─── Claim types ─── */
@@ -74,6 +76,7 @@ export function DecoderFlow({
   autoProcess,
   paymentReturned,
   isEnterprise,
+  carrierNotes,
 }: DecoderFlowProps) {
   const router = useRouter();
 
@@ -983,34 +986,11 @@ export function DecoderFlow({
           </span>
         </div>
 
-        {/* Download PDF button */}
-        <div className="flex justify-end">
-          <Button variant="outline" asChild>
-            <a
-              href={`/api/policy-decoder/${decodingId}/download`}
-              download
-            >
-              <svg
-                className="mr-2 h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              Download PDF
-            </a>
-          </Button>
-        </div>
-
         <PolicyDecoderResults
           analysis={analysis}
           documentMeta={documentMeta}
+          decodingId={decodingId}
+          carrierNotes={carrierNotes}
         />
 
         {/* Pre-Inspection Prep — generate talking points from decoded policy */}
