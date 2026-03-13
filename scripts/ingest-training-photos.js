@@ -33,7 +33,7 @@ If this is NOT a roofing, construction, or property photo (e.g. personal photo, 
 
 Otherwise classify using this taxonomy:
 
-category (required): elevation | roof_overview | damage | component | repair_install | install | interior_damage | estimate_photo | other
+category (required): elevation | roof_overview | damage | component | repair_install | install | interior_damage | estimate_photo | roof_notes | other
 subcategory (required):
   - If elevation: front | front_left | left | back_left | back | back_right | right | front_right
   - If damage: hail | wind | mechanical | thermal | blistering | wear | tree | other
@@ -41,6 +41,7 @@ subcategory (required):
   - If component: pipe_jack | ridge_cap | vent | flashing | valley | drip_edge | gutter | skylight | chimney | soffit | fascia | starter_strip | hip_cap | step_flashing | counter_flashing | boot | turbine | satellite_mount | other
   - If install: tear_off | underlayment | shingle_install | flashing_install | ridge_install | completed | other
   - If estimate_photo: xactimate | handwritten | printed | other
+  - If roof_notes: chalk_accessories | chalk_measurements | chalk_diagram | written_notes | other (photos of chalk markings listing roof accessories, measurements, or diagrams written on the roof surface)
   - If roof_overview/repair_install/other: null or descriptive string
 damage_severity: none | minor | moderate | severe (null if not a damage photo)
 components_visible: array of roofing components visible in the photo
