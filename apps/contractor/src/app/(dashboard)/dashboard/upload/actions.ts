@@ -185,7 +185,6 @@ export async function createJobAndSupplement(
         (input.measurementData.damageTypes ?? []).length > 0
           ? input.measurementData.damageTypes
           : null,
-      notes: input.claimName,
     })
     .eq("id", jobId);
 
