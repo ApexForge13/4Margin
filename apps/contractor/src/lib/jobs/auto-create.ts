@@ -43,23 +43,44 @@ export async function findOrCreateJob(
   });
 
   if (match.matched && match.jobId) {
-    // Update existing job with any new data
+    // Fetch existing job to enable enrichment-only updates
+    const { data: existing } = await supabase
+      .from('jobs')
+      .select('homeowner_name, homeowner_phone, homeowner_email, insurance_data')
+      .eq('id', match.jobId)
+      .eq('company_id', input.companyId)
+      .single();
+
     const updates: Record<string, unknown> = {};
-    if (input.homeownerName && input.homeownerName.trim()) {
+
+    // Only enrich empty fields — never overwrite existing data
+    if (input.homeownerName?.trim() && !existing?.homeowner_name) {
       updates.homeowner_name = input.homeownerName;
     }
-    if (input.homeownerPhone) updates.homeowner_phone = input.homeownerPhone;
-    if (input.homeownerEmail) updates.homeowner_email = input.homeownerEmail;
+    if (input.homeownerPhone && !existing?.homeowner_phone) {
+      updates.homeowner_phone = input.homeownerPhone;
+    }
+    if (input.homeownerEmail && !existing?.homeowner_email) {
+      updates.homeowner_email = input.homeownerEmail;
+    }
     if (input.insuranceData) {
-      // Merge insurance data, don't overwrite
-      updates.insurance_data = input.insuranceData;
+      // Deep merge: existing data preserved, new keys added
+      updates.insurance_data = {
+        ...(existing?.insurance_data as Record<string, unknown> || {}),
+        ...input.insuranceData,
+      };
     }
 
     if (Object.keys(updates).length > 0) {
-      await supabase
+      const { error: updateError } = await supabase
         .from('jobs')
         .update(updates)
-        .eq('id', match.jobId);
+        .eq('id', match.jobId)
+        .eq('company_id', input.companyId);
+
+      if (updateError) {
+        console.error(`Failed to update job ${match.jobId}:`, updateError.message);
+      }
     }
 
     return { jobId: match.jobId, created: false };
