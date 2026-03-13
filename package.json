@@ -1,7 +1,10 @@
 {
   "name": "4margin",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "turbo dev",
     "dev:contractor": "turbo dev --filter=@4margin/contractor",
@@ -12,5 +15,8 @@
   "packageManager": "npm@11.8.0",
   "devDependencies": {
     "turbo": "^2"
+  },
+  "dependencies": {
+    "heic-convert": "^2.1.0"
   }
 }
