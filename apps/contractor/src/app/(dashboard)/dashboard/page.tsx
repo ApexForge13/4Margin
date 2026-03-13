@@ -4,6 +4,7 @@ import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import type { Period } from "@/components/dashboard/dashboard-client";
 import type { DashboardStatsProps } from "@/components/dashboard/dashboard-stats";
 import type { ActivityItem } from "@/components/dashboard/activity-feed";
+import type { JobStatus, JobType } from "@/types/job";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,20 @@ interface SupplementRow {
     claim_number: string | null;
     property_address: string | null;
   } | null;
+}
+
+interface JobRow {
+  id: string;
+  job_status: JobStatus;
+  job_type: JobType;
+  homeowner_name: string | null;
+  property_address: string | null;
+  property_city: string | null;
+  property_state: string | null;
+  financials: Record<string, unknown>;
+  insurance_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -259,6 +274,16 @@ export default async function DashboardPage() {
 
   const decodings = (decodingsRaw ?? []) as { id: string; created_at: string }[];
 
+  // Fetch jobs for pipeline display
+  const { data: jobsRaw } = await supabase
+    .from("jobs")
+    .select("id, job_status, job_type, homeowner_name, property_address, property_city, property_state, financials, insurance_data, created_at, updated_at")
+    .eq("company_id", companyId)
+    .is("archived_at", null)
+    .order("updated_at", { ascending: false });
+
+  const jobs = (jobsRaw ?? []) as unknown as JobRow[];
+
   // ── Build action items ────────────────────────────────────────────────────
 
   const THREE_MIN_AGO = new Date(Date.now() - 3 * 60 * 1000).toISOString();
@@ -393,6 +418,7 @@ export default async function DashboardPage() {
         allActionItems={{ stuckGenerating, needsReview, pendingPayment }}
         allActivity={activity}
         periodStats={periodStats}
+        jobs={jobs}
       />
     </div>
   );

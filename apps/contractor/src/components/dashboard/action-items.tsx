@@ -61,7 +61,7 @@ export function ActionItems({
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-[#344767]">Action Items</h3>
-          <p className="text-xs text-[#94a3b8] mt-0.5">Supplements needing your attention</p>
+          <p className="text-xs text-[#94a3b8] mt-0.5">Jobs needing your attention</p>
         </div>
         {total > 0 && (
           <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-50 border border-red-100 px-1.5 text-[10px] font-bold text-red-500">

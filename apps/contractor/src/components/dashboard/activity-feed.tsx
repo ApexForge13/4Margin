@@ -71,7 +71,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
     >
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-[#344767]">Recent Activity</h3>
-        <p className="text-xs text-[#94a3b8] mt-0.5">Latest supplement events</p>
+        <p className="text-xs text-[#94a3b8] mt-0.5">Latest job and supplement events</p>
       </div>
 
       {items.length === 0 ? (
@@ -82,7 +82,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
             </svg>
           </div>
           <p className="text-sm font-medium text-[#344767]">No activity yet</p>
-          <p className="text-xs text-[#94a3b8]">Supplement events will appear here</p>
+          <p className="text-xs text-[#94a3b8]">Job events will appear here</p>
         </div>
       ) : (
         <div className="relative flex-1 overflow-y-auto">
@@ -153,7 +153,7 @@ export function ActivityFeed({ items }: ActivityFeedProps) {
             href="/dashboard/supplements"
             className="text-xs font-semibold text-[#00BFFF] hover:text-[#0090cc] transition-colors flex items-center gap-1"
           >
-            View all supplements
+            View all jobs
             <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>

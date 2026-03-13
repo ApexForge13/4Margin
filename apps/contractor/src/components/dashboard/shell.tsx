@@ -19,10 +19,11 @@ interface UserProfile {
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/dashboard/supplements": "Supplements",
-  "/dashboard/upload": "New Supplement",
+  "/dashboard/supplements": "Jobs",
+  "/dashboard/upload": "New Job",
   "/dashboard/policy-checks": "Policy Checks",
   "/dashboard/policy-decoder": "Policy Decoder",
+  "/dashboard/documents": "Documents",
   "/dashboard/knowledge-base": "Knowledge Base",
   "/dashboard/settings": "Settings",
   "/dashboard/admin": "Admin",
@@ -75,6 +76,11 @@ const NAV_ICONS = {
   newDecoder: (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  ),
+  documents: (
+    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
     </svg>
   ),
   enterprise: (
@@ -141,10 +147,11 @@ export function DashboardShell({
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: NAV_ICONS.dashboard },
-    { label: "Supplements", href: "/dashboard/supplements", icon: NAV_ICONS.supplements },
-    { label: "New Supplement", href: "/dashboard/upload", icon: NAV_ICONS.upload },
+    { label: "Jobs", href: "/dashboard/supplements", icon: NAV_ICONS.supplements },
+    { label: "New Job", href: "/dashboard/upload", icon: NAV_ICONS.upload },
     { label: "Policy Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.decoder },
     { label: "New Decoder", href: "/dashboard/policy-decoder/new", icon: NAV_ICONS.newDecoder },
+    { label: "Documents", href: "/dashboard/documents", icon: NAV_ICONS.documents },
     { label: "Knowledge Base", href: "/dashboard/knowledge-base", icon: NAV_ICONS.knowledgeBase },
     { label: "Settings", href: "/dashboard/settings", icon: NAV_ICONS.settings },
     ...(isEnterpriseOwner

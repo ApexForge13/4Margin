@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { DashboardStats } from "./dashboard-stats";
+import { JobsPipeline } from "./jobs-pipeline";
+import type { JobsPipelineProps } from "./jobs-pipeline";
 import { PipelineChart } from "./pipeline-chart";
 import { RecoveryChart } from "./recovery-chart";
 import { ActionItems } from "./action-items";
@@ -24,6 +26,9 @@ export interface DashboardClientProps {
 
   // Per-period data
   periodStats: Record<Period, DashboardStatsProps>;
+
+  // Jobs pipeline
+  jobs: JobsPipelineProps["jobs"];
 }
 
 const PERIOD_LABELS: Record<Period, string> = {
@@ -39,6 +44,7 @@ export function DashboardClient({
   allActionItems,
   allActivity,
   periodStats,
+  jobs,
 }: DashboardClientProps) {
   const [period, setPeriod] = useState<Period>("month");
 
@@ -77,13 +83,24 @@ export function DashboardClient({
       {/* Row 1: KPI cards */}
       <DashboardStats {...stats} />
 
-      {/* Row 2: Pipeline donut + Recovery chart */}
-      <div className="grid gap-5 md:grid-cols-3">
-        <div className="md:col-span-1">
-          <PipelineChart data={allPipeline} />
-        </div>
-        <div className="md:col-span-2">
-          <RecoveryChart data={allRecovery} />
+      {/* Row 2: Jobs pipeline */}
+      <JobsPipeline jobs={jobs} />
+
+      {/* Supplement Analytics */}
+      <div>
+        <h2 className="text-base font-bold text-[#344767] mb-1">Supplement Analytics</h2>
+        <p className="text-xs text-[#94a3b8] mb-4">
+          Supplement pipeline status and recovery trends
+        </p>
+
+        {/* Pipeline donut + Recovery chart */}
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <PipelineChart data={allPipeline} />
+          </div>
+          <div className="md:col-span-2">
+            <RecoveryChart data={allRecovery} />
+          </div>
         </div>
       </div>
 
