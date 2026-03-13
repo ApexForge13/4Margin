@@ -27,6 +27,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard/knowledge-base": "Knowledge Base",
   "/dashboard/settings": "Settings",
   "/dashboard/admin": "Admin",
+  "/dashboard/admin/photo-review": "Photo Review",
   "/dashboard/enterprise": "Enterprise",
 };
 
@@ -91,6 +92,12 @@ const NAV_ICONS = {
   admin: (
     <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+  ),
+  photoReview: (
+    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
     </svg>
   ),
 };
@@ -158,7 +165,10 @@ export function DashboardShell({
       ? [{ label: "Enterprise", href: "/dashboard/enterprise", icon: NAV_ICONS.enterprise }]
       : []),
     ...(isAdmin
-      ? [{ label: "Admin", href: "/dashboard/admin", icon: NAV_ICONS.admin }]
+      ? [
+          { label: "Admin", href: "/dashboard/admin", icon: NAV_ICONS.admin },
+          { label: "Photo Review", href: "/dashboard/admin/photo-review", icon: NAV_ICONS.photoReview },
+        ]
       : []),
   ];
 
