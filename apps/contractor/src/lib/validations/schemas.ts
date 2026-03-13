@@ -231,8 +231,8 @@ export const photoMetaSchema = z.object({
 });
 
 export const createJobInputSchema = z.object({
-  jobName: requiredString("Job name").max(255),
-  jobDetails: jobDetailsSchema,
+  claimName: requiredString("Job name").max(255),
+  claimDetails: jobDetailsSchema,
   measurementData: measurementDataSchema,
   photoMeta: z.array(photoMetaSchema),
   estimateStoragePath: z.string().min(1, "Estimate file is required"),

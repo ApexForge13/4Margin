@@ -98,7 +98,7 @@ export interface WizardState {
   // Step 1
   estimateFiles: UploadedFile[];
   policyFiles: UploadedFile[];
-  jobDetails: JobDetails;
+  claimDetails: JobDetails;
   estimateParsingStatus: ParsingStatus;
 
   // Step 2
@@ -110,7 +110,7 @@ export interface WizardState {
   measurementParsingStatus: ParsingStatus;
 
   // Step 4
-  jobName: string;
+  claimName: string;
 
   // Submission
   isSubmitting: boolean;
