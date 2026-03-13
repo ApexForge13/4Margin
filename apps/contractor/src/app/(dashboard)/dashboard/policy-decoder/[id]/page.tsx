@@ -141,6 +141,22 @@ export default async function PolicyDecodingDetailPage({
     // Continue with defaults: isFirstDecode=true, isEnterprise=false
   }
 
+  // ── Fetch linked job address (if any) ──────────────────────
+  let jobAddress: string | null = null;
+  if (decoding.job_id) {
+    try {
+      const adminForJob = createAdminClient();
+      const { data: job } = await adminForJob
+        .from("jobs")
+        .select("property_address")
+        .eq("id", decoding.job_id)
+        .single();
+      jobAddress = job?.property_address || null;
+    } catch {
+      // Non-critical — skip if jobs table unavailable
+    }
+  }
+
   // ── Compute state for DecoderFlow ──────────────────────────
   const isPaid = !!decoding.paid_at;
   const hasFile = !!decoding.policy_pdf_url;
@@ -263,6 +279,8 @@ export default async function PolicyDecodingDetailPage({
         paymentReturned={payment === "success"}
         isEnterprise={isEnterprise}
         carrierNotes={decoding.carrier_notes ?? undefined}
+        jobId={decoding.job_id ?? undefined}
+        jobAddress={jobAddress ?? undefined}
       />
     </div>
   );

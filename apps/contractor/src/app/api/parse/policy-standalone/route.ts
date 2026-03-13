@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parsePolicyPdfV2 } from "@/lib/ai/policy-parser";
+import { findOrCreateJob } from "@/lib/jobs/auto-create";
 
 export async function POST(request: NextRequest) {
   try {
@@ -132,6 +133,38 @@ export async function POST(request: NextRequest) {
       console.log(
         `[parse/policy-standalone] Complete: ${policyDecodingId}. Risk: ${analysis.riskLevel}, Confidence: ${analysis.confidence.toFixed(2)}`
       );
+
+      // ── Best-effort: link decode to a Job ──────────────────
+      try {
+        if (analysis.propertyAddress) {
+          const jobResult = await findOrCreateJob(admin, {
+            companyId: userProfile.company_id,
+            createdBy: user.id,
+            propertyAddress: analysis.propertyAddress,
+            jobType: "insurance",
+            insuranceData: analysis.carrier
+              ? { carrier_id: analysis.carrier }
+              : undefined,
+            metadata: analysis.summaryForContractor
+              ? { description: analysis.summaryForContractor }
+              : undefined,
+          });
+
+          await admin
+            .from("policy_decodings")
+            .update({ job_id: jobResult.jobId })
+            .eq("id", policyDecodingId);
+
+          console.log(
+            `[parse/policy-standalone] Linked to job ${jobResult.jobId} (${jobResult.created ? "new" : "existing"})`
+          );
+        }
+      } catch (jobErr) {
+        console.error(
+          "[parse/policy-standalone] Job linking failed (non-blocking):",
+          jobErr
+        );
+      }
 
       return NextResponse.json({ success: true, analysis });
     } catch (parseErr) {

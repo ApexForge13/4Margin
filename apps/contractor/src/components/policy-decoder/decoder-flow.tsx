@@ -41,6 +41,10 @@ interface DecoderFlowProps {
   isEnterprise?: boolean;
   /** Carrier notes from the policy_decodings row */
   carrierNotes?: string;
+  /** Linked Job ID (if auto-created via find-or-create) */
+  jobId?: string;
+  /** Property address of the linked job */
+  jobAddress?: string;
 }
 
 /* ─── Claim types ─── */
@@ -77,6 +81,8 @@ export function DecoderFlow({
   paymentReturned,
   isEnterprise,
   carrierNotes,
+  jobId,
+  jobAddress,
 }: DecoderFlowProps) {
   const router = useRouter();
 
@@ -985,6 +991,29 @@ export function DecoderFlow({
             )}
           </span>
         </div>
+
+        {/* Job link banner */}
+        {jobId && jobAddress && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700 flex items-center gap-2">
+            <svg
+              className="h-4 w-4 text-blue-500 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+              />
+            </svg>
+            <span>
+              Linked to job at{" "}
+              <span className="font-medium">{jobAddress}</span>
+            </span>
+          </div>
+        )}
 
         <PolicyDecoderResults
           analysis={analysis}
