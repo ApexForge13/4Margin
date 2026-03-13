@@ -36,7 +36,7 @@ import { toast } from "sonner";
 
 // ── Types ───────────────────────────────────────────────────
 
-interface ClaimData {
+interface JobData {
   id: string;
   notes: string | null;
   claim_number: string | null;
@@ -60,7 +60,7 @@ interface SupplementRow {
   supplement_total: number | null;
   paid_at: string | null;
   created_at: string;
-  claims: ClaimData;
+  jobs: JobData;
 }
 
 type SortColumn =
@@ -89,8 +89,8 @@ function formatCurrency(value: number | null): string {
   }).format(value);
 }
 
-function claimName(claim: ClaimData | null): string {
-  return claim?.notes || `Claim #${claim?.claim_number || "—"}`;
+function jobName(job: JobData | null): string {
+  return job?.notes || `Claim #${job?.claim_number || "—"}`;
 }
 
 // ── Sortable Header ─────────────────────────────────────────
@@ -158,7 +158,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
   const [showArchived, setShowArchived] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortColumn>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [editClaim, setEditClaim] = useState<ClaimData | null>(null);
+  const [editJob, setEditJob] = useState<JobData | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<{
     id: string;
     name: string;
@@ -181,7 +181,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
 
     // Archive filter
     if (!showArchived) {
-      result = result.filter((s) => !s.claims?.archived_at);
+      result = result.filter((s) => !s.jobs?.archived_at);
     }
 
     // Status filter
@@ -193,7 +193,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
     if (search) {
       const q = search.toLowerCase();
       result = result.filter((s) => {
-        const c = s.claims;
+        const c = s.jobs;
         return (
           c?.notes?.toLowerCase().includes(q) ||
           c?.claim_number?.toLowerCase().includes(q) ||
@@ -214,8 +214,8 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
       if (aFinished !== bFinished) return aFinished ? 1 : -1;
 
       let cmp = 0;
-      const ca = a.claims;
-      const cb = b.claims;
+      const ca = a.jobs;
+      const cb = b.jobs;
 
       switch (sortColumn) {
         case "claim_name":
@@ -263,7 +263,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
     return sorted;
   }, [supplements, showArchived, statusFilter, search, sortColumn, sortDirection]);
 
-  const hasArchived = supplements.some((s) => s.claims?.archived_at);
+  const hasArchived = supplements.some((s) => s.jobs?.archived_at);
 
   // Restore handler
   const handleRestore = async (claimId: string) => {
@@ -273,7 +273,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Claim restored.");
+      toast.success("Job restored.");
     }
   };
 
@@ -432,14 +432,14 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
               </TableRow>
             ) : (
               filtered.map((s) => {
-                const claim = s.claims;
-                const isArchived = !!claim?.archived_at;
+                const job = s.jobs;
+                const isArchived = !!job?.archived_at;
                 const isFinished = RESULT_STATUSES.includes(s.status as SupplementStatus);
                 const statusInfo = STATUS_LABELS[s.status] || {
                   label: s.status,
                   variant: "secondary" as const,
                 };
-                const name = claimName(claim);
+                const name = jobName(job);
                 const createdDate = new Date(
                   s.created_at
                 ).toLocaleDateString("en-US", {
@@ -448,9 +448,9 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                   year: "numeric",
                 });
                 const address = [
-                  claim?.property_address,
-                  claim?.property_city,
-                  claim?.property_state,
+                  job?.property_address,
+                  job?.property_city,
+                  job?.property_state,
                 ]
                   .filter(Boolean)
                   .join(", ");
@@ -480,10 +480,10 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                       {name}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {claim?.claim_number ? `#${claim.claim_number}` : "—"}
+                      {job?.claim_number ? `#${job.claim_number}` : "—"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">
-                      {claim?.carriers?.name || "—"}
+                      {job?.carriers?.name || "—"}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -546,7 +546,7 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                claim && setEditClaim(claim);
+                                job && setEditJob(job);
                               }}
                             >
                               Edit Claim
@@ -554,13 +554,13 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                           )}
                           {isArchived ? (
                             <DropdownMenuItem
-                              disabled={restoringId === claim?.id}
+                              disabled={restoringId === job?.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                claim?.id && handleRestore(claim.id);
+                                job?.id && handleRestore(job.id);
                               }}
                             >
-                              {restoringId === claim?.id
+                              {restoringId === job?.id
                                 ? "Restoring..."
                                 : "Restore"}
                             </DropdownMenuItem>
@@ -569,9 +569,9 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
                               className="text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                claim &&
+                                job &&
                                   setArchiveTarget({
-                                    id: claim.id,
+                                    id: job.id,
                                     name,
                                   });
                               }}
@@ -597,11 +597,11 @@ export function SupplementsTable({ supplements }: SupplementsTableProps) {
       </p>
 
       {/* Edit Dialog */}
-      {editClaim && (
+      {editJob && (
         <ClaimEditDialog
-          open={!!editClaim}
-          onOpenChange={(open) => !open && setEditClaim(null)}
-          claim={editClaim}
+          open={!!editJob}
+          onOpenChange={(open) => !open && setEditJob(null)}
+          claim={editJob}
         />
       )}
 

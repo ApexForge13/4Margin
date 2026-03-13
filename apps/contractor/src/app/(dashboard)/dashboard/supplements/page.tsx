@@ -9,7 +9,7 @@ export default async function SupplementsPage() {
 
   if (!user) return null;
 
-  // Fetch supplements with full claim data
+  // Fetch supplements with full job data
   const { data: supplements } = await supabase
     .from("supplements")
     .select(`
@@ -19,7 +19,7 @@ export default async function SupplementsPage() {
       supplement_total,
       paid_at,
       created_at,
-      claims (
+      jobs (
         id,
         notes,
         claim_number,
@@ -46,7 +46,7 @@ export default async function SupplementsPage() {
     supplement_total: number | null;
     paid_at: string | null;
     created_at: string;
-    claims: {
+    jobs: {
       id: string;
       notes: string | null;
       claim_number: string | null;

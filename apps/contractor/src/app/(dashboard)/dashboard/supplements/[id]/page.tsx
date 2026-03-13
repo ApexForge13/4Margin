@@ -37,13 +37,13 @@ export default async function SupplementDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  // Fetch supplement with full claim + carrier data
+  // Fetch supplement with full job + carrier data
   const { data: supplement, error } = await supabase
     .from("supplements")
     .select(
       `
       *,
-      claims (
+      jobs (
         *,
         carriers ( * )
       )
@@ -54,8 +54,8 @@ export default async function SupplementDetailPage({
 
   if (error || !supplement) return notFound();
 
-  const claim = supplement.claims as Record<string, unknown>;
-  const carrier = (claim?.carriers as Record<string, unknown>) || null;
+  const job = supplement.jobs as Record<string, unknown>;
+  const carrier = (job?.carriers as Record<string, unknown>) || null;
 
   // Check if first supplement (for free tier display)
   const { count: paidCount } = await supabase
@@ -77,7 +77,7 @@ export default async function SupplementDetailPage({
   const { data: photos } = await supabase
     .from("photos")
     .select("*")
-    .eq("claim_id", claim.id as string)
+    .eq("job_id", job.id as string)
     .order("created_at", { ascending: true });
 
   // Generate signed URLs for photos
@@ -182,7 +182,7 @@ export default async function SupplementDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {(claim.notes as string) || `Claim #${claim.claim_number || "\u2014"}`}
+            {(job.notes as string) || `Claim #${job.claim_number || "\u2014"}`}
           </h1>
           <p className="text-muted-foreground">
             Created {createdDate}
@@ -346,52 +346,52 @@ export default async function SupplementDetailPage({
         <div className="flex items-center gap-3 pt-2">
           <Separator className="flex-1" />
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Uploaded Claim Information
+            Uploaded Job Information
           </span>
           <Separator className="flex-1" />
         </div>
       )}
 
       {/* Claim Overview — full-width narrative card */}
-      {((claim.description as string) ||
-        (claim.adjuster_scope_notes as string) ||
-        (claim.items_believed_missing as string) ||
-        (claim.prior_supplement_history as string)) && (
+      {((job.description as string) ||
+        (job.adjuster_scope_notes as string) ||
+        (job.items_believed_missing as string) ||
+        (job.prior_supplement_history as string)) && (
         <Card>
           <CardHeader>
             <CardTitle>Claim Overview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
-            {(claim.description as string) && (
+            {(job.description as string) && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                   Claim Description
                 </p>
-                <p className="whitespace-pre-wrap">{claim.description as string}</p>
+                <p className="whitespace-pre-wrap">{job.description as string}</p>
               </div>
             )}
-            {(claim.adjuster_scope_notes as string) && (
+            {(job.adjuster_scope_notes as string) && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                   Adjuster&apos;s Estimate Included
                 </p>
-                <p className="whitespace-pre-wrap">{claim.adjuster_scope_notes as string}</p>
+                <p className="whitespace-pre-wrap">{job.adjuster_scope_notes as string}</p>
               </div>
             )}
-            {(claim.items_believed_missing as string) && (
+            {(job.items_believed_missing as string) && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                   Items Believed Missing / Underpaid
                 </p>
-                <p className="whitespace-pre-wrap">{claim.items_believed_missing as string}</p>
+                <p className="whitespace-pre-wrap">{job.items_believed_missing as string}</p>
               </div>
             )}
-            {(claim.prior_supplement_history as string) && (
+            {(job.prior_supplement_history as string) && (
               <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                   Previous Supplement History
                 </p>
-                <p className="whitespace-pre-wrap">{claim.prior_supplement_history as string}</p>
+                <p className="whitespace-pre-wrap">{job.prior_supplement_history as string}</p>
               </div>
             )}
           </CardContent>
@@ -406,14 +406,14 @@ export default async function SupplementDetailPage({
             <CardTitle>Claim Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <Row label="Claim #" value={claim.claim_number as string} />
-            <Row label="Policy #" value={claim.policy_number as string} />
+            <Row label="Claim #" value={job.claim_number as string} />
+            <Row label="Policy #" value={job.policy_number as string} />
             <Row label="Carrier" value={carrier?.name as string} />
             <Row
               label="Property"
               value={[
-                claim.property_address,
-                [claim.property_city, claim.property_state, claim.property_zip]
+                job.property_address,
+                [job.property_city, job.property_state, job.property_zip]
                   .filter(Boolean)
                   .join(", "),
               ]
@@ -423,15 +423,15 @@ export default async function SupplementDetailPage({
             <Row
               label="Date of Loss"
               value={
-                claim.date_of_loss
-                  ? new Date(claim.date_of_loss as string).toLocaleDateString("en-US")
+                job.date_of_loss
+                  ? new Date(job.date_of_loss as string).toLocaleDateString("en-US")
                   : ""
               }
             />
             <Separator className="my-2" />
-            <Row label="Adjuster" value={claim.adjuster_name as string} />
-            <Row label="Adjuster Email" value={claim.adjuster_email as string} />
-            <Row label="Adjuster Phone" value={claim.adjuster_phone as string} />
+            <Row label="Adjuster" value={job.adjuster_name as string} />
+            <Row label="Adjuster Email" value={job.adjuster_email as string} />
+            <Row label="Adjuster Phone" value={job.adjuster_phone as string} />
           </CardContent>
         </Card>
 
@@ -441,36 +441,36 @@ export default async function SupplementDetailPage({
             <CardTitle>Measurements</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            {!claim.roof_squares && !claim.roof_pitch ? (
+            {!job.roof_squares && !job.roof_pitch ? (
               <p className="text-muted-foreground">No measurements recorded</p>
             ) : (
               <>
-                <Row label="Measured Sq" value={claim.roof_squares ? String(claim.roof_squares) : ""} />
-                <Row label="Waste %" value={claim.waste_percent ? String(claim.waste_percent) : ""} />
-                <Row label="Suggested Sq" value={claim.suggested_squares ? String(claim.suggested_squares) : ""} />
-                <Row label="Pitch" value={claim.roof_pitch as string} />
+                <Row label="Measured Sq" value={job.roof_squares ? String(job.roof_squares) : ""} />
+                <Row label="Waste %" value={job.waste_percent ? String(job.waste_percent) : ""} />
+                <Row label="Suggested Sq" value={job.suggested_squares ? String(job.suggested_squares) : ""} />
+                <Row label="Pitch" value={job.roof_pitch as string} />
                 <Separator className="my-2" />
-                <Row label="Ridges (ft)" value={claim.ft_ridges ? String(claim.ft_ridges) : ""} />
-                <Row label="Hips (ft)" value={claim.ft_hips ? String(claim.ft_hips) : ""} />
-                <Row label="Valleys (ft)" value={claim.ft_valleys ? String(claim.ft_valleys) : ""} />
-                <Row label="Rakes (ft)" value={claim.ft_rakes ? String(claim.ft_rakes) : ""} />
-                <Row label="Eaves (ft)" value={claim.ft_eaves ? String(claim.ft_eaves) : ""} />
-                <Row label="Drip Edge (ft)" value={claim.ft_drip_edge ? String(claim.ft_drip_edge) : ""} />
-                <Row label="Parapet (ft)" value={claim.ft_parapet ? String(claim.ft_parapet) : ""} />
-                <Row label="Flashing (ft)" value={claim.ft_flashing ? String(claim.ft_flashing) : ""} />
-                <Row label="Step Flash (ft)" value={claim.ft_step_flashing ? String(claim.ft_step_flashing) : ""} />
-                {claim.accessories && (
+                <Row label="Ridges (ft)" value={job.ft_ridges ? String(job.ft_ridges) : ""} />
+                <Row label="Hips (ft)" value={job.ft_hips ? String(job.ft_hips) : ""} />
+                <Row label="Valleys (ft)" value={job.ft_valleys ? String(job.ft_valleys) : ""} />
+                <Row label="Rakes (ft)" value={job.ft_rakes ? String(job.ft_rakes) : ""} />
+                <Row label="Eaves (ft)" value={job.ft_eaves ? String(job.ft_eaves) : ""} />
+                <Row label="Drip Edge (ft)" value={job.ft_drip_edge ? String(job.ft_drip_edge) : ""} />
+                <Row label="Parapet (ft)" value={job.ft_parapet ? String(job.ft_parapet) : ""} />
+                <Row label="Flashing (ft)" value={job.ft_flashing ? String(job.ft_flashing) : ""} />
+                <Row label="Step Flash (ft)" value={job.ft_step_flashing ? String(job.ft_step_flashing) : ""} />
+                {job.accessories && (
                   <>
                     <Separator className="my-2" />
-                    <Row label="Accessories" value={claim.accessories as string} />
+                    <Row label="Accessories" value={job.accessories as string} />
                   </>
                 )}
               </>
             )}
-            {Array.isArray(claim.damage_types) && (claim.damage_types as string[]).length > 0 && (
+            {Array.isArray(job.damage_types) && (job.damage_types as string[]).length > 0 && (
               <>
                 <Separator className="my-2" />
-                <Row label="Damage Types" value={formatDamageTypes(claim.damage_types as string[])} />
+                <Row label="Damage Types" value={formatDamageTypes(job.damage_types as string[])} />
               </>
             )}
           </CardContent>
