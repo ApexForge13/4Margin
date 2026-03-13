@@ -5,6 +5,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "dependencies": {
-    "jspdf": "^4.2.0"
+    "jpeg-js": "^0.4.4",
+    "jspdf": "^4.2.0",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5"
   }
 }
