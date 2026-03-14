@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
+import { LayoutDashboard, Briefcase, ClipboardCheck, Shield, FileText, Calculator, FolderOpen, BookOpen, Settings, ShieldAlert, Camera, Plus } from 'lucide-react';
+import { NewServiceModal } from './new-service-modal';
 
 interface UserProfile {
   id: string;
@@ -19,88 +21,27 @@ interface UserProfile {
 
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/dashboard/supplements": "Jobs",
-  "/dashboard/upload": "New Job",
-  "/dashboard/policy-checks": "Policy Checks",
-  "/dashboard/policy-decoder": "Policy Decoder",
+  "/dashboard/jobs": "Jobs",
+  "/dashboard/inspections": "Inspections",
+  "/dashboard/policies": "Policies",
+  "/dashboard/supplements": "Supplements",
+  "/dashboard/quotes": "Quotes",
   "/dashboard/documents": "Documents",
   "/dashboard/knowledge-base": "Knowledge Base",
   "/dashboard/settings": "Settings",
   "/dashboard/admin": "Admin",
   "/dashboard/admin/photo-review": "Photo Review",
-  "/dashboard/enterprise": "Enterprise",
 };
 
 function resolvePageTitle(pathname: string): string {
   if (pageTitles[pathname]) return pageTitles[pathname];
+  if (pathname.startsWith("/dashboard/jobs/")) return "Job Detail";
+  if (pathname.startsWith("/dashboard/inspections/")) return "Inspection";
+  if (pathname.startsWith("/dashboard/policies/")) return "Policy Decode";
   if (pathname.startsWith("/dashboard/supplements/")) return "Supplement Detail";
-  if (pathname.startsWith("/dashboard/policy-checks/")) return "Policy Check Detail";
-  if (pathname.startsWith("/dashboard/policy-decoder/")) return "Policy Decode";
-  if (pathname.startsWith("/dashboard/enterprise")) return "Enterprise";
+  if (pathname.startsWith("/dashboard/quotes/")) return "Quote";
   return "Dashboard";
 }
-
-/* ─── Nav item definitions ─── */
-
-const NAV_ICONS = {
-  dashboard: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  ),
-  supplements: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  upload: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-    </svg>
-  ),
-  decoder: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  ),
-  settings: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
-  knowledgeBase: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-    </svg>
-  ),
-  newDecoder: (
-    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-  ),
-  documents: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-    </svg>
-  ),
-  enterprise: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  ),
-  admin: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  ),
-  photoReview: (
-    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-    </svg>
-  ),
-};
 
 export function DashboardShell({
   user,
@@ -112,23 +53,12 @@ export function DashboardShell({
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
+  const [newModalOpen, setNewModalOpen] = useState(false);
 
   // Close sidebar on route change
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
-
-  // Close profile dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
-        setProfileOpen(false);
-      }
-    };
-    if (profileOpen) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [profileOpen]);
 
   // Close profile dropdown on route change
   useEffect(() => {
@@ -148,26 +78,21 @@ export function DashboardShell({
   }, [sidebarOpen]);
 
   const isAdmin = user.role === "admin";
-  const isEnterpriseOwner =
-    user.role === "owner" &&
-    user.companies?.account_type === "enterprise";
 
   const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: NAV_ICONS.dashboard },
-    { label: "Jobs", href: "/dashboard/supplements", icon: NAV_ICONS.supplements },
-    { label: "New Job", href: "/dashboard/upload", icon: NAV_ICONS.upload },
-    { label: "Policy Decoder", href: "/dashboard/policy-decoder", icon: NAV_ICONS.decoder },
-    { label: "New Decoder", href: "/dashboard/policy-decoder/new", icon: NAV_ICONS.newDecoder },
-    { label: "Documents", href: "/dashboard/documents", icon: NAV_ICONS.documents },
-    { label: "Knowledge Base", href: "/dashboard/knowledge-base", icon: NAV_ICONS.knowledgeBase },
-    { label: "Settings", href: "/dashboard/settings", icon: NAV_ICONS.settings },
-    ...(isEnterpriseOwner
-      ? [{ label: "Enterprise", href: "/dashboard/enterprise", icon: NAV_ICONS.enterprise }]
-      : []),
+    { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard className="h-[18px] w-[18px]" /> },
+    { label: "Jobs", href: "/dashboard/jobs", icon: <Briefcase className="h-[18px] w-[18px]" /> },
+    { label: "Inspections", href: "/dashboard/inspections", icon: <ClipboardCheck className="h-[18px] w-[18px]" /> },
+    { label: "Policies", href: "/dashboard/policies", icon: <Shield className="h-[18px] w-[18px]" /> },
+    { label: "Supplements", href: "/dashboard/supplements", icon: <FileText className="h-[18px] w-[18px]" /> },
+    { label: "Quotes", href: "/dashboard/quotes", icon: <Calculator className="h-[18px] w-[18px]" /> },
+    { label: "Documents", href: "/dashboard/documents", icon: <FolderOpen className="h-[18px] w-[18px]" /> },
+    { label: "Knowledge Base", href: "/dashboard/knowledge-base", icon: <BookOpen className="h-[18px] w-[18px]" /> },
+    { label: "Settings", href: "/dashboard/settings", icon: <Settings className="h-[18px] w-[18px]" /> },
     ...(isAdmin
       ? [
-          { label: "Admin", href: "/dashboard/admin", icon: NAV_ICONS.admin },
-          { label: "Photo Review", href: "/dashboard/admin/photo-review", icon: NAV_ICONS.photoReview },
+          { label: "Admin", href: "/dashboard/admin", icon: <ShieldAlert className="h-[18px] w-[18px]" /> },
+          { label: "Photo Review", href: "/dashboard/admin/photo-review", icon: <Camera className="h-[18px] w-[18px]" /> },
         ]
       : []),
   ];
@@ -245,8 +170,38 @@ export function DashboardShell({
         })}
       </nav>
 
-      {/* Spacer — pushes nav to fill, keeps sidebar clean */}
-      <div className="mb-4" />
+      {/* Profile at bottom */}
+      <div className="mt-auto border-t border-white/10 p-4">
+        <button
+          onClick={() => setProfileOpen(!profileOpen)}
+          className="flex items-center gap-3 w-full rounded-lg px-2 py-2 hover:bg-white/[0.06] transition-colors"
+        >
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#00BFFF]/30 to-[#0090cc]/30 flex items-center justify-center text-white text-sm font-medium shrink-0">
+            {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+          </div>
+          <div className="text-left min-w-0">
+            <div className="text-[13px] font-medium text-white/80 truncate">{user?.full_name}</div>
+            <div className="text-[11px] text-white/40 truncate">{user?.companies?.name}</div>
+          </div>
+        </button>
+        {profileOpen && (
+          <div className="mt-2 space-y-1 px-2">
+            <Link
+              href="/dashboard/settings"
+              className="block px-3 py-1.5 text-[13px] text-white/60 rounded-lg hover:bg-white/[0.06] hover:text-white/80 transition-colors"
+              onClick={() => setProfileOpen(false)}
+            >
+              Settings
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="block w-full text-left px-3 py-1.5 text-[13px] text-red-400/70 rounded-lg hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
+      </div>
     </>
   );
 
@@ -305,55 +260,14 @@ export function DashboardShell({
               <h1 className="text-base font-bold text-[#344767]">{pageTitle}</h1>
             </div>
           </div>
-          {/* Profile avatar + dropdown */}
-          <div className="relative" ref={profileRef}>
-            <button
-              onClick={() => setProfileOpen((prev) => !prev)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#00BFFF]/20 to-[#0090cc]/20 border border-[#344767]/10 hover:border-[#344767]/25 transition-all duration-200 group"
-              aria-label="Profile menu"
-            >
-              <svg className="h-[18px] w-[18px] text-[#344767]/50 group-hover:text-[#344767]/80 transition-colors" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-              </svg>
-            </button>
-
-            {/* Profile dropdown */}
-            {profileOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl bg-white border border-[#344767]/10 shadow-xl shadow-black/10 z-50 overflow-hidden">
-                {/* User info */}
-                <div className="px-4 py-3 border-b border-[#344767]/[0.06]">
-                  <p className="text-sm font-medium text-[#344767] truncate">{user.full_name}</p>
-                  <p className="text-[11px] text-[#344767]/40 truncate">{user.email}</p>
-                  {user.companies?.name && (
-                    <p className="text-[11px] text-[#00BFFF]/80 truncate mt-0.5">{user.companies.name}</p>
-                  )}
-                </div>
-                {/* Actions */}
-                <div className="py-1.5">
-                  <Link
-                    href="/dashboard/settings"
-                    className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-[#344767]/60 hover:text-[#344767] hover:bg-[#344767]/[0.04] transition-colors"
-                    onClick={() => setProfileOpen(false)}
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Settings
-                  </Link>
-                  <button
-                    className="flex w-full items-center gap-2.5 px-4 py-2 text-[13px] text-red-400/70 hover:text-red-500 hover:bg-red-50/50 transition-colors"
-                    onClick={handleSignOut}
-                  >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* New button */}
+          <button
+            onClick={() => setNewModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-[#00BFFF] to-[#0090cc] text-white text-sm font-medium hover:shadow-lg hover:shadow-[#00BFFF]/20 transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            New
+          </button>
         </header>
 
         {/* Content */}
@@ -361,6 +275,8 @@ export function DashboardShell({
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
       </div>
+
+      <NewServiceModal open={newModalOpen} onOpenChange={setNewModalOpen} />
     </div>
   );
 }
