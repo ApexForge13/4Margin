@@ -20,3 +20,6 @@ export {
   FALLBACK_BRAND,
 } from "./template";
 export type { DocumentBrand } from "./template";
+
+export { generateInspectionPdf } from "./inspection-pdf";
+export type { InspectionPdfData } from "./inspection-pdf";
