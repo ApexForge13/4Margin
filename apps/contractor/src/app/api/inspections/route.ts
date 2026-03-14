@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { EMPTY_ASSESSMENT } from '@/types/inspection';
+import { findOrCreateJob } from '@/lib/jobs/auto-create';
+import type { JobType } from '@/types/job';
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,41 +67,37 @@ export async function POST(request: NextRequest) {
       }
 
       resolvedJobId = existingJob.id;
-    } else {
-      // findOrCreateJob: look for an existing job by address + company
-      const { data: existingJob } = await supabase
+
+      // Enrich existing job with any new data (only fill empty fields)
+      const { data: existingJobData } = await supabase
         .from('jobs')
-        .select('id')
+        .select('homeowner_name, homeowner_phone, homeowner_email')
+        .eq('id', job_id)
         .eq('company_id', company_id)
-        .ilike('property_address', property_address.trim())
-        .limit(1)
-        .maybeSingle();
+        .single();
 
-      if (existingJob) {
-        resolvedJobId = existingJob.id;
-      } else {
-        // Create a new job
-        const { data: newJob, error: createError } = await supabase
-          .from('jobs')
-          .insert({
-            company_id,
-            property_address: property_address.trim(),
-            job_type,
-            homeowner_name: homeowner_name ?? null,
-            homeowner_phone: homeowner_phone ?? null,
-            homeowner_email: homeowner_email ?? null,
-            job_status: 'lead',
-          })
-          .select('id')
-          .single();
-
-        if (createError || !newJob) {
-          console.error('[inspections POST] Failed to create job:', createError);
-          return NextResponse.json({ error: 'Failed to create job' }, { status: 500 });
+      if (existingJobData) {
+        const updates: Record<string, unknown> = {};
+        if (!existingJobData.homeowner_name && homeowner_name) updates.homeowner_name = homeowner_name;
+        if (!existingJobData.homeowner_phone && homeowner_phone) updates.homeowner_phone = homeowner_phone;
+        if (!existingJobData.homeowner_email && homeowner_email) updates.homeowner_email = homeowner_email;
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('jobs').update(updates).eq('id', resolvedJobId).eq('company_id', company_id);
         }
-
-        resolvedJobId = newJob.id;
       }
+    } else {
+      // Use findOrCreateJob for proper matching + enrichment
+      const result = await findOrCreateJob(supabase, {
+        companyId: company_id,
+        createdBy: user.id,
+        propertyAddress: property_address,
+        jobType: job_type as JobType,
+        homeownerName: homeowner_name,
+        homeownerPhone: homeowner_phone,
+        homeownerEmail: homeowner_email,
+      });
+
+      resolvedJobId = result.jobId;
     }
 
     // Insert the inspection record

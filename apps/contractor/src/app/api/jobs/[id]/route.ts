@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logActivity } from '@/lib/jobs/activity-log';
 
 export async function GET(
   request: NextRequest,
@@ -45,6 +46,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 
+  // Fetch current job to detect status change and get company_id
+  const { data: currentJob } = await supabase
+    .from('jobs')
+    .select('job_status, company_id')
+    .eq('id', id)
+    .single();
+
   const { data, error } = await supabase
     .from('jobs')
     .update(updates)
@@ -53,5 +61,23 @@ export async function PATCH(
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Log activity if status changed
+  if (
+    updates.job_status &&
+    currentJob &&
+    updates.job_status !== currentJob.job_status
+  ) {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logActivity(supabase, {
+      jobId: id,
+      companyId: currentJob.company_id,
+      userId: user?.id,
+      action: 'status_changed',
+      description: `Status changed from ${currentJob.job_status} to ${updates.job_status}`,
+      metadata: { from: currentJob.job_status, to: updates.job_status },
+    });
+  }
+
   return NextResponse.json(data);
 }

@@ -66,6 +66,15 @@ export async function POST(
         if (jobUpdateError) {
           // Non-blocking — log but don't fail the finalize
           console.error('[finalize] Failed to advance job status:', jobUpdateError);
+        } else {
+          await logActivity(supabase, {
+            jobId: inspection.job_id,
+            companyId: inspection.company_id,
+            userId: user.id,
+            action: 'status_changed',
+            description: 'Status auto-advanced to Inspected',
+            metadata: { from: job.job_status, to: 'inspected', trigger: 'inspection_completed' },
+          });
         }
       }
 

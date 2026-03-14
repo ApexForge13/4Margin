@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { DEFAULT_LINE_ITEMS } from '@/types/pricing';
 import { EMPTY_TIER } from '@/types/quote';
+import { findOrCreateJob } from '@/lib/jobs/auto-create';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,38 +50,28 @@ export async function POST(request: NextRequest) {
       }
 
       resolvedJobId = existingJob.id;
-    } else if (property_address) {
-      // findOrCreate job by address
-      const { data: existingJob } = await supabase
+
+      // Enrich existing job with any new data (only fill empty fields)
+      const { data: existingJobData } = await supabase
         .from('jobs')
-        .select('id')
+        .select('homeowner_name')
+        .eq('id', job_id)
         .eq('company_id', company_id)
-        .ilike('property_address', property_address.trim())
-        .limit(1)
-        .maybeSingle();
+        .single();
 
-      if (existingJob) {
-        resolvedJobId = existingJob.id;
-      } else {
-        const { data: newJob, error: createError } = await supabase
-          .from('jobs')
-          .insert({
-            company_id,
-            property_address: property_address.trim(),
-            homeowner_name: homeowner_name ?? null,
-            job_type: 'roof',
-            job_status: 'lead',
-          })
-          .select('id')
-          .single();
-
-        if (createError || !newJob) {
-          console.error('[quotes POST] Failed to create job:', createError);
-          return NextResponse.json({ error: 'Failed to create job' }, { status: 500 });
-        }
-
-        resolvedJobId = newJob.id;
+      if (existingJobData && !existingJobData.homeowner_name && homeowner_name) {
+        await supabase.from('jobs').update({ homeowner_name }).eq('id', resolvedJobId).eq('company_id', company_id);
       }
+    } else if (property_address) {
+      // Use findOrCreateJob for proper matching + enrichment
+      const result = await findOrCreateJob(supabase, {
+        companyId: company_id,
+        createdBy: user.id,
+        propertyAddress: property_address,
+        homeownerName: homeowner_name,
+      });
+
+      resolvedJobId = result.jobId;
     }
 
     // Fetch company pricing for tier defaults

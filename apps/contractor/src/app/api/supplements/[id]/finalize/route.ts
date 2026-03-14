@@ -15,6 +15,9 @@ import { ircSectionToUrl } from "@/data/building-codes";
 import { getRequirementsForXactimateCode } from "@/data/manufacturers";
 import { lookupCountyByZip } from "@/data/county-jurisdictions";
 import type { ReferenceLink } from "@/lib/pdf/generate-supplement";
+import { logActivity } from "@/lib/jobs/activity-log";
+import { JOB_STATUS_TRANSITIONS } from "@/types/job";
+import type { JobStatus } from "@/types/job";
 
 export async function POST(
   request: NextRequest,
@@ -478,6 +481,56 @@ export async function POST(
     }
 
     console.log(`[finalize] Complete — ${items.length} items, $${supplementTotal.toFixed(2)}`);
+
+    // ── Log activity + auto-advance job status ──
+    const jobId = supplement.job_id as string | null;
+    if (jobId) {
+      await logActivity(admin, {
+        jobId,
+        companyId: supplement.company_id,
+        userId: user.id,
+        action: 'supplement_generated',
+        description: `Supplement finalized — ${items.length} items, $${supplementTotal.toFixed(2)}`,
+        metadata: {
+          supplement_id: supplementId,
+          item_count: items.length,
+          supplement_total: supplementTotal,
+          ohp: ohpResult.supplementalOhp,
+        },
+      });
+
+      // Auto-advance job status if in an early stage
+      try {
+        const { data: job } = await admin
+          .from('jobs')
+          .select('id, job_status')
+          .eq('id', jobId)
+          .single();
+
+        if (job && ['inspected', 'estimate_received'].includes(job.job_status)) {
+          const allowed = JOB_STATUS_TRANSITIONS[job.job_status as JobStatus];
+          if (allowed.includes('supplement_sent')) {
+            await admin
+              .from('jobs')
+              .update({ job_status: 'supplement_sent' })
+              .eq('id', jobId);
+
+            await logActivity(admin, {
+              jobId,
+              companyId: supplement.company_id,
+              userId: user.id,
+              action: 'status_changed',
+              description: 'Status auto-advanced to Supplement Sent',
+              metadata: { from: job.job_status, to: 'supplement_sent', trigger: 'supplement_generated' },
+            });
+
+            console.log(`[finalize] Auto-advanced job ${jobId} from ${job.job_status} to supplement_sent`);
+          }
+        }
+      } catch (advanceErr) {
+        console.error('[finalize] Job auto-advance failed (non-blocking):', advanceErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
