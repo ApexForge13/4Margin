@@ -23,3 +23,6 @@ export type { DocumentBrand } from "./template";
 
 export { generateInspectionPdf } from "./inspection-pdf";
 export type { InspectionPdfData } from "./inspection-pdf";
+
+export { generateQuotePdf } from "./quote-pdf";
+export type { QuotePdfData, QuoteTier } from "./quote-pdf";

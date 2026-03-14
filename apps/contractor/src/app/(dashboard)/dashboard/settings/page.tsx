@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "./settings-form";
+import { PricingSettings } from "@/components/settings/pricing-settings";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -44,6 +45,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <SettingsForm profile={normalised} />
+      <PricingSettings companyId={normalised.company_id} />
     </div>
   );
 }
