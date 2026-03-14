@@ -16,7 +16,7 @@ interface SupplementRow {
   updated_at: string;
   paid_at: string | null;
   generated_pdf_url: string | null;
-  claims: {
+  jobs: {
     claim_number: string | null;
     property_address: string | null;
   } | null;
@@ -192,8 +192,8 @@ function buildRecoveryData(
 }
 
 function claimName(s: SupplementRow): string {
-  if (s.claims?.claim_number) return `Claim #${s.claims.claim_number}`;
-  if (s.claims?.property_address) return s.claims.property_address;
+  if (s.jobs?.claim_number) return `Claim #${s.jobs.claim_number}`;
+  if (s.jobs?.property_address) return s.jobs.property_address;
   return `Supplement ${s.id.slice(0, 6)}`;
 }
 
@@ -238,7 +238,7 @@ export default async function DashboardPage() {
       updated_at,
       paid_at,
       generated_pdf_url,
-      claims (
+      jobs (
         claim_number,
         property_address
       )

@@ -77,7 +77,7 @@ export default async function AdminPage() {
       .select(
         `
         id, status, supplement_total, approved_amount, created_at,
-        claims ( notes, company_id, companies ( name ) ),
+        jobs ( notes, company_id, companies ( name ) ),
         users:created_by ( full_name )
       `
       )
@@ -205,7 +205,7 @@ export default async function AdminPage() {
     supplement_total: number | null;
     approved_amount: number | null;
     created_at: string;
-    claims: {
+    jobs: {
       notes: string | null;
       company_id: string;
       companies: { name: string } | null;
@@ -242,8 +242,8 @@ export default async function AdminPage() {
       supplement_total: s.supplement_total,
       approved_amount: s.approved_amount,
       created_at: s.created_at,
-      claimName: s.claims?.notes ?? null,
-      companyName: s.claims?.companies?.name ?? null,
+      claimName: s.jobs?.notes ?? null,
+      companyName: s.jobs?.companies?.name ?? null,
       userName: s.users?.full_name ?? null,
     })),
   };
