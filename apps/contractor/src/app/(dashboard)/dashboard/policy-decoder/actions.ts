@@ -31,7 +31,9 @@ export interface PolicyDecodingRow {
 
 // ── Create Draft Policy Decoding (no file — pay first) ──────
 
-export async function createDraftDecoding(): Promise<CreateDecodingResult> {
+export async function createDraftDecoding(
+  jobId?: string
+): Promise<CreateDecodingResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -52,12 +54,27 @@ export async function createDraftDecoding(): Promise<CreateDecodingResult> {
     return { decodingId: null, error: "Company not found." };
   }
 
+  // If jobId provided, verify it belongs to this company
+  let verifiedJobId: string | null = null;
+  if (jobId) {
+    const { data: job } = await supabase
+      .from("jobs")
+      .select("id")
+      .eq("id", jobId)
+      .eq("company_id", profile.company_id)
+      .single();
+    if (job) {
+      verifiedJobId = job.id;
+    }
+  }
+
   const { data: decoding, error: insertError } = await supabase
     .from("policy_decodings")
     .insert({
       company_id: profile.company_id,
       created_by: user.id,
       status: "draft",
+      ...(verifiedJobId ? { job_id: verifiedJobId } : {}),
     })
     .select("id")
     .single();
@@ -70,6 +87,7 @@ export async function createDraftDecoding(): Promise<CreateDecodingResult> {
   }
 
   revalidatePath("/dashboard/policy-decoder");
+  revalidatePath("/dashboard/policies");
 
   return { decodingId: decoding.id, error: null };
 }
@@ -126,6 +144,7 @@ export async function createPolicyDecoding(
   }
 
   revalidatePath("/dashboard/policy-decoder");
+  revalidatePath("/dashboard/policies");
 
   return { decodingId: decoding.id, error: null };
 }
@@ -192,6 +211,7 @@ export async function uploadPolicyFile(
   }
 
   revalidatePath(`/dashboard/policy-decoder/${decodingId}`);
+  revalidatePath(`/dashboard/policies/${decodingId}`);
 
   return { error: null };
 }
@@ -258,6 +278,7 @@ export async function unlockFreeDecoding(
   }
 
   revalidatePath(`/dashboard/policy-decoder/${decodingId}`);
+  revalidatePath(`/dashboard/policies/${decodingId}`);
 
   return { error: null };
 }

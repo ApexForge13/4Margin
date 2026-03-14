@@ -35,7 +35,7 @@ export function OnboardingChecklist({
     {
       label: "Run a policy decode",
       description: "Upload an insurance policy to decode coverage details and identify opportunities",
-      href: "/dashboard/policy-decoder",
+      href: "/dashboard/policies",
       done: hasDecodes ?? false,
     },
     {

@@ -29,7 +29,7 @@ export function NewDecodeButton({ isFirstDecode, isEnterprise }: NewDecodeButton
       }
 
       // Go straight to detail page — upload first, pay after
-      router.push(`/dashboard/policy-decoder/${decodingId}`);
+      router.push(`/dashboard/policies/${decodingId}`);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Something went wrong"

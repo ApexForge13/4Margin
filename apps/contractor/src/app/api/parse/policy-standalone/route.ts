@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parsePolicyPdfV2 } from "@/lib/ai/policy-parser";
 import { findOrCreateJob } from "@/lib/jobs/auto-create";
+import { logActivity } from "@/lib/jobs/activity-log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     // ── Verify decoding exists, is paid, and belongs to company ─
     const { data: decoding, error: decodingErr } = await admin
       .from("policy_decodings")
-      .select("id, status, paid_at, policy_pdf_url, claim_type, claim_description")
+      .select("id, status, paid_at, policy_pdf_url, claim_type, claim_description, job_id")
       .eq("id", policyDecodingId)
       .eq("company_id", userProfile.company_id)
       .single();
@@ -134,9 +135,11 @@ export async function POST(request: NextRequest) {
         `[parse/policy-standalone] Complete: ${policyDecodingId}. Risk: ${analysis.riskLevel}, Confidence: ${analysis.confidence.toFixed(2)}`
       );
 
-      // ── Best-effort: link decode to a Job ──────────────────
+      // ── Best-effort: link decode to a Job + enrich + log ──
+      let linkedJobId = decoding.job_id as string | null;
       try {
-        if (analysis.propertyAddress) {
+        // If not already linked to a job, try to find/create one
+        if (!linkedJobId && analysis.propertyAddress) {
           const jobResult = await findOrCreateJob(admin, {
             companyId: userProfile.company_id,
             createdBy: user.id,
@@ -150,18 +153,81 @@ export async function POST(request: NextRequest) {
               : undefined,
           });
 
+          linkedJobId = jobResult.jobId;
+
           await admin
             .from("policy_decodings")
-            .update({ job_id: jobResult.jobId })
+            .update({ job_id: linkedJobId })
             .eq("id", policyDecodingId);
 
           console.log(
-            `[parse/policy-standalone] Linked to job ${jobResult.jobId} (${jobResult.created ? "new" : "existing"})`
+            `[parse/policy-standalone] Linked to job ${linkedJobId} (${jobResult.created ? "new" : "existing"})`
           );
+        }
+
+        // Enrich linked job with carrier info from analysis (only if fields are empty)
+        if (linkedJobId && analysis.carrier) {
+          try {
+            const { data: existingJob } = await admin
+              .from("jobs")
+              .select("insurance_data")
+              .eq("id", linkedJobId)
+              .single();
+
+            if (existingJob) {
+              const ins = (existingJob.insurance_data || {}) as Record<string, unknown>;
+              let needsUpdate = false;
+              const updatedIns = { ...ins };
+
+              if (!ins.carrier_id && analysis.carrier) {
+                updatedIns.carrier_id = analysis.carrier;
+                needsUpdate = true;
+              }
+              if (!ins.policy_number && analysis.policyNumber) {
+                updatedIns.policy_number = analysis.policyNumber;
+                needsUpdate = true;
+              }
+
+              if (needsUpdate) {
+                await admin
+                  .from("jobs")
+                  .update({
+                    insurance_data: updatedIns,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", linkedJobId);
+                console.log(
+                  `[parse/policy-standalone] Enriched job ${linkedJobId} with carrier data`
+                );
+              }
+            }
+          } catch (enrichErr) {
+            console.error(
+              "[parse/policy-standalone] Job enrichment failed (non-blocking):",
+              enrichErr
+            );
+          }
+        }
+
+        // Log activity
+        if (linkedJobId) {
+          await logActivity(admin, {
+            jobId: linkedJobId,
+            companyId: userProfile.company_id,
+            userId: user.id,
+            action: "policy_decoded",
+            description: `Policy decoded — Risk: ${analysis.riskLevel}, Carrier: ${analysis.carrier || "Unknown"}`,
+            metadata: {
+              decodingId: policyDecodingId,
+              riskLevel: analysis.riskLevel,
+              carrier: analysis.carrier,
+              confidence: analysis.confidence,
+            },
+          });
         }
       } catch (jobErr) {
         console.error(
-          "[parse/policy-standalone] Job linking failed (non-blocking):",
+          "[parse/policy-standalone] Job linking/enrichment failed (non-blocking):",
           jobErr
         );
       }

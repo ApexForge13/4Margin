@@ -443,6 +443,27 @@ export function StepReview() {
         </Card>
       </div>
 
+      {/* Baltimore pricing disclaimer */}
+      <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 py-3">
+        <svg
+          className="h-4 w-4 text-blue-600 mt-0.5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <p className="text-sm text-blue-800">
+          Note: All pricing in this supplement reflects Baltimore, MD area
+          Xactimate pricing. Actual pricing may vary by region.
+        </p>
+      </div>
+
       <Separator />
 
       {/* Submission */}

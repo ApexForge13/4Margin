@@ -119,7 +119,7 @@ export function DecodingsList({ decodings }: DecodingsListProps) {
               {createdDate}
             </span>
             <Button variant="ghost" size="sm" asChild>
-              <Link href={`/dashboard/policy-decoder/${d.id}`}>View</Link>
+              <Link href={`/dashboard/policies/${d.id}`}>View</Link>
             </Button>
           </div>
         );

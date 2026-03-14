@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       const origin =
         request.headers.get("origin") || "http://localhost:3000";
       return NextResponse.json({
-        url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=success`,
+        url: `${origin}/dashboard/policies/${policyDecodingId}?payment=success`,
       });
     }
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
       const origin =
         request.headers.get("origin") || "http://localhost:3000";
-      const freeUrl = `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=success&free=true`;
+      const freeUrl = `${origin}/dashboard/policies/${policyDecodingId}?payment=success&free=true`;
       return NextResponse.json({ url: freeUrl });
     }
 
@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/dashboard/policy-decoder/${policyDecodingId}?payment=cancelled`,
+      success_url: `${origin}/dashboard/policies/${policyDecodingId}?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/dashboard/policies/${policyDecodingId}?payment=cancelled`,
     });
 
     // Save session ID for webhook matching

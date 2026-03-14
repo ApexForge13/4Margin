@@ -24,6 +24,13 @@ type Phase =
   | "complete"
   | "error";
 
+interface DecoderFlowPrefill {
+  carrierName?: string;
+  claimNumber?: string;
+  dateOfLoss?: string;
+  homeownerName?: string;
+}
+
 interface DecoderFlowProps {
   decodingId: string;
   isFirstDecode: boolean;
@@ -45,6 +52,8 @@ interface DecoderFlowProps {
   jobId?: string;
   /** Property address of the linked job */
   jobAddress?: string;
+  /** Pre-fill data from linked job (carrier, claim #, date of loss) */
+  prefill?: DecoderFlowPrefill;
 }
 
 /* ─── Claim types ─── */
@@ -83,6 +92,7 @@ export function DecoderFlow({
   carrierNotes,
   jobId,
   jobAddress,
+  prefill,
 }: DecoderFlowProps) {
   const router = useRouter();
 
@@ -509,6 +519,27 @@ export function DecoderFlow({
     return (
       <div className="space-y-4">
         {renderStepper()}
+
+        {/* Job prefill banner */}
+        {prefill && (prefill.carrierName || prefill.claimNumber || prefill.homeownerName) && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+            <p className="font-medium mb-1">Pre-filled from linked job</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs">
+              {prefill.homeownerName && (
+                <span>Homeowner: <span className="font-medium">{prefill.homeownerName}</span></span>
+              )}
+              {prefill.carrierName && (
+                <span>Carrier: <span className="font-medium">{prefill.carrierName}</span></span>
+              )}
+              {prefill.claimNumber && (
+                <span>Claim #: <span className="font-medium">{prefill.claimNumber}</span></span>
+              )}
+              {prefill.dateOfLoss && (
+                <span>Date of Loss: <span className="font-medium">{new Date(prefill.dateOfLoss).toLocaleDateString("en-US")}</span></span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Claim context fields — optional */}
         <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
