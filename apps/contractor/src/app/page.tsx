@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { CoverageMap } from "@/components/landing/coverage-map";
 
 export const metadata: Metadata = {
-  title: "4Margin — AI-Powered Platform for Insurance Restoration Contractors",
+  title: "4Margin — One Platform for Every Roof",
   description:
-    "Inspect. Decode. Supplement. Quote. One AI-powered platform for roofing contractors — inspection reports, policy analysis, supplement detection, and branded proposals.",
+    "Inspect. Quote. Decode. Supplement. 4Margin keeps your jobs organized from first look to final payment. Built for roofing contractors.",
 };
 
 /* ─────── shared tiny components ─────── */
@@ -35,18 +35,18 @@ function CheckIcon({ className, style }: { className?: string; style?: React.CSS
   );
 }
 
-/* ─────── workflow step data ─────── */
+/* ─────── services data ─────── */
 
-const WORKFLOW_STEPS = [
+const SERVICES = [
   {
     number: "01",
     title: "Inspect",
-    tagline: "Document the damage. Build your case.",
+    tagline: "Document it right the first time.",
     description:
-      "Upload property photos and let AI classify damage type, material condition, and affected components. Generate a professional inspection report that becomes the foundation for your supplement.",
-    features: ["AI-powered photo classification", "Professional PDF reports", "Feeds directly into supplements"],
-    price: "Free",
-    priceNote: "Always free",
+      "Walk the roof, tap submit. Get a professional inspection report with photos, measurements, and manufacturer specs — ready to hand the homeowner or send to the carrier.",
+    features: ["Photo-based reports", "Manufacturer specs included", "Feeds into quotes & supplements"],
+    priceBadge: "Free",
+    priceNote: "Unlimited",
     color: "#00BFFF",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -54,45 +54,121 @@ const WORKFLOW_STEPS = [
   },
   {
     number: "02",
+    title: "Quote",
+    tagline: "Quote the job before you leave the property.",
+    description:
+      "Build accurate quotes with real product lines from 6 manufacturers. Material breakdowns, labor, waste — all in one document the homeowner can say yes to.",
+    features: ["55+ shingle products", "6 manufacturers", "Branded PDF proposals"],
+    priceBadge: "Free",
+    priceNote: "3 free, then Pro",
+    color: "#39FF9E",
+    icon: (
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+    ),
+  },
+  {
+    number: "03",
     title: "Decode",
     tagline: "Know the policy before you talk to the adjuster.",
     description:
-      "Upload any homeowner insurance policy and get a plain-English breakdown in minutes. Identify coverage limits, hidden exclusions, landmine clauses, and favorable provisions that strengthen your position.",
-    features: ["Carrier-specific analysis", "Landmine & gap detection", "Favorable provision identification"],
-    price: "$10",
-    priceNote: "First 10 free",
-    color: "#39FF9E",
+      "Upload any insurance policy. Get a plain-English breakdown of what's covered, what's excluded, and what the carrier owes — before you start the job.",
+    features: ["Coverage & exclusion breakdown", "Landmine clause detection", "Favorable provision identification"],
+    priceBadge: "Free",
+    priceNote: "3 free, then Pro",
+    color: "#00BFFF",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     ),
   },
   {
-    number: "03",
+    number: "04",
     title: "Supplement",
     tagline: "Find what the adjuster missed. Back it with evidence.",
     description:
-      "Upload the adjuster's Xactimate estimate and let our 10-layer AI engine identify every missing line item. Get estimated recovery ranges with Xactimate codes, IRC building code references, and manufacturer installation requirements — the documentation you need to build your case.",
-    features: ["200+ detectable missing items", "IRC + manufacturer-backed justification", "Estimated recovery ranges"],
-    price: "$50",
-    priceNote: "First 3 free",
-    color: "#00BFFF",
+      "Missing line items, underpaid trades, code-required work the adjuster skipped. 4Margin finds what's owed and builds the supplement with code authority and manufacturer backing.",
+    features: ["200+ detectable missing items", "IRC code references", "Manufacturer-backed justification"],
+    priceBadge: "Free",
+    priceNote: "3 free, then Pro+",
+    color: "#39FF9E",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     ),
   },
+];
+
+/* ─────── pricing data ─────── */
+
+const PRICING_TIERS = [
   {
-    number: "04",
-    title: "Quote",
-    tagline: "Quote the job before you leave the property.",
-    description:
-      "Generate branded proposals with market-based material pricing ranges from all major manufacturers. Present a professional quote on-site that reflects the scope of work and builds homeowner confidence.",
-    features: ["55+ shingle products across 6 manufacturers", "Market-based pricing ranges", "Branded PDF proposals"],
-    price: "Free",
-    priceNote: "Always free",
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    description: "Try everything. No credit card required.",
+    cta: "Get Started Free",
+    highlighted: false,
+    features: [
+      "Unlimited inspection reports",
+      "3 free quotes",
+      "3 free policy decodes",
+      "3 free supplements",
+      "MD · PA · DE coverage",
+    ],
+  },
+  {
+    name: "Pro",
+    price: "$99",
+    period: "/month",
+    description: "Unlimited quotes, decodes, and full knowledge base access.",
+    cta: "Start Free, Upgrade Anytime",
+    highlighted: true,
+    features: [
+      "Everything in Free",
+      "Unlimited quotes",
+      "Unlimited policy decodes",
+      "Knowledge base — IRC codes, manufacturer specs, carrier insights",
+      "Job management dashboard",
+      "Document library",
+    ],
+  },
+  {
+    name: "Pro + Supplements",
+    price: "$199",
+    period: "/month",
+    description: "Full platform with supplement and rebuttal support.",
+    cta: "Start Free, Upgrade Anytime",
+    highlighted: false,
+    features: [
+      "Everything in Pro",
+      "5 supplements/month included",
+      "Additional supplements $49 each",
+      "Supplement and rebuttal support",
+      "Cover letters & code authority docs",
+    ],
+  },
+];
+
+/* ─────── why 4margin data ─────── */
+
+const VALUE_PROPS = [
+  {
+    title: "Everything in one place",
+    desc: "Your inspections, quotes, policies, and supplements — all tied to the same job. No more jumping between apps or digging through email.",
+    color: "#00BFFF",
+  },
+  {
+    title: "Built for the field",
+    desc: "Designed for contractors between jobs, not office workers at a desk. Fast, mobile-ready, no learning curve.",
     color: "#39FF9E",
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-    ),
+  },
+  {
+    title: "Code and manufacturer authority",
+    desc: "Every supplement and inspection report is backed by IRC building codes and manufacturer installation requirements — not opinions.",
+    color: "#00BFFF",
+  },
+  {
+    title: "Your jobs, your data",
+    desc: "Every document, photo, and report lives in your account. Organized by job, accessible anytime.",
+    color: "#39FF9E",
   },
 ];
 
@@ -108,8 +184,8 @@ export default function LandingPage() {
             <Logo />
           </Link>
           <div className="hidden items-center gap-8 text-sm text-gray-400 md:flex">
-            <a href="#workflow" className="transition hover:text-white">
-              How It Works
+            <a href="#services" className="transition hover:text-white">
+              Services
             </a>
             <a href="#why" className="transition hover:text-white">
               Why 4Margin
@@ -147,25 +223,20 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-4xl px-6 pt-24 pb-20 text-center sm:pt-32 sm:pb-28">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-medium text-gray-300">
             <span className="inline-block h-2 w-2 rounded-full bg-[#39FF9E] animate-pulse" />
-            Built by a roofer. Powered by AI.
+            Built by a roofer. Built for roofers.
           </div>
 
           <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+            One platform for{" "}
             <span className="bg-gradient-to-r from-[#00BFFF] to-[#39FF9E] bg-clip-text text-transparent">
-              Inspect.
-            </span>{" "}
-            Decode.{" "}
-            <span className="bg-gradient-to-r from-[#00BFFF] to-[#39FF9E] bg-clip-text text-transparent">
-              Supplement.
-            </span>{" "}
-            Quote.
+              every roof.
+            </span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-400 sm:text-xl">
-            One AI-powered platform that connects your inspection reports,
-            policy analysis, supplements, and proposals into a single workflow.{" "}
+            Inspect. Quote. Decode. Supplement.{" "}
             <span className="font-semibold text-white">
-              Built for insurance restoration contractors who want to recover every dollar.
+              4Margin keeps your jobs organized from first look to final payment.
             </span>
           </p>
 
@@ -174,10 +245,10 @@ export default function LandingPage() {
               href="/signup"
               className="w-full rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#00A8E0] px-8 py-4 text-center text-base font-bold text-white shadow-lg shadow-[#00BFFF]/25 transition hover:shadow-xl hover:shadow-[#00BFFF]/30 sm:w-auto"
             >
-              Start Free
+              Get Started Free
             </Link>
             <a
-              href="#workflow"
+              href="#services"
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 text-base font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/10 sm:w-auto"
             >
               See How It Works
@@ -190,10 +261,10 @@ export default function LandingPage() {
           {/* Stats row */}
           <div className="mt-16 grid grid-cols-2 gap-6 border-t border-white/5 pt-10 sm:grid-cols-4">
             {[
-              { value: "10", label: "Free policy decodes", color: "text-[#39FF9E]" },
-              { value: "3", label: "Free supplements", color: "text-[#00BFFF]" },
-              { value: "AI", label: "Powered analysis", color: "text-white" },
-              { value: "IRC", label: "& manufacturer backed", color: "text-[#00BFFF]" },
+              { value: "6", label: "Manufacturers", color: "text-[#39FF9E]" },
+              { value: "43", label: "Counties — MD · PA · DE", color: "text-[#00BFFF]" },
+              { value: "4", label: "Services", color: "text-white" },
+              { value: "$0", label: "Free to start", color: "text-[#39FF9E]" },
             ].map((stat) => (
               <div key={stat.label}>
                 <div className={`text-2xl font-extrabold sm:text-3xl ${stat.color}`}>
@@ -208,44 +279,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ───── The Problem ───── */}
-      <section className="border-t border-white/5 bg-[#080D18]">
-        <div className="mx-auto max-w-3xl px-6 py-16 text-center sm:py-20">
-          <p className="text-lg leading-relaxed text-gray-400 sm:text-xl">
-            Most restoration contractors juggle disconnected tools, manual
-            supplement processes, and unread policies across every job.
-            Inspections in one app. Estimates in another. Supplements outsourced
-            or skipped entirely.{" "}
-            <span className="font-semibold text-white">
-              4Margin brings it all into one platform.
-            </span>
-          </p>
-        </div>
-      </section>
-
-      {/* ───── The Workflow ───── */}
-      <section id="workflow" className="border-t border-white/5">
+      {/* ───── Services ───── */}
+      <section id="services" className="border-t border-white/5">
         <div className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
           <div className="text-center">
-            <SectionTag>How It Works</SectionTag>
+            <SectionTag>Services</SectionTag>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
               Four tools. One connected workflow.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-400">
-              Each step feeds into the next — so your inspection photos back
-              your supplement, your policy decode informs your strategy, and your
-              quote reflects the full scope of work.
+              Each service feeds into the next — your inspection photos back your
+              supplement, your policy decode informs your strategy, and your quote
+              reflects the full scope of work.
             </p>
           </div>
 
           <div className="mt-16 space-y-8">
-            {WORKFLOW_STEPS.map((step, i) => (
+            {SERVICES.map((step, i) => (
               <div
                 key={step.number}
                 className="group relative rounded-2xl border border-white/5 bg-white/[0.02] p-8 transition hover:border-white/10 md:p-10"
               >
                 {/* Connecting line between steps */}
-                {i < WORKFLOW_STEPS.length - 1 && (
+                {i < SERVICES.length - 1 && (
                   <div className="absolute -bottom-8 left-1/2 hidden h-8 w-px bg-gradient-to-b from-white/10 to-transparent md:block" />
                 )}
 
@@ -276,9 +332,9 @@ export default function LandingPage() {
                           color: step.color,
                         }}
                       >
-                        {step.price === "Free" ? "Free" : `${step.price}/each`}
+                        {step.priceBadge}
                       </span>
-                      {step.priceNote && step.price !== "Free" && (
+                      {step.priceNote && (
                         <span className="text-xs text-gray-500">{step.priceNote}</span>
                       )}
                     </div>
@@ -310,32 +366,16 @@ export default function LandingPage() {
           <div className="text-center">
             <SectionTag>Why 4Margin</SectionTag>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Documentation adjusters can&apos;t dismiss.
+              Run your roofing business from one place.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-400">
-              Most supplement tools give you a list of missing items. 4Margin
-              gives you the evidence to back every one of them.
+              No more jumping between apps, emailing yourself photos, or losing
+              track of what you sent to which homeowner.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {[
-              {
-                title: "The logic adjusters can't deny",
-                desc: "We identify every missing line item with the correct Xactimate code, backed by IRC references and manufacturer specs. You get the justification and documentation to build your supplement — not just a guess at what's missing.",
-                color: "#00BFFF",
-              },
-              {
-                title: "Built on code authority",
-                desc: "Every supplement item references specific IRC building codes, manufacturer installation requirements, and industry standards. This is documentation grounded in authority — not opinion.",
-                color: "#39FF9E",
-              },
-              {
-                title: "Carrier pattern intelligence",
-                desc: "We track which items each carrier approves and denies, by region. Your supplement is built to match what actually gets paid — not just what should be covered on paper.",
-                color: "#00BFFF",
-              },
-            ].map((card) => (
+          <div className="mt-14 grid gap-6 md:grid-cols-2">
+            {VALUE_PROPS.map((card) => (
               <div
                 key={card.title}
                 className="rounded-xl border border-white/5 bg-white/[0.02] p-8 transition hover:border-white/10"
@@ -358,79 +398,75 @@ export default function LandingPage() {
 
       {/* ───── Pricing ───── */}
       <section id="pricing" className="border-t border-white/5">
-        <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
+        <div className="mx-auto max-w-5xl px-6 py-24 sm:py-32">
           <div className="text-center">
             <SectionTag>Pricing</SectionTag>
             <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-              Simple. Per-use. No subscriptions.
+              Start free. Scale when you&apos;re ready.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-400">
-              Inspections and quotes are free. Pay per decode and per supplement
-              — only after your free tier runs out.
+              Unlimited inspections on every plan. Upgrade for unlimited quotes,
+              policy decodes, and supplement support.
             </p>
           </div>
 
-          <div className="mt-16 overflow-hidden rounded-2xl border border-white/10">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/[0.02]">
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-300">Service</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-300">Free Tier</th>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-300">Per-Use</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                <tr>
-                  <td className="px-6 py-5">
-                    <div className="font-semibold">Inspection Reports</div>
-                    <div className="mt-0.5 text-xs text-gray-500">AI photo analysis + PDF report</div>
-                  </td>
-                  <td className="px-6 py-5 text-[#39FF9E] font-semibold">Free</td>
-                  <td className="px-6 py-5 text-gray-400">Free</td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-5">
-                    <div className="font-semibold">Policy Decodes</div>
-                    <div className="mt-0.5 text-xs text-gray-500">Coverage analysis + landmine detection</div>
-                  </td>
-                  <td className="px-6 py-5 text-[#39FF9E] font-semibold">10 free</td>
-                  <td className="px-6 py-5">
-                    <span className="font-semibold">$10</span>
-                    <span className="text-gray-500"> /decode</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-5">
-                    <div className="font-semibold">Supplements</div>
-                    <div className="mt-0.5 text-xs text-gray-500">Missing item detection + documentation package</div>
-                  </td>
-                  <td className="px-6 py-5 text-[#39FF9E] font-semibold">3 free</td>
-                  <td className="px-6 py-5">
-                    <span className="font-semibold">$50</span>
-                    <span className="text-gray-500"> /supplement</span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-5">
-                    <div className="font-semibold">Quotes & Proposals</div>
-                    <div className="mt-0.5 text-xs text-gray-500">Branded PDF proposals with pricing ranges</div>
-                  </td>
-                  <td className="px-6 py-5 text-[#39FF9E] font-semibold">Free</td>
-                  <td className="px-6 py-5 text-gray-400">Free</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="mt-16 grid gap-6 md:grid-cols-3">
+            {PRICING_TIERS.map((tier) => (
+              <div
+                key={tier.name}
+                className={`relative rounded-2xl border p-8 transition ${
+                  tier.highlighted
+                    ? "border-[#00BFFF]/40 bg-[#00BFFF]/5 shadow-lg shadow-[#00BFFF]/10"
+                    : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                }`}
+              >
+                {tier.highlighted && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#00BFFF] px-4 py-1 text-xs font-bold text-white">
+                    Most Popular
+                  </div>
+                )}
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold">{tier.name}</h3>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold">{tier.price}</span>
+                    <span className="text-sm text-gray-500">{tier.period}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-400">{tier.description}</p>
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {tier.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
+                      <CheckIcon
+                        className="mt-0.5 h-4 w-4 shrink-0"
+                        style={{ color: tier.highlighted ? "#00BFFF" : "#39FF9E" } as React.CSSProperties}
+                      />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <Link
+                  href="/signup"
+                  className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition ${
+                    tier.highlighted
+                      ? "bg-[#00BFFF] text-white shadow-lg shadow-[#00BFFF]/25 hover:bg-[#00A8E0]"
+                      : "border border-white/10 bg-white/5 text-gray-300 hover:border-white/20 hover:bg-white/10"
+                  }`}
+                >
+                  {tier.cta}
+                </Link>
+              </div>
+            ))}
           </div>
 
-          <div className="mt-8 text-center">
-            <Link
-              href="/signup"
-              className="inline-block rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#00A8E0] px-10 py-4 text-base font-bold text-white shadow-lg shadow-[#00BFFF]/25 transition hover:shadow-xl hover:shadow-[#00BFFF]/30"
-            >
-              Start Free — No Credit Card Required
-            </Link>
-            <p className="mt-3 text-xs text-gray-500">
-              Enterprise or volume pricing? <a href="mailto:team@4margin.com" className="text-[#00BFFF] hover:underline">Contact us</a>.
+          <div className="mt-10 text-center">
+            <p className="text-sm text-gray-500">
+              Running 50+ jobs a month?{" "}
+              <a href="mailto:team@4margin.com" className="text-[#00BFFF] hover:underline">
+                Contact us for volume pricing
+              </a>
+              .
             </p>
           </div>
         </div>
@@ -445,10 +481,11 @@ export default function LandingPage() {
               43 counties. Growing fast.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-gray-400">
-              Our IRC code database and manufacturer requirement library
-              currently covers Maryland, Pennsylvania, and Delaware. Policy
-              decoder and quoting work nationwide. More code authority regions
-              coming soon.
+              Available in 43 counties across Maryland, Pennsylvania, and Delaware.
+              Expanding soon.{" "}
+              <a href="mailto:team@4margin.com" className="text-[#00BFFF] hover:underline">
+                Need coverage in your area? Let us know.
+              </a>
             </p>
           </div>
           <CoverageMap />
@@ -459,11 +496,11 @@ export default function LandingPage() {
       <section className="border-t border-white/5">
         <div className="mx-auto max-w-3xl px-6 py-24 text-center sm:py-32">
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Start recovering more. Today.
+            Start running your jobs from one platform.
           </h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-gray-400">
-            Create your free account and decode your first policy in under 2
-            minutes. No credit card. No commitment.
+            Create your free account and run your first inspection in minutes.
+            No credit card. No commitment.
           </p>
           <div className="mt-8">
             <Link
@@ -481,8 +518,8 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 py-10 sm:flex-row">
           <Logo />
           <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
-            <a href="#workflow" className="transition hover:text-gray-300">
-              How It Works
+            <a href="#services" className="transition hover:text-gray-300">
+              Services
             </a>
             <a href="#why" className="transition hover:text-gray-300">
               Why 4Margin
