@@ -261,21 +261,20 @@ export function PhotoReviewClient({
           throw new Error(err.error || "Failed to save");
         }
 
-        // Mark as reviewed in local state
-        setPhotos((prev) =>
-          prev.map((p) =>
-            p.id === photoId
-              ? { ...p, ...body, reviewed: true, reviewed_by: userId } as TrainingPhoto
-              : p
-          )
-        );
+        // Remove from grid so it disappears after review
+        setPhotos((prev) => prev.filter((p) => p.id !== photoId));
 
         toast.success("Photo confirmed");
 
         if (advance && selectedIndex !== null) {
-          const nextIndex = selectedIndex + 1;
-          if (nextIndex < photos.length) {
-            openDetail(nextIndex);
+          // After removing, the next photo slides into the same index
+          const remainingPhotos = photos.filter((p) => p.id !== photoId);
+          if (selectedIndex < remainingPhotos.length) {
+            // Open same index (which is now the next photo)
+            setTimeout(() => openDetail(selectedIndex), 50);
+          } else if (remainingPhotos.length > 0) {
+            // We were at the end, go to the new last photo
+            setTimeout(() => openDetail(remainingPhotos.length - 1), 50);
           } else {
             closeDetail();
           }

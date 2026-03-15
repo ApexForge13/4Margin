@@ -39,7 +39,7 @@ export default async function PhotoReviewPage({
   const reviewed = params.reviewed ?? null; // "true" | "false" | null (all)
   const showNonRoofing = params.showNonRoofing === "true";
   const page = Math.max(1, Number(params.page) || 1);
-  const limit = 100;
+  const limit = 24;
   const offset = (page - 1) * limit;
 
   // ── Build query ────────────────────────────────────────────
@@ -77,44 +77,35 @@ export default async function PhotoReviewPage({
     console.error("[photo-review] Query error:", photosError);
   }
 
-  // ── Aggregate stats ────────────────────────────────────────
-  const { data: statsRaw, error: statsError } = await admin.rpc(
-    "training_photo_stats" as never
-  ).then(
-    // If the RPC doesn't exist, fall back to a manual query
-    (res: { data: unknown; error: unknown }) => {
-      if (res.error) return { data: null, error: res.error };
-      return res;
-    }
-  );
+  // ── Aggregate stats (parallel count queries per category) ──
+  const categories = [
+    "elevation", "roof_overview", "damage", "component",
+    "repair_install", "interior_damage", "estimate_photo", "other",
+  ];
 
-  // Fallback: manual stats query if RPC doesn't exist
-  let stats: { category: string; count: number; reviewed_count: number }[] = [];
-  if (statsError || !statsRaw) {
-    // Get all categories with counts
-    const { data: allPhotos } = await admin
-      .from("training_photos")
-      .select("category, reviewed");
+  const stats: { category: string; count: number; reviewed_count: number }[] = [];
+  const statPromises = categories.map(async (cat) => {
+    const [totalRes, reviewedRes] = await Promise.all([
+      admin
+        .from("training_photos")
+        .select("*", { count: "exact", head: true })
+        .eq("category", cat),
+      admin
+        .from("training_photos")
+        .select("*", { count: "exact", head: true })
+        .eq("category", cat)
+        .eq("reviewed", true),
+    ]);
+    return {
+      category: cat,
+      count: totalRes.count || 0,
+      reviewed_count: reviewedRes.count || 0,
+    };
+  });
 
-    if (allPhotos) {
-      const grouped = new Map<
-        string,
-        { count: number; reviewed_count: number }
-      >();
-      for (const p of allPhotos) {
-        const cat = p.category || "uncategorized";
-        const entry = grouped.get(cat) || { count: 0, reviewed_count: 0 };
-        entry.count++;
-        if (p.reviewed) entry.reviewed_count++;
-        grouped.set(cat, entry);
-      }
-      stats = Array.from(grouped.entries()).map(([category, data]) => ({
-        category,
-        ...data,
-      }));
-    }
-  } else {
-    stats = statsRaw as typeof stats;
+  const statResults = await Promise.all(statPromises);
+  for (const s of statResults) {
+    if (s.count > 0) stats.push(s);
   }
 
   // ── Generate signed URLs ───────────────────────────────────
